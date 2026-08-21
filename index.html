@@ -3246,7 +3246,9 @@ function resetReassignments() {
             const loginScreen = document.getElementById('loginScreen');
 
             const email = user.email.toLowerCase();
-            if (!email.includes('@marcan.com')) { 
+            
+            // 🔥 FILTRO ESTRICTO: Solo entra @marcan.com.pe
+            if (!email.endsWith('@marcan.com.pe')) { 
                 msg.textContent = "Acceso denegado. Solo correos corporativos autorizados.";
                 msg.className = "text-sm mb-6 text-center font-bold text-red-500";
                 statusColor.className = "absolute top-0 left-0 w-full h-2 bg-red-600 transition-colors";
@@ -3255,48 +3257,32 @@ function resetReassignments() {
                 return;
             }
 
-            msg.textContent = "Verificando credenciales...";
+            msg.textContent = "Acceso corporativo verificado...";
             
             try {
+                // (Opcional) Registramos quién entró en tu base de datos para tu control
                 const userRef = window.fsDoc(window.firebaseDb, "usuarios", email);
-                const userSnap = await window.fsGetDoc(userRef);
+                await window.fsSetDoc(userRef, {
+                    email: email,
+                    nombre: user.displayName,
+                    estado: 'aprobado_automaticamente',
+                    ultimoAcceso: new Date().toISOString()
+                }, { merge: true });
 
-                if (userSnap.exists()) {
-                    const data = userSnap.data();
-                    if (data.estado === 'aprobado') {
-                        msg.textContent = "¡Bienvenido!";
-                        msg.className = "text-sm mb-6 text-center font-bold text-emerald-600";
-                        statusColor.className = "absolute top-0 left-0 w-full h-2 bg-emerald-500 transition-colors";
-                        setTimeout(() => {
-                            loginScreen.style.opacity = '0';
-                            setTimeout(() => loginScreen.style.display = 'none', 500);
-                        }, 800);
-                    } else {
-                        msg.innerHTML = "Tu cuenta está <b>pendiente de aprobación</b>.<br>Solicita acceso al administrador.";
-                        msg.className = "text-sm mb-6 text-center font-medium text-amber-600";
-                        statusColor.className = "absolute top-0 left-0 w-full h-2 bg-amber-500 transition-colors";
-                        btn.classList.add('hidden');
-                        btnLogout.classList.remove('hidden');
-                    }
-                } else {
-                    await window.fsSetDoc(userRef, {
-                        email: email,
-                        nombre: user.displayName,
-                        estado: 'pendiente',
-                        fechaRegistro: new Date().toISOString()
-                    });
-                    
-                    msg.innerHTML = "Hemos registrado tu solicitud.<br>Cuenta <b>pendiente de aprobación</b>.";
-                    msg.className = "text-sm mb-6 text-center font-medium text-amber-600";
-                    statusColor.className = "absolute top-0 left-0 w-full h-2 bg-amber-500 transition-colors";
-                    btn.classList.add('hidden');
-                    btnLogout.classList.remove('hidden');
-                }
+                // ¡ACCESO CONCEDIDO INMEDIATAMENTE!
+                msg.textContent = "¡Bienvenido, equipo Marcan!";
+                msg.className = "text-sm mb-6 text-center font-bold text-emerald-600";
+                statusColor.className = "absolute top-0 left-0 w-full h-2 bg-emerald-500 transition-colors";
+                
+                setTimeout(() => {
+                    loginScreen.style.opacity = '0';
+                    setTimeout(() => loginScreen.style.display = 'none', 500);
+                }, 800);
+
             } catch (error) {
-                msg.textContent = "Error conectando a la base de datos.";
-                msg.className = "text-sm mb-6 text-center font-bold text-red-500";
-                btn.classList.add('hidden');
-                btnLogout.classList.remove('hidden');
+                console.error("Error registrando acceso:", error);
+                // Si la BD falla por un milisegundo, igual lo dejamos entrar porque su correo es correcto
+                loginScreen.style.display = 'none';
             }
         }
 
