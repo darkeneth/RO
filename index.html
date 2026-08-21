@@ -69,6 +69,52 @@
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
+    <!-- ========================================== -->
+    <!-- BARRA SUPERIOR: SELECTOR DE PROYECTO Y FECHA -->
+    <!-- ========================================== -->
+    <header class="bg-slate-900 text-white shadow-md z-40 relative border-b-4 border-indigo-500">
+        <div class="max-w-[1400px] mx-auto px-4 h-16 flex items-center justify-between">
+            <!-- Izquierda: Logo y Usuario -->
+            <div class="flex items-center gap-4">
+                <div class="w-10 h-10 bg-indigo-600 rounded flex items-center justify-center font-bold text-xl shadow-inner">
+                    RO
+                </div>
+                <div>
+                    <h1 class="text-sm font-bold leading-tight">Control de Costos</h1>
+                    <p id="userDisplay" class="text-xs text-indigo-300">Cargando usuario...</p>
+                </div>
+            </div>
+
+            <!-- Centro: Selector de Proyecto y Mes -->
+            <div class="flex items-center gap-3 bg-slate-800 p-1.5 rounded-lg border border-slate-700">
+                <div class="flex items-center gap-2 px-2 border-r border-slate-600">
+                    <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                    <select id="proyectoSelect" class="bg-transparent text-sm font-bold text-white focus:outline-none cursor-pointer appearance-none pr-4">
+                        <option value="ELYSEE" class="bg-slate-800">ELYSÉE</option>
+                        <option value="PARC" class="bg-slate-800">PARC</option>
+                        <option value="MIDTOWN" class="bg-slate-800">MIDTOWN</option>
+                        <option value="PRISMA" class="bg-slate-800">PRISMA</option>
+                        <option value="CV" class="bg-slate-800">CV</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2 px-2">
+                    <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <input type="month" id="mesSelect" class="bg-transparent text-sm font-bold text-white focus:outline-none cursor-pointer [color-scheme:dark]">
+                </div>
+            </div>
+
+            <!-- Derecha: Botón Guardar Nube (Aún inactivo) y Salir -->
+            <div class="flex items-center gap-4">
+                <button id="btnGuardarNube" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-1.5 px-3 rounded shadow transition flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                    Guardar RO en Nube
+                </button>
+                <button onclick="window.signOut(window.firebaseAuth)" class="text-xs text-slate-400 hover:text-red-400 transition font-semibold">
+                    Cerrar Sesión
+                </button>
+            </div>
+        </div>
+    </header>
 
     <!-- ========================================== -->
     <!-- PANTALLA DE LOGIN (ACCESO CORPORATIVO) -->
