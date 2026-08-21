@@ -1596,7 +1596,7 @@ function resetReassignments() {
             }
 
             // ==========================================
-            // VISTA RESUMEN RO (CON SC / STOCK ENTRE Q Y R)
+            // VISTA RESUMEN RO (NUBE + SC/STOCK + FÓRMULAS)
             // ==========================================
             if (currentMainView === 'RO') {
                 if (roFilteredMatrix2D.length === 0) {
@@ -1605,7 +1605,6 @@ function resetReassignments() {
                     return;
                 }
 
-                // --- CONEXIÓN: PENDIENTES SUBCONTRATOS Y STOCK ---
                 let subcontratosTotals = typeof getTotalesSubcontratosParaRO === 'function' ? getTotalesSubcontratosParaRO() : {};
                 let roPendientesMap = {};
                 const cleanTextRO = (txt) => String(txt).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/\s+/g, ' ').trim();
@@ -1680,7 +1679,6 @@ function resetReassignments() {
                     th.textContent = getExcelColumnLetter(c);
                     trLetters.appendChild(th);
 
-                    // 🔥 INYECCIÓN DE LETRA SC DESPUÉS DE LA COLUMNA Q (Índice 16)
                     if (c === 16) {
                         const thLetExtra = document.createElement('th');
                         thLetExtra.className = 'p-2 border-r border-indigo-500 whitespace-nowrap text-center font-bold bg-indigo-900 text-indigo-100';
@@ -1714,7 +1712,6 @@ function resetReassignments() {
                         th.textContent = cellVal !== undefined ? cellVal : '';
                         tr.appendChild(th);
 
-                        // 🔥 INYECCIÓN DE TÍTULO SC DESPUÉS DE LA COLUMNA Q (Índice 16)
                         if (cIdx === 16) {
                             const thHeadExtra = document.createElement('th');
                             thHeadExtra.className = 'p-2 border-r border-indigo-400 whitespace-nowrap text-center font-bold bg-indigo-200 text-indigo-900';
@@ -1755,27 +1752,29 @@ function resetReassignments() {
                     else if (codeVal.length === 2) { rowFontClass = 'text-red-600 font-bold'; isRowRed = true; }
                     else if (codeVal.length === 4) { rowFontClass = 'text-blue-600 font-bold'; isRowBlue = true; }
 
-                    // 🔥 PRE-CALCULAR FÓRMULAS MATEMÁTICAS (S y T)
+                    // 🔥 1. PRE-CÁLCULOS MATEMÁTICOS Y DE NUBE
                     let scValue = roPendientesMap[codeVal] || 0;
                     let val_VCosto = 0, val_P = 0, val_R = 0;
+                    let notaNube = '';
 
                     row.forEach((v, i) => {
                         let cName = String(roFilteredMatrix2D[0][i] || '');
                         if (cName === 'V costo') val_VCosto = typeof v === 'number' ? v : 0;
                         if (cName.includes('R Costo Corregido')) val_P = typeof v === 'number' ? v : 0;
                         if (cName.includes('Proyección (CTC)')) val_R = typeof v === 'number' ? v : 0;
-                        // 🔥 CONEXIÓN MULTIJUGADOR: Leer valor de la nube si existe
-                    let notaNube = '';
+                    });
+
+                    // Leer la NUBE (Si hay un dato en vivo, sobreescribe al Excel)
                     if (window.proyeccionesNube && window.proyeccionesNube[codeVal]) {
                         if (window.proyeccionesNube[codeVal].amount !== undefined) val_R = window.proyeccionesNube[codeVal].amount;
                         if (window.proyeccionesNube[codeVal].note !== undefined) notaNube = window.proyeccionesNube[codeVal].note;
                     }
-                    });
 
-                    // Las nuevas fórmulas en tiempo real
+                    // Fórmulas S y T
                     let calc_CostoFinal_S = val_P + val_R + scValue;
                     let calc_Diferencia_T = val_VCosto - calc_CostoFinal_S;
 
+                    // 🔥 2. DIBUJAR LAS CELDAS
                     row.forEach((val, cIdx) => {
                         const td = document.createElement('td');
                         let stickyClass = '';
@@ -1793,7 +1792,7 @@ function resetReassignments() {
 
                         const colName = roFilteredMatrix2D[0][cIdx] || '';
 
-                        // 🔥 SOBRESCRIBIR VALORES MUERTOS DE EXCEL CON LAS FÓRMULAS VIVAS
+                        // Inyectar S y T
                         if (colName.includes('Costo Final (EAC)') && !isRowStock) {
                             val = calc_CostoFinal_S; 
                         } else if (colName.includes('Diferencia Final') && !isRowStock) {
@@ -1824,7 +1823,6 @@ function resetReassignments() {
                         }
                         tr.appendChild(td);
 
-                        // 🔥 INYECCIÓN DE DATO SC DESPUÉS DE LA COLUMNA Q (Índice 16)
                         if (cIdx === 16) {
                             const tdDataExtra = document.createElement('td');
                             tdDataExtra.className = 'p-2 border-r border-indigo-200 whitespace-nowrap text-right font-mono font-bold';
