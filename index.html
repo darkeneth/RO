@@ -1,0 +1,3329 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S10 - RO</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS Library for Excel processing -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <!-- ExcelJS & FileSaver para exportación con diseño y estilos -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        s10blue: '#003366',
+                        s10accent: '#008080',
+                        s10dark: '#1e293b',
+                        s10light: '#f8fafc'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 6px;
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        /* Estilos para el redimensionamiento de columnas */
+        th {
+            position: relative;
+        }
+        .resizer {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 6px;
+            cursor: col-resize;
+            user-select: none;
+            height: 100%;
+            z-index: 10;
+            transition: background-color 0.2s;
+        }
+        .resizer:hover, .resizer.active {
+            background-color: #8b5cf6; /* Púrpura al pasar el mouse */
+        }
+        .cursor-col-resize {
+            cursor: col-resize !important;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
+
+    <!-- ========================================== -->
+    <!-- PANTALLA DE LOGIN (ACCESO CORPORATIVO) -->
+    <!-- ========================================== -->
+    <div id="loginScreen" class="fixed inset-0 z-[100] bg-slate-900 flex items-center justify-center transition-opacity duration-500">
+        <div class="bg-white p-8 rounded-lg shadow-2xl w-96 max-w-[90%] flex flex-col items-center relative overflow-hidden">
+            <div id="loginStatusColor" class="absolute top-0 left-0 w-full h-2 bg-indigo-600 transition-colors"></div>
+            <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4 shadow-inner border border-slate-200 mt-2">
+                <svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+            </div>
+            <h2 class="text-2xl font-bold text-slate-800 mb-2 text-center">Control de Costos</h2>
+            <p id="loginMessage" class="text-sm text-slate-500 mb-6 text-center font-medium">Acceso exclusivo para personal autorizado.</p>
+            
+            <button id="btnGoogleLogin" onclick="handleGoogleLogin()" class="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold py-2.5 px-4 rounded-md transition shadow-sm flex items-center justify-center gap-3">
+                <svg class="w-5 h-5" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                Ingresar con Marcan
+            </button>
+            <button id="btnLogout" onclick="window.signOut(window.firebaseAuth)" class="mt-4 text-xs text-red-500 hover:text-red-700 font-bold hidden cursor-pointer">Usar otra cuenta</button>
+        </div>
+    </div>
+
+    <header class="bg-slate-900 text-white shadow-md border-b border-slate-800">
+        <div class="w-full px-6 lg:px-8 py-4 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-600 p-2.5 rounded-lg text-white font-bold shadow-lg">
+                    <i class="fa-solid fa-hard-hat text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-wide">RO - S10</h1>
+                    <p class="text-xs text-slate-400">Inmobiliaria y Constructora Marcan</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3 text-xs">
+                <span class="bg-slate-800 text-slate-300 px-3 py-1.5 rounded-full border border-slate-700 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Estado: <strong id="statusText">Esperando Archivos</strong>
+                </span>
+                <button onclick="resetApp()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg transition border border-slate-700 cursor-pointer">
+                    <i class="fa-solid fa-rotate-right mr-1"></i> Reiniciar
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow w-full px-6 lg:px-8 py-6 flex flex-col gap-6">
+
+        <section id="uploadSection" class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 transition">
+            <div class="flex flex-col md:flex-row gap-6 items-center">
+                <div id="dropzone" 
+                     class="w-full md:w-1/2 border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50/50 hover:bg-blue-50 rounded-xl p-8 text-center cursor-pointer transition flex flex-col items-center justify-center min-h-[220px]"
+                     onclick="document.getElementById('fileInput').click()"
+                     ondragover="handleDragOver(event)"
+                     ondragleave="handleDragLeave(event)"
+                     ondrop="handleDrop(event)">
+                    <input type="file" id="fileInput" multiple accept=".xlsx, .xls, .csv" class="hidden" onchange="handleFileSelect(event)">
+                    <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mb-3 shadow-inner">
+                        <i class="fa-solid fa-cloud-arrow-up text-2xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-slate-700 text-base">Arrastra tus archivos exportados de S10 aquí</h3>
+                    <p class="text-xs text-slate-500 mt-1 max-w-xs">Sube tus archivos (.xlsx / .xls) de tipo RESULTADO, STOCK y RO ACUMULADO.</p>
+                    <span class="mt-3 text-xs bg-blue-600 text-white font-medium px-3 py-1 rounded-md shadow-sm">Examinar archivos</span>
+                </div>
+
+                <div class="w-full md:w-1/2 flex flex-col justify-between h-full bg-slate-50 p-4 rounded-xl border border-slate-200 min-h-[220px]">
+                    <div>
+                        <div class="flex justify-between items-center mb-3">
+                            <h4 class="text-sm font-bold text-slate-700 flex items-center gap-2">
+                                <i class="fa-solid fa-list-check text-blue-600"></i> Archivos Seleccionados (<span id="fileCount">0</span>)
+                            </h4>
+                            <span class="text-[11px] text-slate-400">Detección Automática</span>
+                        </div>
+                        <ul id="fileList" class="space-y-2 max-h-[140px] overflow-y-auto custom-scrollbar text-xs">
+                            <li class="text-slate-400 italic text-center py-4">No se han subido archivos aún</li>
+                        </ul>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-slate-200 flex justify-between items-center">
+                        <div class="text-[11px] text-slate-500">
+                            <i class="fa-solid fa-circle-info text-blue-500 mr-1"></i>
+                            Fusión inteligente con reasignación interactiva de partidas.
+                        </div>
+                        <button id="processBtn" 
+                                onclick="processFiles()" 
+                                disabled
+                                class="bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white px-5 py-2 rounded-lg text-xs font-bold shadow-md transition flex items-center gap-2 cursor-pointer disabled:cursor-not-allowed">
+                            <i class="fa-solid fa-gears"></i> Procesar y Consolidar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="metricsSection" class="hidden grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+                <div class="p-3 bg-blue-50 text-blue-600 rounded-lg">
+                    <i class="fa-solid fa-layer-group text-xl"></i>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500 font-medium">Partidas de Control</p>
+                    <h3 id="metricPartidas" class="text-lg font-bold text-slate-800">0</h3>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+                <div class="p-3 bg-emerald-50 text-emerald-600 rounded-lg">
+                    <i class="fa-solid fa-database text-xl"></i>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500 font-medium">Total Registros/Filas</p>
+                    <h3 id="metricRegistros" class="text-lg font-bold text-slate-800">0</h3>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+                <div class="p-3 bg-amber-50 text-amber-600 rounded-lg">
+                    <i class="fa-solid fa-arrow-right-arrow-left text-xl"></i>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500 font-medium">Ítems Reasignados</p>
+                    <h3 id="metricReasignados" class="text-lg font-bold text-amber-600">0</h3>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+                <div class="p-3 bg-purple-50 text-purple-600 rounded-lg">
+                    <i class="fa-solid fa-columns text-xl"></i>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500 font-medium">Archivos Cargados</p>
+                    <h3 id="metricArchivos" class="text-lg font-bold text-slate-800">0</h3>
+                </div>
+            </div>
+        </section>
+
+        <section id="resultSection" class="hidden bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col min-h-[500px]">
+            
+            <div class="bg-slate-800 px-4 pt-3 pb-0 rounded-t-xl flex justify-between items-center border-b border-slate-700">
+                <div class="flex gap-2 overflow-x-auto custom-scrollbar pr-2">
+                    <button id="viewConsolidadoBtn" onclick="switchMainView('CONSOLIDADO')" 
+                            class="px-4 py-2.5 text-xs font-bold rounded-t-lg bg-white text-slate-900 border-t-2 border-blue-500 flex items-center gap-2 transition cursor-pointer whitespace-nowrap">
+                        <i class="fa-solid fa-layer-group text-blue-600"></i> CONSOLIDADO
+                    </button>
+                    <button id="viewRoBtn" onclick="switchMainView('RO')" 
+                            class="px-4 py-2.5 text-xs font-bold rounded-t-lg bg-slate-700 text-slate-300 hover:text-white hover:bg-slate-600 flex items-center gap-2 transition cursor-pointer whitespace-nowrap">
+                        <i class="fa-solid fa-table-columns text-purple-400"></i> RESUMEN RO
+                    </button>
+                    <button id="viewStockBtn" onclick="switchMainView('STOCK')" 
+                            class="px-4 py-2.5 text-xs font-bold rounded-t-lg bg-slate-700 text-slate-300 hover:text-white hover:bg-slate-600 flex items-center gap-2 transition cursor-pointer whitespace-nowrap">
+                        <i class="fa-solid fa-boxes-stacked text-emerald-400"></i> STOCK
+                    </button>
+                    <button id="viewSubcontratoBtn" onclick="switchMainView('SUBCONTRATO')" 
+                            class="px-4 py-2.5 text-xs font-bold rounded-t-lg bg-slate-700 text-slate-300 hover:text-white hover:bg-slate-600 flex items-center gap-2 transition cursor-pointer whitespace-nowrap">
+                        <i class="fa-solid fa-file-signature text-amber-500"></i> SUBCONTRATOS
+                    </button>
+                </div>
+
+                <div class="pb-2 flex gap-2 items-center">
+                    <!-- Botones de Auditoría IA -->
+                    <button id="btnAuditDetect" onclick="detectInconsistencies()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1.5 cursor-pointer">
+                        <i class="fa-solid fa-robot"></i> Buscar Inconsistencias
+                    </button>
+                    
+                    <div id="auditActions" class="hidden flex gap-1 bg-indigo-50 p-1 rounded-lg border border-indigo-200">
+                        <button onclick="applyAuditSuggestions()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 text-[11px] rounded-md font-bold transition shadow-sm flex items-center gap-1.5 cursor-pointer">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Aplicar <span id="auditCountBadge" class="bg-white text-purple-700 px-1.5 rounded-full">0</span>
+                        </button>
+                        <button onclick="clearAuditSuggestions()" class="bg-slate-500 hover:bg-slate-600 text-white px-2 py-1 text-[11px] rounded-md font-bold transition shadow-sm cursor-pointer" title="Descartar sugerencias">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+
+                    <div class="w-px h-6 bg-slate-600 mx-1"></div> <!-- Separador -->
+
+                    <button onclick="resetReassignments()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-semibold transition border border-slate-600 flex items-center gap-1.5 cursor-pointer">
+                        <i class="fa-solid fa-arrow-rotate-left text-amber-400"></i> Restablecer
+                    </button>
+                    <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1.5 cursor-pointer">
+                        <i class="fa-solid fa-file-export"></i> Exportar
+                    </button>
+                </div>
+            </div> <!-- <--- ¡ESTE ES EL DIV QUE FALTABA! CIERRA LA BARRA OSCURA -->
+
+            <!-- Consolidado Filtering Controls -->
+            <div id="consolidadoToolbar" class="p-4 border-b border-slate-200 bg-slate-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div class="flex items-center gap-2 w-full md:w-auto flex-wrap">
+                    <div class="relative w-full md:w-64">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                        <input type="text" id="tableSearch" onkeyup="onSearchInput()" placeholder="Buscar recurso, código o texto..." 
+                               class="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <select id="partidaSelect" onchange="switchPartidaTab(this.value)" class="py-1.5 px-3 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium max-w-xs truncate">
+                    </select>
+                    <!-- NUEVO: FILTRO DE SEMANAS (SUBCONTRATOS) -->
+                    <div id="semanasFilterContainer" class="hidden relative z-[60]">
+                        <button onclick="document.getElementById('semanasDropdown').classList.toggle('hidden')" class="py-1.5 px-3 text-xs bg-white border border-slate-300 rounded-lg hover:bg-slate-50 flex items-center gap-2 font-medium text-slate-700 shadow-sm cursor-pointer">
+                            <i class="fa-solid fa-calendar-week text-amber-600"></i> Filtro de Semanas <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                        </button>
+                        <div id="semanasDropdown" class="hidden absolute top-full left-0 mt-1 bg-white border border-slate-200 shadow-xl rounded-lg p-2 z-50 w-56 max-h-64 overflow-y-auto custom-scrollbar text-xs">
+                            <div class="border-b border-slate-200 pb-2 mb-2">
+                                <label class="flex items-center gap-2 cursor-pointer font-bold text-slate-700">
+                                    <input type="checkbox" id="chkAllSemanas" checked onchange="toggleAllSemanas(this.checked)" class="rounded text-amber-600 focus:ring-amber-500">
+                                    Seleccionar Todas
+                                </label>
+                            </div>
+                            <div id="semanasList" class="flex flex-col gap-1.5">
+                                <!-- Se llenará dinámicamente -->
+                            </div>
+                        </div>
+                    </div>
+                    <!-- NUEVO: BADGE VALORIZADO DE STOCK -->
+                    <div id="stockTotalContainer" class="hidden items-center gap-2 bg-emerald-50 text-emerald-900 px-3 py-1 rounded-lg border border-emerald-300 shadow-sm">
+                        <i class="fa-solid fa-sack-dollar text-emerald-600 text-xl"></i>
+                        <div class="flex flex-col leading-tight">
+                            <span class="text-[9px] font-bold uppercase tracking-wider text-emerald-700">Valorizado en Almacén</span>
+                            <span class="text-sm font-bold font-mono">S/ <span id="stockTotalValue">0.00</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 text-xs text-slate-600 flex-wrap">
+                    <span class="flex items-center gap-1.5 bg-red-100 text-red-800 text-[11px] px-2.5 py-1 rounded-md font-medium border border-red-200" title="Ítem movido fuera de esta partida">
+                        <span class="w-2 h-2 rounded-full bg-red-500"></span> Rojo: Salida
+                    </span>
+                    <span class="flex items-center gap-1.5 bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded-md font-medium border border-emerald-200" title="Ítem traído desde otra partida">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Verde: Entrada
+                    </span>
+                    <div id="movedInJumpContainer"></div>
+                    <span class="font-medium ml-2">Mostrar:</span>
+                    <select id="pageSizeSelect" onchange="changePageSize(this.value)" class="bg-white border border-slate-300 rounded px-2 py-1 text-xs">
+                        <option value="50">50 filas</option>
+                        <option value="100" selected>100 filas</option>
+                        <option value="200">200 filas</option>
+                        <option value="ALL">Todas (Sin límite)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="bg-slate-100 border-b border-slate-200 px-4 py-2 flex gap-2 overflow-x-auto custom-scrollbar" id="tabBar">
+            </div>
+
+            <div class="flex-grow overflow-auto custom-scrollbar pb-4 pt-0 px-0 max-h-[calc(100vh-250px)]">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead class="sticky top-0 bg-slate-800 text-slate-200 z-50 shadow-sm">
+                        <tr id="tableHeader">
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y divide-slate-200 text-slate-700">
+                        <tr>
+                            <td colspan="15" class="text-center py-8 text-slate-400">Procesa tus archivos para visualizar los resultados aquí.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="p-3 border-t border-slate-200 bg-slate-50 rounded-b-xl flex flex-col sm:flex-row justify-between items-center gap-2 text-xs text-slate-500">
+                <div>
+                    Mostrando del <strong id="showingStart">0</strong> al <strong id="showingEnd">0</strong> de <strong id="totalCount">0</strong> filas.
+                </div>
+                <div class="flex items-center gap-2" id="paginationControls">
+                    <button onclick="prevPage()" id="btnPrevPage" class="px-2.5 py-1 bg-white border border-slate-300 rounded hover:bg-slate-100 disabled:opacity-50 font-medium cursor-pointer">
+                        <i class="fa-solid fa-chevron-left mr-1"></i> Anterior
+                    </button>
+                    <span id="pageIndicator" class="font-semibold text-slate-700">Pág. 1 de 1</span>
+                    <button onclick="nextPage()" id="btnNextPage" class="px-2.5 py-1 bg-white border border-slate-300 rounded hover:bg-slate-100 disabled:opacity-50 font-medium cursor-pointer">
+                        Siguiente <i class="fa-solid fa-chevron-right ml-1"></i>
+                    </button>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <footer class="bg-slate-900 text-slate-500 text-xs py-4 text-center border-t border-slate-800">
+        <p>S10 Civil Engineering RO Processor &bull; Sistema de Control Operacional de Obras y Reasignación de Partidas</p>
+    </footer>
+
+    
+    <script>
+        // ==========================================
+        // VARIABLES Y LÓGICA DE REDIMENSIONAMIENTO
+        // ==========================================
+        let colWidths = JSON.parse(localStorage.getItem('s10_col_widths')) || {};
+
+        function initColumnResize(th, colKey, colIndex) {
+            return function(e) {
+                e.stopPropagation();
+                let startX = e.clientX;
+                let startWidth = th.offsetWidth;
+                let table = th.closest('table');
+                
+                document.body.classList.add('cursor-col-resize');
+                th.querySelector('.resizer').classList.add('active');
+                
+                function onMouseMove(e) {
+                    let newWidth = startWidth + (e.clientX - startX);
+                    if (newWidth < 60) newWidth = 60; // Ancho mínimo permitido
+                    
+                    // Actualizar el encabezado
+                    th.style.width = newWidth + 'px';
+                    th.style.minWidth = newWidth + 'px';
+                    th.style.maxWidth = newWidth + 'px';
+                    
+                    // Actualizar celdas y empujar las columnas inmovilizadas en vivo
+                    let rows = table.querySelectorAll('tr');
+                    rows.forEach(row => {
+                        let cell = row.children[colIndex];
+                        if (cell) {
+                            cell.style.width = newWidth + 'px';
+                            cell.style.minWidth = newWidth + 'px';
+                            cell.style.maxWidth = newWidth + 'px';
+                        }
+                        
+                        // Si estamos en Consolidado, empujar dinámicamente el "left"
+                        if (currentMainView === 'CONSOLIDADO' && colIndex < 2) {
+                            let c0 = row.children[0];
+                            let c1 = row.children[1];
+                            let c2 = row.children[2];
+                            
+                            let w0 = c0 ? parseFloat(c0.style.width) : 0;
+                            let w1 = c1 ? parseFloat(c1.style.width) : 0;
+                            
+                            if (colIndex === 0) {
+                                if (c1) c1.style.left = newWidth + 'px';
+                                if (c2) c2.style.left = (newWidth + w1) + 'px';
+                            } else if (colIndex === 1) {
+                                if (c2) c2.style.left = (w0 + newWidth) + 'px';
+                            }
+                        }
+                    });
+                }
+                
+                function onMouseUp(e) {
+                    document.body.classList.remove('cursor-col-resize');
+                    th.querySelector('.resizer').classList.remove('active');
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                    
+                    colWidths[colKey] = parseInt(th.style.width);
+                    localStorage.setItem('s10_col_widths', JSON.stringify(colWidths));
+                }
+                
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            };
+        }
+
+        let uploadedFiles = [];
+        let rawDataFiles = [];
+        let consolidatedRows = [];  
+        let stockRows = []; // Memoria independiente para el STOCK
+        let subcontratoRows = []; // Memoria independiente para SUBCONTRATOS
+        let roFilteredMatrix2D = []; 
+        let roHeaderRowCount = 1;   
+        let partidasGrouped = {};
+        let partidaListKeys = [];
+        let currentMainView = "CONSOLIDADO"; 
+        let currentPartidaKey = "ALL";
+
+        let currentPage = 1;
+        let pageSize = 100;
+        let roProjections = JSON.parse(localStorage.getItem('s10_ro_projections')) || {}; // Memoria para proyecciones
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            document.getElementById('dropzone').classList.add('border-blue-600', 'bg-blue-100/50');
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            document.getElementById('dropzone').classList.remove('border-blue-600', 'bg-blue-100/50');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            document.getElementById('dropzone').classList.remove('border-blue-600', 'bg-blue-100/50');
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                addFiles(e.dataTransfer.files);
+            }
+        }
+
+        function handleFileSelect(e) {
+            if (e.target.files && e.target.files.length > 0) {
+                addFiles(e.target.files);
+            }
+        }
+
+        function addFiles(files) {
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                if (!uploadedFiles.some(f => f.name === file.name)) {
+                    const category = categorizeFile(file.name);
+                    uploadedFiles.push({
+                        fileObject: file,
+                        name: file.name,
+                        size: (file.size / 1024).toFixed(1) + ' KB',
+                        category: category
+                    });
+                }
+            }
+            updateFileListUI();
+        }
+
+        function categorizeFile(filename) {
+            const nameUpper = filename.toUpperCase().trim();
+            if (nameUpper.startsWith("RO")) return "HORIZ"; 
+            if (nameUpper.startsWith("STOCK")) return "STOCK"; 
+            if (nameUpper.includes("SUBCONTRATO")) return "SUBCONTRATO"; // <-- NUEVA CATEGORÍA
+            return "VERT"; 
+        }
+
+        function removeFile(index) {
+            uploadedFiles.splice(index, 1);
+            updateFileListUI();
+        }
+
+        function updateFileListUI() {
+            const listEl = document.getElementById('fileList');
+            const countEl = document.getElementById('fileCount');
+            const processBtn = document.getElementById('processBtn');
+
+            countEl.textContent = uploadedFiles.length;
+            listEl.innerHTML = '';
+
+            if (uploadedFiles.length === 0) {
+                listEl.innerHTML = '<li class="text-slate-400 italic text-center py-4">No se han subido archivos aún</li>';
+                processBtn.disabled = true;
+                return;
+            }
+
+            processBtn.disabled = false;
+
+            uploadedFiles.forEach((f, idx) => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between p-2 bg-white rounded-lg border border-slate-200 text-xs shadow-2xs';
+
+                let badgeColor = f.category === 'VERT' 
+                    ? 'bg-blue-100 text-blue-800 border-blue-200' 
+                    : 'bg-purple-100 text-purple-800 border-purple-200';
+                
+                let badgeText = f.category === 'VERT' ? 'Consolidado (Vertical)' : 'Resumen RO (Horizontal)';
+
+                li.innerHTML = `
+                    <div class="flex items-center gap-2 overflow-hidden mr-2">
+                        <i class="fa-solid fa-file-excel text-emerald-600 text-sm flex-shrink-0"></i>
+                        <span class="truncate font-medium text-slate-700" title="${f.name}">${f.name}</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full border ${badgeColor} flex-shrink-0 font-semibold">${badgeText}</span>
+                    </div>
+                    <button onclick="removeFile(${idx})" class="text-slate-400 hover:text-red-500 transition px-1 cursor-pointer">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                `;
+                listEl.appendChild(li);
+            });
+        }
+
+        function resetApp() {
+            uploadedFiles = [];
+            rawDataFiles = [];
+            consolidatedRows = [];
+            roFilteredMatrix2D = [];
+            roHeaderRowCount = 1;
+            partidasGrouped = {};
+            partidaListKeys = [];
+            currentPartidaKey = "ALL";
+            currentPage = 1;
+            
+            updateFileListUI();
+            document.getElementById('statusText').textContent = "Esperando Archivos";
+            document.getElementById('statusText').className = "";
+            
+            // 2. MOSTRAR LA ZONA DE CARGA NUEVAMENTE
+            document.getElementById('uploadSection').classList.remove('hidden');
+
+            document.getElementById('metricsSection').classList.add('hidden');
+            document.getElementById('resultSection').classList.add('hidden');
+            document.getElementById('fileInput').value = "";
+        }
+
+        async function processFiles() {
+            if (uploadedFiles.length === 0) return;
+
+            document.getElementById('statusText').textContent = "Procesando...";
+            document.getElementById('statusText').className = "text-amber-400 animate-pulse font-bold";
+
+            rawDataFiles = [];
+
+            try {
+                for (let item of uploadedFiles) {
+                    const data = await readFileAsArrayBuffer(item.fileObject);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                    const rawAOA = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+
+                    rawDataFiles.push({
+                        name: item.name,
+                        category: item.category,
+                        data: jsonData,
+                        rawAOA: rawAOA
+                    });
+                }
+
+                consolidateData();
+            } catch (err) {
+                console.error(err);
+                document.getElementById('statusText').textContent = "Error en lectura de archivos";
+                document.getElementById('statusText').className = "text-red-500 font-bold";
+            }
+        }
+
+        function readFileAsArrayBuffer(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (err) => reject(err);
+                reader.readAsArrayBuffer(file);
+            });
+        }
+        
+        // Lector inteligente unificado para S10 (Soporta Stock y Subcontratos)
+        function extractTableFromS10(rawAOA) {
+            let headerIdx = -1;
+            let maxCols = 0;
+            rawAOA.forEach(row => { if (row && row.length > maxCols) maxCols = row.length; });
+
+            // 1. Buscar palabras clave primero (Soporta RO, Subcontratos y Stock)
+            for (let i = 0; i < Math.min(30, rawAOA.length); i++) {
+                let rowStr = (rawAOA[i] || []).join(' ').toLowerCase();
+                
+                // 🔥 Palabras mágicas del Stock: "precio promedio", "almacén"
+                if (rowStr.includes('precio promedio') || rowStr.includes('almacén') || rowStr.includes('descripci') || rowStr.includes('estado') || rowStr.includes('subcontratista')) {
+                    headerIdx = i;
+                    break;
+                }
+            }
+
+            // 2. FALLBACK: Si no encontró la palabra clave, usa la fila con más texto (vital para el Stock)
+            if (headerIdx === -1) {
+                let maxTextCols = 0;
+                for (let i = 0; i < Math.min(20, rawAOA.length); i++) {
+                    let colsWithText = (rawAOA[i] || []).filter(c => String(c).trim().length > 0).length;
+                    if (colsWithText > maxTextCols && colsWithText > 2) {
+                        maxTextCols = colsWithText;
+                        headerIdx = i;
+                    }
+                }
+            }
+            if (headerIdx === -1) headerIdx = 0;
+
+            let row1 = rawAOA[headerIdx] || [];
+            let row2 = rawAOA[headerIdx + 1] || [];
+
+            let isTwoTier = false;
+            let row2Str = row2.join(' ').toLowerCase();
+            if (row2Str.includes('calculado') || row2Str.includes('otorgado') || row2Str.includes('amortizado')) isTwoTier = true;
+
+            let headers = [];
+            let lastMainHeader = "";
+
+            for (let c = 0; c < maxCols; c++) {
+                let h1 = String(row1[c] || '').trim().replace(/\r?\n|\r/g, ' ');
+                if (h1) lastMainHeader = h1;
+
+                let h2 = '';
+                if (isTwoTier) h2 = String(row2[c] || '').trim().replace(/\r?\n|\r/g, ' ');
+
+                let colName = '';
+                if (isTwoTier) {
+                    if (h2) colName = lastMainHeader ? `${lastMainHeader} | ${h2}` : h2;
+                    else colName = lastMainHeader || `Col_${c}`;
+                } else {
+                    colName = h1 || `Col_${c}`;
+                }
+
+                let finalName = colName;
+                let counter = 1;
+                while(headers.includes(finalName)) {
+                    finalName = `${colName}_${counter}`;
+                    counter++;
+                }
+                headers.push(finalName);
+            }
+
+            let parsedData = [];
+            let dataStartIdx = isTwoTier ? headerIdx + 2 : headerIdx + 1;
+
+            for (let i = dataStartIdx; i < rawAOA.length; i++) {
+                let row = rawAOA[i] || [];
+                if (row.filter(c => String(c).trim() !== '').length === 0) continue;
+
+                let rowData = {};
+                let hasActualData = false;
+                headers.forEach((h, cIdx) => {
+                    let val = row[cIdx] !== undefined ? row[cIdx] : '';
+                    rowData[h] = val;
+                    if (String(val).trim() !== '') hasActualData = true;
+                });
+                if (hasActualData) parsedData.push(rowData);
+            }
+
+            let keysToRemove = headers.filter(h => h.startsWith('Col_') && parsedData.every(r => String(r[h]).trim() === ''));
+            if (keysToRemove.length > 0) {
+                parsedData.forEach(r => keysToRemove.forEach(k => delete r[k]));
+            }
+
+            return parsedData;
+        }
+
+        function consolidateData() {
+            const verticalFiles = rawDataFiles.filter(f => f.category === 'VERT'); 
+            const horizontalFiles = rawDataFiles.filter(f => f.category === 'HORIZ'); 
+            const stockFiles = rawDataFiles.filter(f => f.category === 'STOCK'); 
+            const subcontratoFiles = rawDataFiles.filter(f => f.category === 'SUBCONTRATO'); // <-- NUEVO
+
+            // 1. Procesar CONSOLIDADO (Solo RESULTADO)
+            consolidatedRows = [];
+            let globalIndex = 0;
+
+            verticalFiles.forEach(fileObj => {
+                fileObj.data.forEach(row => {
+                    let partida = findValueByPossibleKeys(row, ['Partida de Control', 'PARTIDA DE CONTROL', 'Partida', 'PARTIDA', 'PartidaControl']);
+                    let recursoN1 = findValueByPossibleKeys(row, ['Recurso N1', 'RECURSO N1', 'RecursoN1', 'Tipo Recurso']);
+                    let recurso = findValueByPossibleKeys(row, ['Recurso', 'RECURSO', 'Descripcion', 'DESCRIPCION']);
+
+                    let partidaClean = partida ? String(partida).trim() : "SIN PARTIDA";
+
+                    let rowCopy = {
+                        "_id": "row_" + globalIndex + "_" + Math.random().toString(36).substr(2, 6),
+                        "_originalIndex": globalIndex,
+                        "_PartidaControl": partidaClean,
+                        "_PartidaOriginal": partidaClean,
+                        "_PartidaActual": partidaClean,
+                        "_reassignedTimestamp": 0,
+                        "_RecursoN1": recursoN1 || "GENERAL",
+                        "_Recurso": recurso || "-",
+                        "_Origen": fileObj.name,
+                        ...row
+                    };
+
+                    consolidatedRows.push(rowCopy);
+                    globalIndex++;
+                });
+            });
+
+            // Juntar todos los archivos STOCK con el lector inteligente
+            stockRows = [];
+            stockFiles.forEach(fileObj => { 
+                let extracted = extractTableFromS10(fileObj.rawAOA);
+                extracted.forEach(row => stockRows.push({ ...row, _Origen: fileObj.name })); 
+            });
+
+            // Juntar todos los archivos SUBCONTRATO con el lector inteligente
+            subcontratoRows = [];
+            subcontratoFiles.forEach(fileObj => { 
+                let extracted = extractTableFromS10(fileObj.rawAOA);
+                extracted.forEach(row => subcontratoRows.push({ ...row, _Origen: fileObj.name })); 
+            });
+            extractSemanasFromSubcontratos(); // <-- NUEVA LÍNEA
+
+            // 2. Process RESUMEN RO with N-file horizontal joining
+            roFilteredMatrix2D = [];
+            roHeaderRowCount = 1;
+
+            if (horizontalFiles.length > 0) {
+                const mergedRes = mergeHorizontalFiles(horizontalFiles);
+                roFilteredMatrix2D = applyRoColumnFilterAndSum(mergedRes.matrix, mergedRes.headerRowsCount);
+            }
+
+            groupDataByPartida();
+            renderResultsUI(verticalFiles.length, horizontalFiles.length);
+        }
+
+        function mergeHorizontalFiles(horizontalFiles) {
+            if (horizontalFiles.length === 0) return { matrix: [], headerRowsCount: 1 };
+
+            const parsedFiles = horizontalFiles.map(f => extractRoStructure(f.rawAOA));
+
+            let hHeight = 0;
+            parsedFiles.forEach(pf => {
+                if (pf.headerRows.length > hHeight) hHeight = pf.headerRows.length;
+            });
+            if (hHeight === 0) hHeight = 3;
+
+            const fileColCounts = parsedFiles.map(pf => {
+                let maxC = 0;
+                pf.headerRows.forEach(r => { if (r.length > maxC) maxC = r.length; });
+                pf.dataRows.forEach(r => { if (r.length > maxC) maxC = r.length; });
+                return maxC;
+            });
+
+            const mergedHeaders = [];
+            for (let h = 0; h < hHeight; h++) {
+                let mergedHRow = [];
+                parsedFiles.forEach((pf, fIdx) => {
+                    const hRow = [...(pf.headerRows[h] || [])];
+                    while (hRow.length < fileColCounts[fIdx]) hRow.push('');
+                    mergedHRow.push(...hRow);
+                });
+                mergedHeaders.push(mergedHRow);
+            }
+
+            const baseData = parsedFiles[0].dataRows;
+            const mergedDataRows = [];
+
+            baseData.forEach((r0, idx) => {
+                let code0 = String(r0[0] || '').trim() || String(r0[1] || '').trim();
+                let mergedRow = [...r0];
+                while (mergedRow.length < fileColCounts[0]) mergedRow.push('');
+
+                for (let f = 1; f < parsedFiles.length; f++) {
+                    const pf = parsedFiles[f];
+                    let matchedRow = null;
+
+                    if (pf.dataRows[idx]) {
+                        let codeF = String(pf.dataRows[idx][0] || '').trim() || String(pf.dataRows[idx][1] || '').trim();
+                        if (codeF === code0 || (!code0 && !codeF)) {
+                            matchedRow = pf.dataRows[idx];
+                        }
+                    }
+
+                    if (!matchedRow && code0) {
+                        const startWin = Math.max(0, idx - 15);
+                        const endWin = Math.min(pf.dataRows.length - 1, idx + 15);
+                        for (let k = startWin; k <= endWin; k++) {
+                            let codeK = String(pf.dataRows[k][0] || '').trim() || String(pf.dataRows[k][1] || '').trim();
+                            if (codeK === code0) {
+                                matchedRow = pf.dataRows[k];
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!matchedRow && pf.dataRows[idx]) {
+                        matchedRow = pf.dataRows[idx];
+                    }
+
+                    let rFPadded = matchedRow ? [...matchedRow] : [];
+                    while (rFPadded.length < fileColCounts[f]) rFPadded.push('');
+                    mergedRow.push(...rFPadded);
+                }
+
+                mergedDataRows.push(mergedRow);
+            });
+
+            return {
+                matrix: [...mergedHeaders, ...mergedDataRows],
+                headerRowsCount: hHeight
+            };
+        }
+
+        function normStr(str) {
+            if (str === undefined || str === null) return '';
+            return String(str)
+                .toLowerCase()
+                .replace(/\u00a0/g, ' ')
+                .replace(/[\s_\.\-]+/g, ' ')
+                .trim();
+        }
+
+        function applyRoColumnFilterAndSum(fullMatrix, headerRowsCount) {
+            if (!fullMatrix || fullMatrix.length === 0) return [];
+
+            let maxCols = 0;
+            for (let r = 0; r < Math.min(headerRowsCount + 2, fullMatrix.length); r++) {
+                if (fullMatrix[r] && fullMatrix[r].length > maxCols) {
+                    maxCols = fullMatrix[r].length;
+                }
+            }
+
+            const colHeaderInfos = [];
+            for (let c = 0; c < maxCols; c++) {
+                const rowNorms = [];
+                let combinedText = '';
+                for (let r = 0; r < headerRowsCount; r++) {
+                    const rawVal = fullMatrix[r] ? fullMatrix[r][c] : '';
+                    const strVal = String(rawVal || '').trim();
+                    if (strVal) {
+                        rowNorms.push(normStr(strVal));
+                        combinedText += ' ' + strVal;
+                    }
+                }
+                colHeaderInfos.push({
+                    colIndex: c,
+                    rowNorms: rowNorms,
+                    fullNorm: normStr(combinedText)
+                });
+            }
+
+            const moColIndices = [];
+            const matColIndices = [];
+            const scColIndices = [];
+
+            for (let c = 0; c < maxCols; c++) {
+                const info = colHeaderInfos[c];
+                const fn = info.fullNorm;
+                const norms = info.rowNorms;
+
+                // STRICTLY exclude V_P, V_V, Venta, Programado, Valorizado, and Total columns
+                const isVpOrVvOrTotal = fn.includes('v p') || fn.includes('v v') || fn.includes('vp') || fn.includes('vv') || 
+                                        fn.includes('programado') || fn.includes('valorizado') || fn.includes('venta') ||
+                                        fn.includes('total') || fn.includes('sum_total') || fn.includes('r costo total');
+
+                if (!isVpOrVvOrTotal) {
+                    // 1. Detección RESILIENTE de R Costo MO
+                    const isMo = fn.includes('r costo mo') || fn.includes('rcosto mo') || norms.some(rn => rn.includes('r costo mo'));
+                    if (isMo && !moColIndices.includes(c)) {
+                        moColIndices.push(c);
+                    }
+
+                    // 2. Detección RESILIENTE de R Costo Materiales
+                    const isMat = fn.includes('r costo mat') || fn.includes('rcosto mat') || norms.some(rn => rn.includes('r costo mat'));
+                    if (isMat && !matColIndices.includes(c)) {
+                        matColIndices.push(c);
+                    }
+
+                    // 3. Detección RESILIENTE de R Costo SC
+                    const isSc = fn.includes('r costo sc') || fn.includes('r costo s/c') || fn.includes('subcontratos') || norms.some(rn => rn.includes('r costo sc') || rn.includes('r costo s/c'));
+                    if (isSc && !scColIndices.includes(c)) {
+                        scColIndices.push(c);
+                    }
+                }
+            }
+
+            // Configuración de Estructura de Columnas RO (Orden: A..K, O, N, L, M, P)
+            const targetDefs = [
+                { name: 'Código', key: 'CODIGO', group: 'neutral', defaultPos: 0 },
+                { name: 'Descripción', key: 'DESCRIPCION', group: 'neutral', defaultPos: 1 },
+                { name: 'V costo', key: 'V_COSTO', group: 'neutral', defaultPos: 2, isNumeric: true },
+                { name: 'V_P Costo', key: 'VP_COSTO', group: 'blue', defaultPos: 3, isNumeric: true },
+                { name: 'V_P Costo MO', key: 'VP_COSTO_MO', group: 'blue', defaultPos: 4, isNumeric: true },
+                { name: 'V_P Costo MAT', key: 'VP_COSTO_MAT', group: 'blue', defaultPos: 5, isNumeric: true },
+                { name: 'V_P Costo SC', key: 'VP_COSTO_SC', group: 'blue', defaultPos: 6, isNumeric: true },
+                { name: 'V_V Costo', key: 'VV_COSTO', group: 'red', defaultPos: 7, isNumeric: true },
+                { name: 'V_V Costo MO', key: 'VV_COSTO_MO', group: 'red', defaultPos: 8, isNumeric: true },
+                { name: 'V_V Costo MAT', key: 'VV_COSTO_MAT', group: 'red', defaultPos: 9, isNumeric: true },
+                { name: 'V_V Costo SC', key: 'VV_COSTO_SC', group: 'red', defaultPos: 10, isNumeric: true },
+                { name: 'R Costo Total', key: 'SUM_TOTAL', group: 'green', calculated: true, isNumeric: true },         // Columna L (Antes O)
+                { name: 'R Costo MO (FINAL)', key: 'SUM_MO_FINAL', group: 'green', calculated: true, isNumeric: true },   // Columna M (Antes N)
+                { name: 'R Costo Materiales', key: 'SUM_MAT_FINAL', group: 'green', calculated: true, isNumeric: true }, // Columna N (Antes L)
+                { name: 'R Costo SC', key: 'SUM_SC_FINAL', group: 'green', calculated: true, isNumeric: true },          // Columna O 
+                { name: 'R Costo Corregido', key: 'SUM_CORREGIDO', group: 'gold', calculated: true, isNumeric: true },
+                { name: 'Diferencia (C - P)', key: 'DIFF_C_P', group: 'light-yellow', calculated: true, isNumeric: true },
+                // NUEVAS COLUMNAS DE PROYECCIÓN
+                { name: 'Proyección (CTC)', key: 'PROY_CTC', group: 'indigo', calculated: true, isNumeric: true },
+                { name: 'Costo Final (EAC)', key: 'PROY_EAC', group: 'indigo', calculated: true, isNumeric: true },
+                { name: 'Diferencia Final (C - S)', key: 'DIFF_C_S', group: 'light-yellow', calculated: true, isNumeric: true }, // <-- NUEVA COLUMNA
+                { name: 'Sustento / Nota', key: 'PROY_NOTA', group: 'indigo', calculated: true, isNumeric: false }
+            ];
+
+            function findSingleColIndex(key) {
+                for (let c = 0; c < maxCols; c++) {
+                    const fn = colHeaderInfos[c].fullNorm;
+
+                    if (key === 'CODIGO' && (fn.includes('codigo') || fn.includes('código') || fn === 'cod')) return c;
+                    if (key === 'DESCRIPCION' && (fn.includes('descripcion') || fn.includes('descripción') || fn === 'desc')) return c;
+                    
+                    // BUSQUEDA FLEXIBLE PARA V COSTO (Excluyendo V_P y V_V)
+                    if (key === 'V_COSTO') {
+                        const isVpOrVv = fn.includes('v p') || fn.includes('vp') || fn.includes('v v') || fn.includes('vv') || fn.includes('programado') || fn.includes('valorizado');
+                        if (!isVpOrVv && (fn.includes('v costo') || fn.includes('vcosto') || fn.includes('venta') || fn.includes('v_costo'))) {
+                            return c;
+                        }
+                    }
+
+                    // Grupo V_P (Programado)
+                    if (fn.includes('v p') || fn.includes('vp')) {
+                        if (key === 'VP_COSTO' && fn.includes('costo') && !fn.includes('mo') && !fn.includes('mat') && !fn.includes('sc') && !fn.includes('s/c')) return c;
+                        if (key === 'VP_COSTO_MO' && fn.includes('mo')) return c;
+                        if (key === 'VP_COSTO_MAT' && fn.includes('mat')) return c;
+                        if (key === 'VP_COSTO_SC' && (fn.includes('sc') || fn.includes('s/c'))) return c;
+                    }
+
+                    // Grupo V_V (Valorizado)
+                    if (fn.includes('v v') || fn.includes('vv')) {
+                        if (key === 'VV_COSTO' && fn.includes('costo') && !fn.includes('mo') && !fn.includes('mat') && !fn.includes('sc') && !fn.includes('s/c')) return c;
+                        if (key === 'VV_COSTO_MO' && fn.includes('mo')) return c;
+                        if (key === 'VV_COSTO_MAT' && fn.includes('mat')) return c;
+                        if (key === 'VV_COSTO_SC' && (fn.includes('sc') || fn.includes('s/c'))) return c;
+                    }
+                }
+                return -1;
+            }
+
+            const mappedTargets = targetDefs.map(t => {
+                let idx = t.calculated ? -1 : findSingleColIndex(t.key);
+                
+                // Respaldo posicional seguro SOLO para columnas base (Código, Descripción, V costo)
+                if (!t.calculated && idx === -1 && (t.key === 'CODIGO' || t.key === 'DESCRIPCION' || t.key === 'V_COSTO') && t.defaultPos !== undefined && t.defaultPos < maxCols) {
+                    idx = t.defaultPos;
+                }
+                
+                return {
+                    ...t,
+                    colIndex: idx
+                };
+            });
+
+            // --- CÁLCULO DE R COSTO CORREGIDO (ALIMENTADO DEL CONSOLIDADO) ---
+            const partidaCostsMap = {};
+            if (consolidatedRows && consolidatedRows.length > 0) {
+                consolidatedRows.forEach(r => {
+                    let pAct = String(r._PartidaActual || '').trim();
+                    let origCost = parseNumberValue(
+                        getConsolidadoRowValue(r, 'R Costo') || 
+                        r.rCostoOriginal || 
+                        r['R Costo'] || 
+                        r['R Costo (Original)']
+                    );
+
+                    if (pAct) {
+                        partidaCostsMap[pAct] = (partidaCostsMap[pAct] || 0) + origCost;
+                    }
+                });
+            }
+
+            // Determinar índices de Código y Descripción
+            let codeColIdx = mappedTargets.find(t => t.key === 'CODIGO')?.colIndex;
+            if (codeColIdx === undefined || codeColIdx === -1) codeColIdx = 0;
+
+            let descColIdx = mappedTargets.find(t => t.key === 'DESCRIPCION')?.colIndex;
+            if (descColIdx === undefined || descColIdx === -1) descColIdx = 1;
+
+            const resultMatrix = [];
+            resultMatrix.push(mappedTargets.map(t => t.name));
+
+            // --- NUEVO: PRE-CALCULAR CTC POR JERARQUÍA WBS ---
+                const ctcMap = {};
+                for (let r = headerRowsCount; r < fullMatrix.length; r++) {
+                    const origRow = fullMatrix[r];
+                    if (!origRow) continue;
+                    let rawCode = String(origRow[codeColIdx] || '').trim();
+                    
+                    // Solo sumarizamos lo que viene de las partidas de menor jerarquía (> 4 dígitos)
+                    if (rawCode.length > 4) {
+                        let storedProj = roProjections[rawCode] || { amount: 0 };
+                        let val = parseFloat(storedProj.amount) || 0;
+                        
+                        ctcMap[rawCode] = (ctcMap[rawCode] || 0) + val; // Suma a sí mismo
+                        
+                        let parent4 = rawCode.substring(0, 4); // Busca a su padre de 4 dígitos
+                        ctcMap[parent4] = (ctcMap[parent4] || 0) + val;
+                        
+                        let parent2 = rawCode.substring(0, 2); // Busca a su abuelo de 2 dígitos
+                        ctcMap[parent2] = (ctcMap[parent2] || 0) + val;
+                    }
+                }
+                // ----------------------------------------------
+
+            // Procesar cada fila de datos del Resumen RO
+            for (let r = headerRowsCount; r < fullMatrix.length; r++) {
+                const origRow = fullMatrix[r];
+                if (!origRow) continue;
+
+                let rawCode = String(origRow[codeColIdx] || '').trim();
+                let rawDesc = normStr(origRow[descColIdx] || '');
+
+                // Sumar del Consolidado todas las partidas que coincidan con el código o jerarquía
+                let sumCorregido = 0;
+                Object.keys(partidaCostsMap).forEach(partName => {
+                    let partClean = normStr(partName);
+                    let partCode = partName.split(' ')[0].trim();
+
+                    let isMatch = false;
+                    if (rawCode && rawCode.length > 0) {
+                        if (partCode.startsWith(rawCode) || partName.startsWith(rawCode)) {
+                            isMatch = true;
+                        } else if (/^\d+$/.test(rawCode) && partCode.endsWith(rawCode)) {
+                            isMatch = true;
+                        }
+                    }
+                    
+                    if (!isMatch && rawDesc && rawDesc.length > 3) {
+                        if (partClean.includes(rawDesc)) {
+                            isMatch = true;
+                        }
+                    }
+
+                    if (isMatch) {
+                        sumCorregido += partidaCostsMap[partName];
+                    }
+                });
+
+                let sumMoFinal = 0;
+                moColIndices.forEach(idx => { if (idx !== -1 && idx < origRow.length) sumMoFinal += parseNumberValue(origRow[idx]); });
+
+                let sumMatFinal = 0;
+                matColIndices.forEach(idx => { if (idx !== -1 && idx < origRow.length) sumMatFinal += parseNumberValue(origRow[idx]); });
+
+                let sumScFinal = 0;
+                scColIndices.forEach(idx => { if (idx !== -1 && idx < origRow.length) sumScFinal += parseNumberValue(origRow[idx]); });
+
+                const sumTotal = sumMoFinal + sumMatFinal + sumScFinal;
+
+                // NUEVO CÁLCULO: Columna C (V Costo) - Columna P (SUM_CORREGIDO)
+                let vCostoIdx = mappedTargets.find(t => t.key === 'V_COSTO')?.colIndex;
+                let vCostoVal = (vCostoIdx !== undefined && vCostoIdx !== -1) ? parseNumberValue(origRow[vCostoIdx]) : 0;
+                let diffCP = vCostoVal - sumCorregido;
+
+                // --- NUEVO: LECTURA Y CÁLCULO DE PROYECCIONES SUMARIZADAS ---
+                let proyCTC = ctcMap[rawCode] || 0; // Lee el valor ya sumado (sea nivel 2, 4 o mayor)
+                let proyEAC = sumCorregido + proyCTC;
+                
+                // NUEVO CÁLCULO: V Costo (C) - Costo Final EAC (S)
+                let diffCS = vCostoVal - proyEAC; 
+                
+                let storedProj = roProjections[rawCode] || { note: '' };
+                let proyNota = rawCode.length > 4 ? (storedProj.note || '') : ''; // Solo muestra nota en partidas hijas
+                // ------------------------------------------------
+
+                const newRow = [];
+                mappedTargets.forEach(t => {
+                    if (t.key === 'SUM_CORREGIDO') {
+                        newRow.push(sumCorregido !== 0 ? sumCorregido : 0);
+                    } else if (t.key === 'DIFF_C_P') { 
+                        newRow.push(diffCP !== 0 ? diffCP : 0);
+                    } else if (t.key === 'PROY_CTC') { // <-- NUEVA COLUMNA
+                        newRow.push(proyCTC !== 0 ? proyCTC : 0);
+                    } else if (t.key === 'PROY_EAC') { 
+                        newRow.push(proyEAC !== 0 ? proyEAC : 0);
+                    } else if (t.key === 'DIFF_C_S') { // <-- NUEVA COLUMNA DE DIFERENCIA FINAL
+                        newRow.push(diffCS !== 0 ? diffCS : 0);
+                    } else if (t.key === 'PROY_NOTA') { 
+                        newRow.push(proyNota);
+                    } else if (t.key === 'SUM_TOTAL') {
+                        newRow.push(sumTotal !== 0 ? sumTotal : 0);
+                    } else if (t.key === 'SUM_MO_FINAL') {
+                        newRow.push(sumMoFinal !== 0 ? sumMoFinal : 0);
+                    } else if (t.key === 'SUM_MAT_FINAL') {
+                        newRow.push(sumMatFinal !== 0 ? sumMatFinal : 0);
+                    } else if (t.key === 'SUM_SC_FINAL') {
+                        newRow.push(sumScFinal !== 0 ? sumScFinal : 0);
+                    } else if (t.colIndex !== -1 && origRow[t.colIndex] !== undefined) {
+                        if (t.isNumeric) {
+                            newRow.push(parseNumberValue(origRow[t.colIndex]));
+                        } else {
+                            newRow.push(origRow[t.colIndex]);
+                        }
+                    } else {
+                        newRow.push(t.isNumeric ? 0 : '');
+                    }
+                });
+
+                resultMatrix.push(newRow);
+            }
+
+            roHeaderRowCount = 1;
+            return resultMatrix;
+        }
+
+        function parseNumberValue(val) {
+            if (val === undefined || val === null || val === '') return 0;
+            if (typeof val === 'number') return isNaN(val) ? 0 : val;
+            let str = String(val).trim();
+            if (!str) return 0;
+
+            let isNegative = false;
+            if (str.includes('-') || (str.includes('(') && str.includes(')'))) {
+                isNegative = true;
+            }
+
+            let cleanStr = str.replace(/[^0-9.,]/g, '');
+            if (!cleanStr) return 0;
+
+            if (cleanStr.includes(',') && cleanStr.includes('.')) {
+                if (cleanStr.indexOf(',') < cleanStr.indexOf('.')) {
+                    cleanStr = cleanStr.replace(/,/g, '');
+                } else {
+                    cleanStr = cleanStr.replace(/\./g, '').replace(/,/g, '.');
+                }
+            } else if (cleanStr.includes(',')) {
+                if (/,\d{1,2}$/.test(cleanStr)) {
+                    cleanStr = cleanStr.replace(/,/g, '.');
+                } else {
+                    cleanStr = cleanStr.replace(/,/g, '');
+                }
+            }
+
+            let num = parseFloat(cleanStr);
+            if (isNaN(num)) return 0;
+            return isNegative ? -Math.abs(num) : Math.abs(num);
+        }
+
+        function extractRoStructure(aoaData) {
+            if (!aoaData || aoaData.length === 0) return { headerRows: [], dataRows: [] };
+
+            let headerEndIndex = 0;
+            for (let i = 0; i < Math.min(10, aoaData.length); i++) {
+                let row = aoaData[i] || [];
+                let cell0 = String(row[0] || '').trim();
+                let cell1 = String(row[1] || '').trim();
+
+                if ((/^[\d\.\-\s]{2,15}$/.test(cell0) || /^[\d\.\-\s]{2,15}$/.test(cell1)) && i > 0 && /^\d/.test(cell0 || cell1)) {
+                    headerEndIndex = i;
+                    break;
+                }
+            }
+            if (headerEndIndex === 0) headerEndIndex = 3;
+
+            return {
+                headerRows: aoaData.slice(0, headerEndIndex),
+                dataRows: aoaData.slice(headerEndIndex)
+            };
+        }
+
+        function findValueByPossibleKeys(obj, keys) {
+            for (let k of keys) {
+                if (obj[k] !== undefined && obj[k] !== null && obj[k] !== "") return obj[k];
+            }
+            const objKeys = Object.keys(obj);
+            for (let k of keys) {
+                let matchedKey = objKeys.find(ok => ok.toLowerCase().trim() === k.toLowerCase().trim());
+                if (matchedKey && obj[matchedKey] !== undefined && obj[matchedKey] !== null) return obj[matchedKey];
+            }
+            return "";
+        }
+
+        function groupDataByPartida() {
+            partidasGrouped = {};
+            partidasGrouped["ALL"] = consolidatedRows;
+
+            const partidaSet = new Set();
+            consolidatedRows.forEach(row => {
+                let pOrig = row["_PartidaOriginal"] || "OTRAS PARTIDAS";
+                let pAct = row["_PartidaActual"] || "OTRAS PARTIDAS";
+                partidaSet.add(pOrig);
+                partidaSet.add(pAct);
+            });
+
+            partidaListKeys = Array.from(partidaSet).sort();
+
+            partidaListKeys.forEach(pKey => {
+                let originalItems = [];
+                let movedInItems = [];
+
+                consolidatedRows.forEach(row => {
+                    let pOrig = row["_PartidaOriginal"] || "OTRAS PARTIDAS";
+                    let pAct = row["_PartidaActual"] || "OTRAS PARTIDAS";
+
+                    if (pOrig === pKey) {
+                        originalItems.push(row);
+                    } else if (pAct === pKey) {
+                        movedInItems.push(row);
+                    }
+                });
+
+                movedInItems.sort((a, b) => a._reassignedTimestamp - b._reassignedTimestamp);
+                partidasGrouped[pKey] = [...originalItems, ...movedInItems];
+            });
+        }
+
+        function reassignItemPartida(rowId, newPartidaKey) {
+    const row = consolidatedRows.find(r => r._id === rowId);
+    if (!row) return;
+
+    if (row._PartidaActual === newPartidaKey) return;
+
+    row._PartidaActual = newPartidaKey;
+    row._reassignedTimestamp = Date.now();
+
+    groupDataByPartida();
+    buildPartidaTabsAndSelect();
+    updateReassignmentCountUI();
+
+    // Recalcular matriz del Resumen RO en tiempo real con las reasignaciones
+    const horizontalFiles = rawDataFiles.filter(f => f.category === 'HORIZ');
+    if (horizontalFiles.length > 0) {
+        const mergedRes = mergeHorizontalFiles(horizontalFiles);
+        roFilteredMatrix2D = applyRoColumnFilterAndSum(mergedRes.matrix, mergedRes.headerRowsCount);
+    }
+
+    renderTableData();
+}
+
+function resetReassignments() {
+            let hadChanges = consolidatedRows.some(r => r._PartidaActual !== r._PartidaOriginal || r._SuggestedPartida);
+
+            if (!hadChanges) {
+                alert("ℹ️ Los datos ya se encuentran en su estado original. No hay reasignaciones que restablecer.");
+                return;
+            }
+
+            // 1. Restaurar partidas al origen y limpiar sugerencias IA
+            consolidatedRows.forEach(row => {
+                row._PartidaActual = row._PartidaOriginal;
+                row._SuggestedPartida = null; 
+                row._reassignedTimestamp = 0;
+            });
+
+            // 2. Limpiar la interfaz de la IA si estaba abierta
+            if (typeof clearAuditSuggestionsUI === 'function') {
+                clearAuditSuggestionsUI();
+            }
+
+            // 3. Reconstruir las agrupaciones y pestañas
+            groupDataByPartida();
+            buildPartidaTabsAndSelect();
+            updateReassignmentCountUI();
+            
+            // 4. Recalcular las sumas de la matriz RO
+            const horizontalFiles = rawDataFiles.filter(f => f.category === 'HORIZ');
+            if (horizontalFiles.length > 0) {
+                const mergedRes = mergeHorizontalFiles(horizontalFiles);
+                roFilteredMatrix2D = applyRoColumnFilterAndSum(mergedRes.matrix, mergedRes.headerRowsCount);
+            }
+
+            // 5. Renderizar la tabla de nuevo
+            renderTableData();
+
+            // 6. Mensaje de feedback al usuario
+            alert("🔄 Restablecimiento completo: Todas las partidas han vuelto a su estado original del Excel y el RO ha sido recalculado.");
+        }
+
+        function updateReassignmentCountUI() {
+            let reassignCount = consolidatedRows.filter(r => r._PartidaOriginal !== r._PartidaActual).length;
+            const metricEl = document.getElementById('metricReasignados');
+            if (metricEl) metricEl.textContent = reassignCount;
+        }
+
+        function getExcelColumnLetter(colIndex) {
+            let temp, letter = '';
+            while (colIndex >= 0) {
+                temp = colIndex % 26;
+                letter = String.fromCharCode(temp + 65) + letter;
+                colIndex = (colIndex - temp) / 26 - 1;
+            }
+            return letter;
+        }
+
+        function renderResultsUI(vertCount, horizCount) {
+            document.getElementById('statusText').textContent = "Procesamiento Exitoso";
+            document.getElementById('statusText').className = "text-emerald-400 font-bold";
+
+            const totalPartidas = partidaListKeys.length;
+            document.getElementById('metricPartidas').textContent = totalPartidas;
+            document.getElementById('metricRegistros').textContent = consolidatedRows.length;
+            document.getElementById('metricArchivos').textContent = vertCount + horizCount;
+            updateReassignmentCountUI();
+
+            // 1. OCULTAR LA ZONA DE CARGA DE ARCHIVOS
+            document.getElementById('uploadSection').classList.add('hidden');
+
+            document.getElementById('metricsSection').classList.remove('hidden');
+            document.getElementById('resultSection').classList.remove('hidden');
+
+            buildPartidaTabsAndSelect();
+            switchMainView('CONSOLIDADO');
+        }
+
+        function switchMainView(viewName) {
+            currentMainView = viewName;
+            currentPage = 1;
+
+            const btnConsolidado = document.getElementById('viewConsolidadoBtn');
+            const btnRo = document.getElementById('viewRoBtn');
+            const btnStock = document.getElementById('viewStockBtn');
+            const btnSubcontrato = document.getElementById('viewSubcontratoBtn'); // <-- NUEVO
+            const consolidadoToolbar = document.getElementById('consolidadoToolbar');
+            const tabBar = document.getElementById('tabBar');
+            const partidaSelect = document.getElementById('partidaSelect');
+            const legends = document.querySelectorAll('#consolidadoToolbar .bg-red-100, #consolidadoToolbar .bg-emerald-100');
+            const stockBadge = document.getElementById('stockTotalContainer');
+            const semanasFilter = document.getElementById('semanasFilterContainer');
+            if (semanasFilter) semanasFilter.classList.add('hidden');
+
+            // Reiniciar todos al estilo inactivo
+            [btnConsolidado, btnRo, btnStock, btnSubcontrato].forEach(btn => {
+                if(btn) btn.className = "px-4 py-2.5 text-xs font-bold rounded-t-lg bg-slate-700 text-slate-300 hover:text-white hover:bg-slate-600 flex items-center gap-2 transition cursor-pointer whitespace-nowrap";
+            });
+
+            consolidadoToolbar.classList.remove('hidden');
+            tabBar.classList.add('hidden');
+            partidaSelect.classList.add('hidden');
+            legends.forEach(l => l.classList.add('hidden'));
+            if (stockBadge) { stockBadge.classList.add('hidden'); stockBadge.classList.remove('flex'); }
+
+            if (viewName === 'CONSOLIDADO') {
+                btnConsolidado.className = "px-4 py-2.5 text-xs font-bold rounded-t-lg bg-white text-slate-900 border-t-2 border-blue-500 flex items-center gap-2 transition cursor-pointer whitespace-nowrap";
+                tabBar.classList.remove('hidden');
+                partidaSelect.classList.remove('hidden');
+                legends.forEach(l => l.classList.remove('hidden'));
+            } else if (viewName === 'RO') {
+                btnRo.className = "px-4 py-2.5 text-xs font-bold rounded-t-lg bg-white text-slate-900 border-t-2 border-purple-500 flex items-center gap-2 transition cursor-pointer whitespace-nowrap";
+            } else if (viewName === 'STOCK') {
+                if(btnStock) btnStock.className = "px-4 py-2.5 text-xs font-bold rounded-t-lg bg-white text-slate-900 border-t-2 border-emerald-500 flex items-center gap-2 transition cursor-pointer whitespace-nowrap";
+                if(stockBadge) { stockBadge.classList.remove('hidden'); stockBadge.classList.add('flex'); }
+            } else if (viewName === 'SUBCONTRATO') {
+                if(btnSubcontrato) btnSubcontrato.className = "px-4 py-2.5 text-xs font-bold rounded-t-lg bg-white text-slate-900 border-t-2 border-amber-500 flex items-center gap-2 transition cursor-pointer whitespace-nowrap";
+                if (semanasFilter) semanasFilter.classList.remove('hidden'); // <-- NUEVO
+            }
+
+            renderTableData();
+        }
+
+        function buildPartidaTabsAndSelect() {
+            const selectEl = document.getElementById('partidaSelect');
+            const tabBarEl = document.getElementById('tabBar');
+
+            selectEl.innerHTML = '<option value="ALL">Ver Todas las Partidas (Consolidado General)</option>';
+            tabBarEl.innerHTML = '';
+
+            const allBtn = document.createElement('button');
+            allBtn.className = 'tab-btn bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg font-semibold whitespace-nowrap shadow-xs transition cursor-pointer';
+            allBtn.setAttribute('data-tab', 'ALL');
+            allBtn.onclick = () => switchPartidaTab('ALL');
+            allBtn.innerHTML = `<i class="fa-solid fa-list mr-1"></i> Todas (${consolidatedRows.length})`;
+            tabBarEl.appendChild(allBtn);
+
+            partidaListKeys.forEach(pName => {
+                let itemsForPartida = partidasGrouped[pName] || [];
+                let count = itemsForPartida.length;
+                
+                // 🔍 NUEVO: Contar si esta pestaña tiene sugerencias IA pendientes
+                let suggestCount = itemsForPartida.filter(r => r._PartidaActual === pName && r._SuggestedPartida).length;
+                let hasSuggestions = suggestCount > 0;
+
+                const opt = document.createElement('option');
+                opt.value = pName;
+                opt.textContent = `${pName} (${count})${hasSuggestions ? ' - ✨ Sugerencias IA' : ''}`;
+                if (pName === currentPartidaKey) opt.selected = true;
+                selectEl.appendChild(opt);
+
+                const tabBtn = document.createElement('button');
+                tabBtn.setAttribute('data-tab', pName);
+                tabBtn.onclick = () => switchPartidaTab(pName);
+
+                // Asignar colores: Azul (Seleccionado), Fucsia (Con Sugerencia), Blanco (Normal)
+                if (pName === currentPartidaKey) {
+                    tabBtn.className = 'tab-btn bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg font-semibold whitespace-nowrap shadow-xs transition cursor-pointer';
+                } else if (hasSuggestions) {
+                    tabBtn.className = 'tab-btn bg-fuchsia-100 hover:bg-fuchsia-200 text-fuchsia-800 border border-fuchsia-300 text-xs px-3 py-1.5 rounded-lg font-bold whitespace-nowrap shadow-sm transition cursor-pointer animate-pulse';
+                } else {
+                    tabBtn.className = 'tab-btn bg-white hover:bg-slate-200 text-slate-700 text-xs px-3 py-1.5 rounded-lg font-medium whitespace-nowrap border border-slate-200 transition cursor-pointer';
+                }
+
+                let shortLabel = pName.length > 25 ? pName.substring(0, 22) + '...' : pName;
+                
+                // Agregar ícono especial si hay sugerencias
+                if (hasSuggestions) {
+                    tabBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles text-fuchsia-600 mr-1"></i> ${shortLabel} <span class="ml-1 bg-fuchsia-600 text-white text-[10px] px-1.5 py-0.5 rounded-full">${count}</span>`;
+                } else {
+                    tabBtn.innerHTML = `${shortLabel} <span class="ml-1 bg-slate-100 text-slate-600 text-[10px] px-1.5 py-0.5 rounded-full">${count}</span>`;
+                }
+                
+                tabBarEl.appendChild(tabBtn);
+            });
+        }
+
+        function switchPartidaTab(partidaKey) {
+            currentPartidaKey = partidaKey;
+            currentPage = 1;
+
+            document.getElementById('partidaSelect').value = partidaKey;
+
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                let pName = btn.getAttribute('data-tab');
+                let isSelected = (pName === partidaKey);
+                
+                let hasSuggestions = false;
+                if (pName !== 'ALL') {
+                    let itemsForPartida = partidasGrouped[pName] || [];
+                    hasSuggestions = itemsForPartida.some(r => r._PartidaActual === pName && r._SuggestedPartida);
+                }
+
+                if (isSelected) {
+                    btn.className = 'tab-btn bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg font-semibold whitespace-nowrap shadow-xs transition cursor-pointer';
+                } else if (hasSuggestions) {
+                    btn.className = 'tab-btn bg-fuchsia-100 hover:bg-fuchsia-200 text-fuchsia-800 border border-fuchsia-300 text-xs px-3 py-1.5 rounded-lg font-bold whitespace-nowrap shadow-sm transition cursor-pointer animate-pulse';
+                } else {
+                    btn.className = 'tab-btn bg-white hover:bg-slate-200 text-slate-700 text-xs px-3 py-1.5 rounded-lg font-medium whitespace-nowrap border border-slate-200 transition cursor-pointer';
+                }
+            });
+
+            renderTableData();
+        }
+
+        function onSearchInput() {
+            currentPage = 1;
+            renderTableData();
+        }
+
+        function changePageSize(val) {
+            pageSize = val === 'ALL' ? 999999 : parseInt(val);
+            currentPage = 1;
+            renderTableData();
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                renderTableData();
+            }
+        }
+
+        function nextPage() {
+            currentPage++;
+            renderTableData();
+        }
+
+        function goToLastPage(totalPages) {
+            currentPage = totalPages;
+            renderTableData();
+        }
+
+        function updatePaginationUI(start, end, total, page = 1, totalPages = 1) {
+            document.getElementById('showingStart').textContent = total === 0 ? 0 : start;
+            document.getElementById('showingEnd').textContent = end;
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('pageIndicator').textContent = `Pág. ${page} de ${totalPages}`;
+
+            document.getElementById('btnPrevPage').disabled = page <= 1;
+            document.getElementById('btnNextPage').disabled = page >= totalPages;
+        }
+
+        function getConsolidadoRowValue(row, key) {
+            switch(key) {
+                case 'Partida de Control':
+                    return row['_PartidaOriginal'] || findValueByPossibleKeys(row, ['Partida de Control', 'PARTIDA DE CONTROL', 'PartidaControl', 'Partida']);
+                case 'Recurso N1':
+                    return row['_RecursoN1'] || findValueByPossibleKeys(row, ['Recurso N1', 'RECURSO N1', 'RecursoN1', 'Tipo Recurso']);
+                case 'Recurso':
+                    return row['_Recurso'] || findValueByPossibleKeys(row, ['Recurso', 'RECURSO', 'Descripcion', 'DESCRIPCION']);
+                case 'Unidad':
+                    return findValueByPossibleKeys(row, ['Unidad', 'UNIDAD', 'Und', 'UND', 'Unid']);
+                case 'V Cantidad':
+                    return findValueByPossibleKeys(row, ['V Cantidad', 'V CANTIDAD', 'VCantidad', 'V_Cantidad', 'V.Cantidad']);
+                case 'V Costo':
+                    return findValueByPossibleKeys(row, ['V Costo', 'V COSTO', 'VCosto', 'V_Costo', 'V.Costo']);
+                case 'R Cantidad':
+                    return findValueByPossibleKeys(row, ['R Cantidad', 'R CANTIDAD', 'RCantidad', 'R_Cantidad', 'R.Cantidad']);
+                case 'R Costo':
+                    return findValueByPossibleKeys(row, ['R Costo', 'R COSTO', 'RCosto', 'R_Costo', 'R.Costo', 'R Costo (Original)', 'R Costo Original', 'R_Costo_Original']);
+                default:
+                    return row[key] !== undefined ? row[key] : '';
+            }
+        }
+
+        function renderTableData() {
+            const tbody = document.getElementById('tableBody');
+            const thead = document.querySelector('#resultSection table thead');
+            const movedInContainer = document.getElementById('movedInJumpContainer');
+
+            tbody.innerHTML = '';
+            thead.innerHTML = '';
+            if (movedInContainer) movedInContainer.innerHTML = '';
+            
+            // ==========================================
+            // VISTA STOCK (RESTAURADA Y CORREGIDA)
+            // ==========================================
+            if (currentMainView === 'STOCK') {
+                let totalStockValorizado = 0;
+                if (stockRows.length > 0) {
+                    let sampleKeys = Object.keys(stockRows[0]);
+                    let exactStockKey = sampleKeys.find(k => k.toUpperCase().trim() === 'STOCK');
+                    let exactPriceKey = sampleKeys.find(k => k.toUpperCase().includes('PRECIO PROMEDIO') && k.toUpperCase().includes('S/'));
+
+                    stockRows.forEach(row => {
+                        // 🔥 Corregido: Ya no usa funciones externas que causaban el colapso
+                        let stockQty = exactStockKey && typeof row[exactStockKey] === 'number' ? row[exactStockKey] : 0;
+                        let avgPrice = exactPriceKey && typeof row[exactPriceKey] === 'number' ? row[exactPriceKey] : 0;
+                        if (stockQty > 0) totalStockValorizado += (stockQty * avgPrice);
+                    });
+                }
+                
+                let stockValEl = document.getElementById('stockTotalValue');
+                if (stockValEl) stockValEl.textContent = totalStockValorizado.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                if (stockRows.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="15" class="text-center py-6 text-slate-400">No hay archivos STOCK cargados.</td></tr>';
+                    updatePaginationUI(0, 0, 0, 1, 1);
+                    return;
+                }
+
+                let filteredStock = stockRows;
+                const searchVal = document.getElementById('tableSearch').value.toLowerCase().trim();
+                if (searchVal) filteredStock = stockRows.filter(row => Object.values(row).some(v => String(v).toLowerCase().includes(searchVal)));
+
+                let rawKeys = Object.keys(stockRows[0]).filter(k => !k.startsWith('_'));
+                const trHeader = document.createElement('tr');
+                trHeader.className = 'bg-slate-800 text-slate-200 text-[11px] font-semibold border-b border-slate-700';
+                rawKeys.forEach(k => {
+                    const th = document.createElement('th');
+                    th.className = 'p-2 border-r border-slate-700 whitespace-nowrap text-center font-bold bg-emerald-900 text-emerald-100';
+                    th.textContent = k;
+                    trHeader.appendChild(th);
+                });
+                thead.appendChild(trHeader);
+
+                const totalRows = filteredStock.length;
+                const totalPages = pageSize === 999999 ? 1 : Math.ceil(totalRows / pageSize) || 1;
+                if (currentPage > totalPages) currentPage = totalPages;
+
+                const startIndex = (currentPage - 1) * pageSize;
+                const endIndex = Math.min(startIndex + pageSize, totalRows);
+                const pageRows = filteredStock.slice(startIndex, endIndex);
+
+                if (pageRows.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="15" class="text-center py-6 text-slate-400">No se encontraron resultados en STOCK.</td></tr>';
+                    updatePaginationUI(0, 0, 0, 1, 1);
+                    return;
+                }
+
+                pageRows.forEach((row, idx) => {
+                    const tr = document.createElement('tr');
+                    tr.className = (idx % 2 === 0 ? 'bg-white' : 'bg-slate-50') + ' hover:bg-emerald-50 transition text-xs border-b border-slate-100';
+                    rawKeys.forEach(k => {
+                        const td = document.createElement('td');
+                        td.className = 'p-2 border-r border-slate-200 whitespace-nowrap';
+                        let val = row[k];
+                        if (typeof val === 'number') {
+                            td.textContent = val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                            td.className += ' text-center font-mono';
+                        } else {
+                            td.textContent = (val !== undefined && val !== null) ? String(val) : '';
+                        }
+                        tr.appendChild(td);
+                    });
+                    tbody.appendChild(tr);
+                });
+
+                updatePaginationUI(startIndex + 1, endIndex, totalRows, currentPage, totalPages);
+                return;
+            }
+
+            // ==========================================
+            // VISTA RESUMEN RO (CON SC / STOCK ENTRE Q Y R)
+            // ==========================================
+            if (currentMainView === 'RO') {
+                if (roFilteredMatrix2D.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="15" class="text-center py-6 text-slate-400">No hay archivos RO cargados.</td></tr>';
+                    updatePaginationUI(0, 0, 0, 1, 1);
+                    return;
+                }
+
+                // --- CONEXIÓN: PENDIENTES SUBCONTRATOS Y STOCK ---
+                let subcontratosTotals = typeof getTotalesSubcontratosParaRO === 'function' ? getTotalesSubcontratosParaRO() : {};
+                let roPendientesMap = {};
+                const cleanTextRO = (txt) => String(txt).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/\s+/g, ' ').trim();
+
+                roFilteredMatrix2D.slice(roHeaderRowCount).forEach(r => {
+                    let code = String(r[0] || '').trim();
+                    let desc = cleanTextRO(r[1]); 
+                    if (subcontratosTotals[desc] !== undefined) roPendientesMap[code] = subcontratosTotals[desc];
+                });
+
+                let totalStockValorizado = 0;
+                if (typeof stockRows !== 'undefined' && stockRows.length > 0) {
+                    let sampleKeys = Object.keys(stockRows[0]);
+                    let exactStockKey = sampleKeys.find(k => k.toUpperCase().trim() === 'STOCK');
+                    let exactPriceKey = sampleKeys.find(k => k.toUpperCase().includes('PRECIO PROMEDIO') && k.toUpperCase().includes('S/'));
+                    stockRows.forEach(row => {
+                        let stockQty = exactStockKey && typeof row[exactStockKey] === 'number' ? row[exactStockKey] : 0;
+                        let avgPrice = exactPriceKey && typeof row[exactPriceKey] === 'number' ? row[exactPriceKey] : 0;
+                        if (stockQty > 0) totalStockValorizado += (stockQty * avgPrice);
+                    });
+                }
+
+                roFilteredMatrix2D.slice(roHeaderRowCount).forEach(r => {
+                    let code = String(r[0] || '').trim();
+                    if (code.length === 2 || code.length === 4) {
+                        let sum = 0;
+                        Object.keys(roPendientesMap).forEach(k => {
+                            if (k !== code && k.startsWith(code) && k.length > 4) sum += roPendientesMap[k];
+                        });
+                        if (sum !== 0) roPendientesMap[code] = sum;
+                    }
+                });
+
+                roPendientesMap['STK'] = totalStockValorizado;
+                Object.keys(roPendientesMap).forEach(code => {
+                    if (code.length === 2) { 
+                        roPendientesMap[code] = (roPendientesMap[code] || 0) + totalStockValorizado;
+                    }
+                });
+
+                const numCols = roFilteredMatrix2D[0].length;
+                const trLetters = document.createElement('tr');
+                trLetters.className = 'bg-slate-300 text-slate-700 text-[11px] font-bold text-center border-b border-slate-400 shadow-sm';
+                
+                function getColumnColorGroup(cIndex) {
+                    const colName = String(roFilteredMatrix2D[0]?.[cIndex] || '');
+                    if (colName.includes('V_P')) return 'blue';
+                    if (colName.includes('V_V')) return 'red';
+                    if (colName.includes('Corregido')) return 'gold';
+                    if (colName.includes('Diferencia')) return 'light-yellow'; 
+                    if (colName.includes('Proyección') || colName.includes('Costo Final') || colName.includes('Sustento')) return 'indigo';
+                    if (colName.includes('R Costo') || colName.includes('Real')) return 'emerald';
+                    return 'neutral';
+                }
+
+                for (let c = 0; c < numCols; c++) {
+                    const th = document.createElement('th');
+                    const colorGroup = getColumnColorGroup(c);
+                    let stickyClass = '';
+                    if (c === 0) stickyClass = 'sticky left-0 z-30 bg-slate-300 min-w-[90px] w-[90px] bg-clip-padding';
+                    else if (c === 1) stickyClass = 'sticky left-[90px] z-30 bg-slate-300 min-w-[220px] w-[220px] bg-clip-padding';
+                    else if (c === 2) stickyClass = 'sticky left-[310px] z-30 bg-slate-300 min-w-[110px] w-[110px] border-r-2 border-slate-500 shadow-md bg-clip-padding';
+
+                    if (colorGroup === 'blue') th.className = `p-2 border-r border-blue-700 whitespace-nowrap text-center font-bold bg-blue-900 text-blue-100 ${stickyClass}`;
+                    else if (colorGroup === 'red') th.className = `p-2 border-r border-red-700 whitespace-nowrap text-center font-bold bg-red-900 text-red-100 ${stickyClass}`;
+                    else if (colorGroup === 'gold') th.className = `p-2 border-l-4 border-l-amber-600 whitespace-nowrap text-center font-bold bg-amber-800 text-amber-100 ${stickyClass}`;
+                    else if (colorGroup === 'emerald') th.className = `py-1 px-2 border-r border-emerald-500 bg-emerald-600 text-white font-bold text-center ${stickyClass}`;
+                    else if (colorGroup === 'light-yellow') th.className = `py-1 px-2 border-r border-yellow-300 bg-yellow-200 text-yellow-800 font-bold text-center ${stickyClass}`;
+                    else if (colorGroup === 'indigo') th.className = `p-2 border-r border-indigo-400 whitespace-nowrap text-center font-bold bg-indigo-100 text-indigo-900 shadow-inner ${stickyClass}`;
+                    else th.className = `py-1 px-2 border-r border-slate-400 text-slate-700 font-bold text-center ${stickyClass}`;
+                    
+                    th.textContent = getExcelColumnLetter(c);
+                    trLetters.appendChild(th);
+
+                    // 🔥 INYECCIÓN DE LETRA SC DESPUÉS DE LA COLUMNA Q (Índice 16)
+                    if (c === 16) {
+                        const thLetExtra = document.createElement('th');
+                        thLetExtra.className = 'p-2 border-r border-indigo-500 whitespace-nowrap text-center font-bold bg-indigo-900 text-indigo-100';
+                        thLetExtra.textContent = 'SC / STOCK';
+                        trLetters.appendChild(thLetExtra);
+                    }
+                }
+                thead.appendChild(trLetters);
+
+                for (let h = 0; h < roHeaderRowCount; h++) {
+                    const hRow = roFilteredMatrix2D[h] || [];
+                    const tr = document.createElement('tr');
+                    tr.className = 'bg-slate-800 text-slate-200 text-[11px] font-semibold border-b border-slate-700';
+
+                    hRow.forEach((cellVal, cIdx) => {
+                        const th = document.createElement('th');
+                        const colorGroup = getColumnColorGroup(cIdx);
+                        let stickyClass = '';
+                        if (cIdx === 0) stickyClass = 'sticky left-0 z-30 bg-slate-800 min-w-[90px] w-[90px] max-w-[90px] bg-clip-padding';
+                        else if (cIdx === 1) stickyClass = 'sticky left-[90px] z-30 bg-slate-800 min-w-[350px] w-[350px] max-w-[350px] bg-clip-padding';
+                        else if (cIdx === 2) stickyClass = 'sticky left-[440px] z-30 bg-slate-800 min-w-[110px] w-[110px] max-w-[110px] border-r-2 border-slate-600 shadow-md bg-clip-padding';
+
+                        if (colorGroup === 'blue') th.className = `p-2 border-r border-blue-700 whitespace-nowrap text-center font-bold bg-blue-900 text-blue-100 ${stickyClass}`;
+                        else if (colorGroup === 'red') th.className = `p-2 border-r border-red-700 whitespace-nowrap text-center font-bold bg-red-900 text-red-100 ${stickyClass}`;
+                        else if (colorGroup === 'gold') th.className = `p-2 border-l-4 border-l-amber-600 whitespace-nowrap text-center font-bold bg-amber-800 text-amber-100 ${stickyClass}`;
+                        else if (colorGroup === 'emerald') th.className = `p-2 border-r border-emerald-700 whitespace-nowrap text-center font-bold bg-emerald-900 text-emerald-100 ${stickyClass}`;
+                        else if (colorGroup === 'light-yellow') th.className = `p-2 border-r border-yellow-400 whitespace-nowrap text-center font-bold bg-yellow-300 text-yellow-900 shadow-inner ${stickyClass}`;
+                        else if (colorGroup === 'indigo') th.className = `py-1 px-2 border-r border-indigo-400 bg-indigo-200 text-indigo-900 font-bold text-center ${stickyClass}`;    
+                        else th.className = `p-2 border-r border-slate-700 whitespace-nowrap text-center font-semibold text-slate-200 ${stickyClass}`;
+
+                        th.textContent = cellVal !== undefined ? cellVal : '';
+                        tr.appendChild(th);
+
+                        // 🔥 INYECCIÓN DE TÍTULO SC DESPUÉS DE LA COLUMNA Q (Índice 16)
+                        if (cIdx === 16) {
+                            const thHeadExtra = document.createElement('th');
+                            thHeadExtra.className = 'p-2 border-r border-indigo-400 whitespace-nowrap text-center font-bold bg-indigo-200 text-indigo-900';
+                            thHeadExtra.textContent = (h === roHeaderRowCount - 1) ? 'Pendientes SC / Almacén' : '';
+                            tr.appendChild(thHeadExtra);
+                        }
+                    });
+                    thead.appendChild(tr);
+                }
+
+                let dataSlice = roFilteredMatrix2D.slice(roHeaderRowCount);
+                const searchVal = document.getElementById('tableSearch').value.toLowerCase().trim();
+                if (searchVal) dataSlice = dataSlice.filter(row => row.some(v => String(v).toLowerCase().includes(searchVal)));
+                
+                let stockFakeRow = new Array(numCols).fill('');
+                stockFakeRow[0] = 'STK'; 
+                stockFakeRow[1] = 'VALORIZADO EN ALMACÉN (STOCK)'; 
+                dataSlice.push(stockFakeRow); 
+
+                const totalRows = dataSlice.length;
+                const totalPages = pageSize === 999999 ? 1 : Math.ceil(totalRows / pageSize) || 1;
+                if (currentPage > totalPages) currentPage = totalPages;
+
+                const startIndex = (currentPage - 1) * pageSize;
+                const endIndex = Math.min(startIndex + pageSize, totalRows);
+                const pageRows = dataSlice.slice(startIndex, endIndex);
+
+                pageRows.forEach((row, idx) => {
+                    const tr = document.createElement('tr');
+                    const rowBg = idx % 2 === 0 ? 'bg-white' : 'bg-slate-50';
+                    tr.className = `${rowBg} hover:bg-blue-50/40 transition text-xs border-b border-slate-100`;
+
+                    let codeVal = String(row[0] || '').trim();
+                    let rowFontClass = 'text-fuchsia-500 font-medium'; 
+                    let isRowRed = false, isRowBlue = false, isRowStock = false;
+
+                    if (codeVal === 'STK') { rowFontClass = 'text-emerald-700 font-bold'; isRowStock = true; }
+                    else if (codeVal.length === 2) { rowFontClass = 'text-red-600 font-bold'; isRowRed = true; }
+                    else if (codeVal.length === 4) { rowFontClass = 'text-blue-600 font-bold'; isRowBlue = true; }
+
+                    // 🔥 PRE-CALCULAR FÓRMULAS MATEMÁTICAS (S y T)
+                    let scValue = roPendientesMap[codeVal] || 0;
+                    let val_VCosto = 0, val_P = 0, val_R = 0;
+
+                    row.forEach((v, i) => {
+                        let cName = String(roFilteredMatrix2D[0][i] || '');
+                        if (cName === 'V costo') val_VCosto = typeof v === 'number' ? v : 0;
+                        if (cName.includes('R Costo Corregido')) val_P = typeof v === 'number' ? v : 0;
+                        if (cName.includes('Proyección (CTC)')) val_R = typeof v === 'number' ? v : 0;
+                    });
+
+                    // Las nuevas fórmulas en tiempo real
+                    let calc_CostoFinal_S = val_P + val_R + scValue;
+                    let calc_Diferencia_T = val_VCosto - calc_CostoFinal_S;
+
+                    row.forEach((val, cIdx) => {
+                        const td = document.createElement('td');
+                        let stickyClass = '';
+                        if (cIdx === 0) stickyClass = `sticky left-0 z-20 ${rowBg} min-w-[90px] w-[90px] max-w-[90px] bg-clip-padding overflow-hidden text-ellipsis`;
+                        else if (cIdx === 1) { stickyClass = `sticky left-[90px] z-20 ${rowBg} min-w-[350px] w-[350px] max-w-[350px] bg-clip-padding overflow-hidden text-ellipsis`; if (val) td.title = val; }
+                        else if (cIdx === 2) stickyClass = `sticky left-[440px] z-20 ${rowBg} min-w-[110px] w-[110px] max-w-[110px] border-r-2 border-slate-300 shadow-sm bg-clip-padding overflow-hidden text-ellipsis`;
+
+                        td.className = `p-2 border-r border-slate-200 whitespace-nowrap ${rowFontClass} ${stickyClass}`;
+
+                        const colorGroup = getColumnColorGroup(cIdx);
+                        if (colorGroup === 'emerald') td.className += ' bg-emerald-50/30';
+                        else if (colorGroup === 'gold') td.className += ' bg-amber-50/80 border-l-4 border-l-amber-500';
+                        else if (colorGroup === 'light-yellow') td.className += ' bg-yellow-50/90 border-l-2 border-l-yellow-300';
+                        else if (colorGroup === 'indigo') td.className += ' bg-indigo-50 border-l-2 border-l-indigo-200';
+
+                        const colName = roFilteredMatrix2D[0][cIdx] || '';
+
+                        // 🔥 SOBRESCRIBIR VALORES MUERTOS DE EXCEL CON LAS FÓRMULAS VIVAS
+                        if (colName.includes('Costo Final (EAC)') && !isRowStock) {
+                            val = calc_CostoFinal_S; 
+                        } else if (colName.includes('Diferencia Final') && !isRowStock) {
+                            val = calc_Diferencia_T;
+                        }
+
+                        if (isRowStock && cIdx > 1) {
+                            td.textContent = '';
+                            if (cIdx === 2) td.className += ' bg-emerald-50';
+                        } else if (colName === 'Proyección (CTC)') {
+                            if (codeVal.length > 4 && !isRowStock) td.innerHTML = `<input type="number" step="0.01" value="${val !== 0 ? val : ''}" class="w-24 text-center bg-white border border-indigo-300 rounded px-1 py-1 text-xs text-indigo-900 font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="0.00" onchange="saveProjection('${codeVal}', 'amount', this.value)">`;
+                            else { td.textContent = val !== 0 ? val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'; td.className += ' text-right font-mono font-bold text-indigo-900'; }
+                        } else if (colName === 'Sustento / Nota') {
+                            if (codeVal.length > 4 && !isRowStock) td.innerHTML = `<input type="text" value="${val || ''}" class="w-full min-w-[150px] bg-white border border-indigo-300 rounded px-1 py-1 text-xs text-slate-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Sustento..." onchange="saveProjection('${codeVal}', 'note', this.value)">`;
+                            else td.textContent = '';
+                        } else if (typeof val === 'number') {
+                            td.textContent = val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                            td.className += ' text-right font-mono';
+                            if (colorGroup === 'light-yellow' && !isRowRed && !isRowBlue) {
+                                if (val < 0) td.className = td.className.replace('text-fuchsia-500', 'text-red-600 font-bold'); 
+                                else if (val > 0) td.className = td.className.replace('text-fuchsia-500', 'text-blue-600 font-bold'); 
+                                else td.className = td.className.replace('text-fuchsia-500', 'text-slate-400');
+                            }
+                        } else {
+                            td.textContent = (val !== undefined && val !== null) ? String(val) : '';
+                        }
+                        tr.appendChild(td);
+
+                        // 🔥 INYECCIÓN DE DATO SC DESPUÉS DE LA COLUMNA Q (Índice 16)
+                        if (cIdx === 16) {
+                            const tdDataExtra = document.createElement('td');
+                            tdDataExtra.className = 'p-2 border-r border-indigo-200 whitespace-nowrap text-right font-mono font-bold';
+                            
+                            if (scValue !== 0) {
+                                tdDataExtra.textContent = scValue.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                if (isRowStock) tdDataExtra.className += ' text-emerald-800 bg-emerald-200 text-[13px] border-l-4 border-l-emerald-600 shadow-inner';
+                                else if (isRowRed) tdDataExtra.className += ' text-red-700 bg-red-50';
+                                else if (isRowBlue) tdDataExtra.className += ' text-blue-800 bg-blue-50';
+                                else tdDataExtra.className += ' text-indigo-900 bg-indigo-50/90';
+                            } else {
+                                tdDataExtra.textContent = '-';
+                                tdDataExtra.className += ' text-slate-300 font-normal bg-slate-50';
+                            }
+                            tr.appendChild(tdDataExtra);
+                        }
+                    });
+
+                    tbody.appendChild(tr);
+                });
+                updatePaginationUI(startIndex + 1, endIndex, totalRows, currentPage, totalPages);
+                return;
+            }
+            // ==========================================
+            // VISTA SUBCONTRATOS (NUEVO)
+            // ==========================================
+            if (currentMainView === 'SUBCONTRATO') {
+                if (subcontratoRows.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="15" class="text-center py-6 text-slate-400">No hay archivos SUBCONTRATO cargados.</td></tr>';
+                    updatePaginationUI(0, 0, 0, 1, 1);
+                    return;
+                }
+
+                let filteredSub = subcontratoRows;
+
+                // 1. Filtrar por la barra de búsqueda general (Corregido)
+                const searchVal = document.getElementById('tableSearch').value.toLowerCase().trim();
+                if (searchVal) {
+                    filteredSub = filteredSub.filter(row => Object.values(row).some(v => String(v).toLowerCase().includes(searchVal)));
+                }
+
+                // 2. APLICAR FILTRO DE SEMANAS (CON AÑO)
+                filteredSub = filteredSub.filter(row => {
+                    let colDesc = Object.keys(row).find(k => k.toLowerCase().includes('descripc')) || Object.keys(row)[0];
+                    let desc = String(row[colDesc] || '').trim();
+                    
+                    if (desc.toUpperCase().startsWith('SEMANA')) {
+                        let match = desc.match(/^SEMANA\s+\d+/i);
+                        if (match) {
+                            let yearMatch = desc.match(/\d{2}\/\d{2}\/(\d{4})/);
+                            let year = yearMatch ? yearMatch[1] : "S/A";
+                            let key = `${year} - ${match[0].toUpperCase()}`;
+                            if (!activeSemanas.has(key)) return false; 
+                        }
+                    }
+                    return true; 
+                });
+
+                // 3. MOTOR DE CÁLCULO DINÁMICO (BOTTOM-UP HÍBRIDO PENDIENTES)
+                let rawKeys = Object.keys(subcontratoRows[0]).filter(k => !k.startsWith('_'));
+                let numericKeys = rawKeys.filter(k => subcontratoRows.some(r => typeof r[k] === 'number'));
+                
+                let colDesc = rawKeys.find(k => k.toLowerCase().includes('descripc')) || rawKeys[0];
+                let colVal = rawKeys.find(k => k.toLowerCase().includes('val')) || rawKeys[1];
+                let colEst = rawKeys.find(k => k.toLowerCase().includes('estado')) || rawKeys[2];
+
+                let keyContratado = numericKeys.find(k => k.toLowerCase().includes('contratado'));
+                let keyPerc = numericKeys.find(k => k === '%' || k.toLowerCase().includes('%'));
+                let keyAmortizado = numericKeys.find(k => k.toLowerCase().includes('adelanto') && k.toLowerCase().includes('amortizado'));
+                let keyBruto = numericKeys.find(k => k.toLowerCase().includes('bruto'));
+                
+                let keyPendienteVal = numericKeys.find(k => k.toLowerCase().includes('pendiente') && k.toLowerCase().includes('valorizar'));
+                let keyPendienteFac = numericKeys.find(k => k.toLowerCase().includes('pendiente') && k.toLowerCase().includes('facturar'));
+                // Evitamos que confunda el adelanto normal con el facturado
+                let keyAdelantoFac = numericKeys.find(k => k.toLowerCase().includes('facturado') && k.toLowerCase().includes('adelanto')) || numericKeys.find(k => k.toLowerCase().includes('adelanto') && k.toLowerCase().includes('otorgado') && k !== keyAmortizado);
+
+                let sumKeys = numericKeys.filter(k => {
+                    if (k === keyContratado || k === keyPerc) return false;
+                    return subcontratoRows.some(row => {
+                        let tDesc = String(row[colDesc] || '').replace(/[^a-zA-Z0-9]/g, '');
+                        let tVal = String(row[colVal] || '').replace(/[^a-zA-Z0-9]/g, '');
+                        let tEst = String(row[colEst] || '').replace(/[^a-zA-Z0-9]/g, '');
+                        let isBlack = tDesc.length > 0 && tVal.length > 0 && tDesc.toUpperCase() !== 'SUBCONTRATOS';
+                        return isBlack && typeof row[k] === 'number' && row[k] !== 0;
+                    });
+                });
+
+                if (keyPendienteVal && !sumKeys.includes(keyPendienteVal)) sumKeys.push(keyPendienteVal);
+                if (keyPendienteFac && !sumKeys.includes(keyPendienteFac)) sumKeys.push(keyPendienteFac);
+
+                let displayRows = filteredSub.map(r => ({...r})); 
+                let runRed = {}, runBlue = {}, runGlobal = {};
+                sumKeys.forEach(k => { runRed[k] = 0; runBlue[k] = 0; runGlobal[k] = 0; });
+                
+                let runRedPerc = 0, runBlueWeightedPerc = 0, runGlobalWeightedPerc = 0;
+                let hasBlackDataForPendingFac = false; // 🔥 NUEVO DETECTOR INTELIGENTE
+
+                for (let i = displayRows.length - 1; i >= 0; i--) {
+                    let row = displayRows[i];
+                    let tDesc = String(row[colDesc] || '').replace(/[^a-zA-Z0-9]/g, '');
+                    let tVal = String(row[colVal] || '').replace(/[^a-zA-Z0-9]/g, '');
+                    let tEst = String(row[colEst] || '').replace(/[^a-zA-Z0-9]/g, '');
+
+                    let isGlobal = tDesc.toUpperCase() === 'SUBCONTRATOS';
+                    let isBlue = !isGlobal && tDesc.length > 0 && tVal.length === 0 && tEst.length === 0;
+                    let isRed = !isGlobal && !isBlue && tDesc.length > 0 && tVal.length === 0;
+                    let isBlack = !isGlobal && !isBlue && !isRed; 
+                    
+                    let cont = keyContratado && typeof row[keyContratado] === 'number' ? row[keyContratado] : 0;
+                    let perc = keyPerc && typeof row[keyPerc] === 'number' ? row[keyPerc] : 0;
+
+                    if (isBlack) {
+                        sumKeys.forEach(k => { runRed[k] += (typeof row[k] === 'number' ? row[k] : 0); });
+                        if (keyPerc) runRedPerc += perc;
+                        
+                        // Si la fila negra tiene un número, encendemos el detector
+                        if (keyPendienteFac && typeof row[keyPendienteFac] === 'number') {
+                            hasBlackDataForPendingFac = true;
+                        }
+                    } else if (isRed) {
+                            sumKeys.forEach(k => { row[k] = runRed[k]; }); 
+                            
+                            let bruto = keyBruto && typeof row[keyBruto] === 'number' ? row[keyBruto] : 0;
+                            
+                            if (keyPendienteVal) {
+                                let amortizado = keyAmortizado && typeof row[keyAmortizado] === 'number' ? row[keyAmortizado] : 0;
+                                row[keyPendienteVal] = cont - amortizado - bruto;
+                            }
+                            
+                            // 🔥 CONDICIONAL DEFINITIVA EXCEL: FÓRMULA + SUMA
+                            if (keyPendienteFac) {
+                                let adelantoFac = keyAdelantoFac && typeof row[keyAdelantoFac] === 'number' ? row[keyAdelantoFac] : 0;
+                                let formulaFac = cont - bruto - adelantoFac;
+                                
+                                if (hasBlackDataForPendingFac) {
+                                    row[keyPendienteFac] = runRed[keyPendienteFac] + formulaFac;
+                                } else {
+                                    row[keyPendienteFac] = formulaFac;
+                                }
+                            }
+
+                            sumKeys.forEach(k => { runBlue[k] += row[k]; runRed[k] = 0; });
+                            if (keyPerc) { row[keyPerc] = runRedPerc; runBlueWeightedPerc += (row[keyPerc] * cont); runRedPerc = 0; }
+                            hasBlackDataForPendingFac = false;
+                        
+                        if (keyPerc) {
+                            row[keyPerc] = runRedPerc; 
+                            runBlueWeightedPerc += (row[keyPerc] * cont); 
+                            runRedPerc = 0;
+                        }
+                        hasBlackDataForPendingFac = false; // Reseteamos el detector
+                    } else if (isBlue) {
+                        sumKeys.forEach(k => { row[k] = runBlue[k]; runGlobal[k] += runBlue[k]; runBlue[k] = 0; });
+                        if (keyPerc) {
+                            row[keyPerc] = cont !== 0 ? (runBlueWeightedPerc / cont) : 0;
+                            runGlobalWeightedPerc += (row[keyPerc] * cont);
+                            runBlueWeightedPerc = 0;
+                        }
+                        hasBlackDataForPendingFac = false; 
+                    } else if (isGlobal) {
+                        sumKeys.forEach(k => { row[k] = runGlobal[k]; });
+                        if (keyPerc) { row[keyPerc] = cont !== 0 ? (runGlobalWeightedPerc / cont) : 0; }
+                        hasBlackDataForPendingFac = false;
+                    }
+                }
+
+                // --- 1. DIBUJAR ENCABEZADOS COMBINADOS EN 2 FILAS TIPO EXCEL ---
+                let hasSubHeaders = rawKeys.some(k => k.includes(' | '));
+                
+                const trTop = document.createElement('tr');
+                trTop.className = 'bg-amber-900 text-amber-50 text-[11px] font-semibold border-b border-amber-950';
+                const trBottom = document.createElement('tr');
+                trBottom.className = 'bg-amber-800 text-amber-100 text-[10px] font-semibold border-b border-amber-900';
+
+                let lastParent = null;
+                let currentParentTh = null;
+
+                rawKeys.forEach(k => {
+                    let parentStr = k;
+                    let childStr = null;
+                    
+                    // Si detecta el separador, divide el padre del hijo
+                    if (k.includes(' | ')) {
+                        let parts = k.split(' | ');
+                        parentStr = parts[0].trim();
+                        childStr = parts[1].trim();
+                    }
+
+                    // Fila Superior (Padres como "Descripción" o "Adelantos")
+                    if (parentStr !== lastParent) {
+                        currentParentTh = document.createElement('th');
+                        currentParentTh.className = 'p-2 border-r border-amber-700/50 whitespace-nowrap text-center font-bold';
+                        currentParentTh.textContent = parentStr;
+                        currentParentTh.colSpan = 1;
+                        
+                        // Si no tiene hijo (ej. Descripción), ocupa las 2 filas hacia abajo (rowspan)
+                        if (!childStr && hasSubHeaders) {
+                            currentParentTh.rowSpan = 2;
+                        }
+                        
+                        trTop.appendChild(currentParentTh);
+                        lastParent = parentStr;
+                    } else if (currentParentTh) {
+                        // Si es el mismo padre (ej. otro Adelanto), combinamos la celda hacia la derecha (colspan)
+                        currentParentTh.colSpan++;
+                    }
+
+                    // Fila Inferior (Hijos como "Calculado", "Otorgado")
+                    if (hasSubHeaders && childStr) {
+                        let childTh = document.createElement('th');
+                        childTh.className = 'p-1.5 border-r border-amber-700/30 whitespace-nowrap text-center font-bold bg-amber-700';
+                        childTh.textContent = childStr;
+                        trBottom.appendChild(childTh);
+                    }
+                });
+
+                thead.appendChild(trTop);
+                if (hasSubHeaders) thead.appendChild(trBottom);
+                // -------------------------------------------------------------
+
+                // Usamos displayRows (que ya tiene las sumas calculadas) en lugar de filteredSub
+                const totalRows = displayRows.length; // <-- CAMBIAR AQUÍ
+                const totalPages = pageSize === 999999 ? 1 : Math.ceil(totalRows / pageSize) || 1;
+                if (currentPage > totalPages) currentPage = totalPages;
+
+                const startIndex = (currentPage - 1) * pageSize;
+                const endIndex = Math.min(startIndex + pageSize, totalRows);
+                const pageRows = displayRows.slice(startIndex, endIndex); // <-- CAMBIAR AQUÍ
+
+                if (pageRows.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="15" class="text-center py-6 text-slate-400">No se encontraron resultados en SUBCONTRATOS.</td></tr>';
+                    updatePaginationUI(0, 0, 0, 1, 1);
+                    return;
+                }
+
+                // --- 2. DIBUJAR FILAS DE DATOS Y PINTAR AGRUPADORES ---
+                // (Ya no declaramos las variables aquí porque ya existen en el motor de cálculo de arriba)
+
+                pageRows.forEach((row, idx) => {
+                    const tr = document.createElement('tr');
+                    
+                    let isGroupHeader = false;
+                    let isSecondHierarchy = false; 
+                    
+                    // Usamos las variables que ya calculamos arriba
+                    let tDesc = String(row[colDesc] || '').replace(/[^a-zA-Z0-9]/g, '');
+                    let tVal = String(row[colVal] || '').replace(/[^a-zA-Z0-9]/g, '');
+                    let tEst = String(row[colEst] || '').replace(/[^a-zA-Z0-9]/g, '');
+                    
+                    // Si tiene texto en la descripción y no es el título global
+                    if (tDesc.length > 0 && !tDesc.toUpperCase().includes('SUBCONTRATO')) {
+                        if (tVal.length === 0 && tEst.length === 0) {
+                            // Jerarquía 1: Empresa (Sin Val, Sin Estado) -> Azul
+                            isGroupHeader = true;
+                        } else if (tVal.length === 0) {
+                            // Jerarquía 2: Contrato/Adicional (Sin Val, pero CON Estado) -> Rojo
+                            isSecondHierarchy = true;
+                        }
+                    }
+
+                    // Fondo Azul si es Empresa, de lo contrario fondo normal intercalado
+                    let rowBgClass = isGroupHeader ? 'bg-blue-100/80' : (idx % 2 === 0 ? 'bg-white' : 'bg-slate-50');
+                    tr.className = `${rowBgClass} hover:bg-amber-50 transition text-xs border-b ${isGroupHeader ? 'border-blue-300' : 'border-slate-100'}`;
+                    
+                    rawKeys.forEach(k => {
+                        const td = document.createElement('td');
+                        td.className = `p-2 border-r ${isGroupHeader ? 'border-blue-200' : 'border-slate-200'} whitespace-nowrap`;
+                        
+                        // --- APLICACIÓN DE COLORES ---
+                        if (isGroupHeader) {
+                            td.style.cssText = 'color: #1E3A8A !important; font-weight: bold !important;'; // Azul
+                        } else if (isSecondHierarchy) {
+                            td.style.cssText = 'color: #DC2626 !important; font-weight: 500 !important;'; // Rojo 
+                        } else {
+                            td.className += ' text-slate-700';
+                        }
+                        
+                        let val = row[k];
+                        if (typeof val === 'number') {
+                            td.textContent = val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                            td.className += ' text-center font-mono';
+                        } else {
+                            td.textContent = (val !== undefined && val !== null) ? String(val) : '';
+                        }
+                        tr.appendChild(td);
+                    });
+                    tbody.appendChild(tr);
+                });
+
+                updatePaginationUI(startIndex + 1, endIndex, totalRows, currentPage, totalPages);
+                return;
+            }
+
+            // ==========================================
+                // 2. VISTA CONSOLIDADO (Con Columnas Ajustables y FIJAS)
+                // ==========================================
+                const targetCols = [
+                    'Partida de Control', 'Recurso N1', 'Recurso', 'Unidad',
+                    'V Cantidad', 'V Costo', 'R Cantidad', 'R Costo (Original)',
+                    'Partida Reasignada (Destino)', 'R Costo Ajustado'
+                ];
+
+                const trHeader = document.createElement('tr');
+                trHeader.className = 'bg-slate-800 text-slate-200 text-[11px] font-semibold border-b border-slate-700';
+
+                function getColWidth(colName) {
+                    let colKey = 'CONS_' + colName;
+                    let currentWidth = colWidths[colKey];
+                    if (!currentWidth) {
+                        if (colName === 'Recurso') currentWidth = 350;
+                        else if (colName === 'Partida de Control' || colName === 'Partida Reasignada (Destino)') currentWidth = 220;
+                        else if (colName === 'Recurso N1') currentWidth = 150;
+                        else currentWidth = 100;
+                    }
+                    return currentWidth;
+                }
+
+                function applyColWidth(cell, colName) {
+                    let currentWidth = getColWidth(colName);
+                    cell.style.width = currentWidth + 'px';
+                    cell.style.minWidth = currentWidth + 'px';
+                    cell.style.maxWidth = currentWidth + 'px';
+                    cell.className += ' overflow-hidden text-ellipsis whitespace-nowrap';
+                }
+
+                // Crear los ENCABEZADOS FIJOS
+                targetCols.forEach((colName, cIdx) => {
+                    const th = document.createElement('th');
+                    let baseClass = 'p-2 border-r border-slate-700 text-center ';
+                    
+                    let isSticky = cIdx < 3;
+                    let leftOffset = 0;
+                    if (cIdx === 1) leftOffset = getColWidth('Partida de Control');
+                    if (cIdx === 2) leftOffset = getColWidth('Partida de Control') + getColWidth('Recurso N1');
+
+                    if (isSticky) {
+                        baseClass += 'sticky z-30 bg-slate-800 bg-clip-padding ';
+                        if (cIdx === 2) baseClass += 'shadow-[4px_0_10px_-4px_rgba(0,0,0,0.5)] '; // Sombra para separar
+                    } else {
+                        baseClass += 'relative bg-slate-800 ';
+                    }
+                    
+                    if (colName.includes('Ajustado') || colName.includes('Reasignada')) {
+                        th.className = baseClass.replace('bg-slate-800', 'bg-amber-900 text-amber-100 font-bold');
+                    } else if (colName.includes('Original')) {
+                        th.className = baseClass.replace('bg-slate-800', 'bg-slate-700 text-slate-200 font-bold');
+                    } else {
+                        th.className = baseClass + 'font-bold';
+                    }
+
+                    if (isSticky) th.style.left = leftOffset + 'px';
+
+                    th.innerHTML = `<span class="block truncate pr-2" title="${colName}">${colName}</span>`;
+                    applyColWidth(th, colName);
+
+                    let resizer = document.createElement('div');
+                    resizer.className = 'resizer';
+                    resizer.addEventListener('mousedown', initColumnResize(th, 'CONS_' + colName, cIdx));
+                    th.appendChild(resizer);
+
+                    trHeader.appendChild(th);
+                });
+                thead.appendChild(trHeader);
+
+                let rowSet = partidasGrouped[currentPartidaKey] || [];
+                const searchVal = document.getElementById('tableSearch').value.toLowerCase().trim();
+                if (searchVal) {
+                    rowSet = rowSet.filter(row => {
+                        return [
+                            getConsolidadoRowValue(row, 'Partida de Control'),
+                            getConsolidadoRowValue(row, 'Recurso N1'), getConsolidadoRowValue(row, 'Recurso'),
+                            row._PartidaOriginal, row._PartidaActual
+                        ].some(v => String(v).toLowerCase().includes(searchVal));
+                    });
+                }
+
+                const totalRows = rowSet.length;
+                const totalPages = pageSize === 999999 ? 1 : Math.ceil(totalRows / pageSize) || 1;
+                if (currentPage > totalPages) currentPage = totalPages;
+
+                const startIndex = (currentPage - 1) * pageSize;
+                const endIndex = Math.min(startIndex + pageSize, totalRows);
+                const pageRows = rowSet.slice(startIndex, endIndex);
+
+                let movedInCountTotal = (currentPartidaKey !== "ALL") ? rowSet.filter(r => r._PartidaOriginal !== currentPartidaKey && r._PartidaActual === currentPartidaKey).length : 0;
+                if (movedInCountTotal > 0 && movedInContainer) {
+                    let jumpBtn = document.createElement('button');
+                    jumpBtn.className = 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] px-2.5 py-1 rounded-md shadow-xs transition animate-bounce cursor-pointer flex items-center gap-1.5';
+                    jumpBtn.innerHTML = `<i class="fa-solid fa-arrow-down-long"></i> 🟢 ${movedInCountTotal} traído(s) al final ➔ Ir a última pág.`;
+                    jumpBtn.onclick = () => goToLastPage(totalPages);
+                    movedInContainer.appendChild(jumpBtn);
+                }
+
+                let totalRCostoOriginalSum = 0, totalRCostoAjustadoSum = 0;
+                rowSet.forEach(r => {
+                    let origVal = parseNumberValue(getConsolidadoRowValue(r, 'R Costo'));
+                    if (currentPartidaKey !== "ALL") {
+                        if (r._PartidaOriginal === currentPartidaKey) totalRCostoOriginalSum += origVal;
+                        if (r._PartidaActual === currentPartidaKey) totalRCostoAjustadoSum += origVal;
+                    } else {
+                        totalRCostoOriginalSum += origVal;
+                        totalRCostoAjustadoSum += origVal;
+                    }
+                });
+
+                if (pageRows.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="10" class="text-center py-8 text-slate-400">No se encontraron registros en esta vista.</td></tr>';
+                    updatePaginationUI(0, 0, 0, 1, 1);
+                    return;
+                }
+
+                pageRows.forEach((row, idx) => {
+                    const tr = document.createElement('tr');
+                    let isMovedOut = (currentPartidaKey !== "ALL") && (row._PartidaOriginal === currentPartidaKey) && (row._PartidaActual !== currentPartidaKey);
+                    let isMovedIn = (currentPartidaKey !== "ALL") && (row._PartidaOriginal !== currentPartidaKey) && (row._PartidaActual === currentPartidaKey);
+                    let isSuggested = !!row._SuggestedPartida;
+
+                    let rowBgClass = 'bg-white';
+                    if (isSuggested) rowBgClass = 'bg-fuchsia-50';
+                    else if (isMovedOut) rowBgClass = 'bg-red-50';
+                    else if (isMovedIn) rowBgClass = 'bg-emerald-50';
+                    else if (row._PartidaOriginal !== row._PartidaActual) rowBgClass = 'bg-amber-50';
+                    else rowBgClass = (idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'); // <-- Sólido (sin /60)
+
+                    // Usamos la etiqueta "group" para que el sombreado azul al pasar el ratón funcione hasta en las columnas fijas
+                    tr.className = `group ${rowBgClass} hover:bg-blue-50 transition text-xs border-b border-slate-100`; // <-- Sólido (sin /40)
+
+                    let tdVals = [
+                        { col: 'Partida de Control', val: row._PartidaOriginal, class: 'font-medium' },
+                        { col: 'Recurso N1', val: getConsolidadoRowValue(row, 'Recurso N1'), class: '' },
+                        { col: 'Recurso', val: getConsolidadoRowValue(row, 'Recurso'), class: 'font-semibold text-slate-800' },
+                        { col: 'Unidad', val: getConsolidadoRowValue(row, 'Unidad'), class: 'text-center' },
+                        { col: 'V Cantidad', val: getConsolidadoRowValue(row, 'V Cantidad'), isNum: true },
+                        { col: 'V Costo', val: getConsolidadoRowValue(row, 'V Costo'), isNum: true },
+                        { col: 'R Cantidad', val: getConsolidadoRowValue(row, 'R Cantidad'), isNum: true },
+                        { col: 'R Costo (Original)', val: getConsolidadoRowValue(row, 'R Costo'), isNum: true, custom: 'font-semibold text-slate-700 bg-slate-100/40' },
+                        { col: 'Partida Reasignada (Destino)', isCombo: true },
+                        { col: 'R Costo Ajustado', val: getConsolidadoRowValue(row, 'R Costo'), isAdjusted: true }
+                    ];
+
+                    tdVals.forEach((cellData, cIdx) => {
+                        let td = document.createElement('td');
+                        td.className = `p-2 border-r border-slate-200 ${cellData.class || ''}`;
+
+                        // Configuración de INMOVILIZACIÓN
+                        let isSticky = cIdx < 3;
+                        let leftOffset = 0;
+                        if (cIdx === 1) leftOffset = getColWidth('Partida de Control');
+                        if (cIdx === 2) leftOffset = getColWidth('Partida de Control') + getColWidth('Recurso N1');
+
+                        if (isSticky) {
+                            td.className += ` sticky z-20 ${rowBgClass} group-hover:bg-blue-50 bg-clip-padding`; // <-- Sólido (sin /40)
+                            if (cIdx === 2) td.className += ' shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)]'; // Sombra divisoria
+                            td.style.left = leftOffset + 'px';
+                        }
+
+                        applyColWidth(td, cellData.col);
+
+                        // TEXT-RIGHT mantenido para contabilidad
+                        if (cellData.isNum || cellData.isAdjusted) {
+                            let numVal = parseNumberValue(cellData.val);
+                            td.className += ' text-right font-mono';
+                            
+                            if (cellData.isAdjusted) {
+                                td.className += ' font-bold';
+                                if (isMovedOut) {
+                                    td.className += ' text-red-600 line-through bg-red-100/40';
+                                    td.textContent = '0.00';
+                                } else if (isMovedIn) {
+                                    td.className += ' text-emerald-700 bg-emerald-100/50';
+                                    td.textContent = numVal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                } else {
+                                    td.className += ' text-slate-900 bg-slate-50';
+                                    td.textContent = numVal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                }
+                            } else {
+                                if (cellData.custom) td.className += ' ' + cellData.custom;
+                                td.textContent = numVal !== 0 ? numVal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-';
+                            }
+                        } else if (cellData.isCombo) {
+                            let selectWrapper = document.createElement('div');
+                            selectWrapper.className = 'flex items-center gap-1.5 w-full';
+                            
+                            let partSelect = document.createElement('select');
+                            partSelect.className = 'py-1 px-1 text-[11px] bg-white border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 font-medium truncate shadow-2xs cursor-pointer flex-grow';
+                            partidaListKeys.forEach(pK => {
+                                let opt = document.createElement('option');
+                                opt.value = pK; opt.textContent = pK;
+                                if (pK === row._PartidaActual) opt.selected = true;
+                                partSelect.appendChild(opt);
+                            });
+                            partSelect.onchange = (e) => reassignItemPartida(row._id, e.target.value);
+                            selectWrapper.appendChild(partSelect);
+
+                            if (isSuggested) {
+                                let actionDiv = document.createElement('div');
+                                actionDiv.className = 'flex items-center gap-1 ml-1 flex-shrink-0';
+                                
+                                let btnAccept = document.createElement('button');
+                                btnAccept.className = 'px-1.5 py-1 rounded bg-fuchsia-600 hover:bg-fuchsia-700 text-white text-[10px] shadow-sm transition cursor-pointer flex items-center gap-1 animate-pulse';
+                                btnAccept.title = `✨ Aceptar sugerencia: Mover a ${row._SuggestedPartida}`;
+                                btnAccept.innerHTML = '<i class="fa-solid fa-check"></i>';
+                                btnAccept.onclick = () => acceptSingleSuggestion(row._id);
+
+                                let btnReject = document.createElement('button');
+                                btnReject.className = 'px-1.5 py-1 rounded bg-slate-300 hover:bg-slate-400 text-slate-700 text-[10px] shadow-sm transition cursor-pointer';
+                                btnReject.title = '❌ Descartar y mantener en partida actual';
+                                btnReject.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+                                btnReject.onclick = () => rejectSingleSuggestion(row._id);
+
+                                actionDiv.appendChild(btnAccept);
+                                actionDiv.appendChild(btnReject);
+                                selectWrapper.appendChild(actionDiv);
+                            } else if (isMovedOut) {
+                                let badge = document.createElement('span');
+                                badge.title = `Movido a ${row._PartidaActual}`;
+                                badge.className = 'px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] shadow-xs flex-shrink-0 cursor-help';
+                                badge.innerHTML = '<i class="fa-solid fa-arrow-right-from-bracket"></i>';
+                                selectWrapper.appendChild(badge);
+                            } else if (isMovedIn) {
+                                let badge = document.createElement('span');
+                                badge.title = `Traído de ${row._PartidaOriginal}`;
+                                badge.className = 'px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[10px] shadow-xs flex-shrink-0 cursor-help';
+                                badge.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i>';
+                                selectWrapper.appendChild(badge);
+                            }
+                            
+                            td.appendChild(selectWrapper);
+                        } else {
+                            td.textContent = cellData.val;
+                            if (String(cellData.val).length > 25) td.title = cellData.val; 
+                        }
+                        tr.appendChild(td);
+                    });
+                    tbody.appendChild(tr);
+                });
+
+                // TOTALES
+                const trTotal = document.createElement('tr');
+                trTotal.className = 'bg-slate-900 text-white font-bold text-xs border-t-2 border-slate-900 sticky bottom-0 z-40 shadow-lg';
+                
+                targetCols.forEach((colKey, cIdx) => {
+                    const td = document.createElement('td');
+                    td.className = 'p-2.5 border-r border-slate-700 bg-slate-900';
+                    
+                    let isSticky = cIdx < 3;
+                    let leftOffset = 0;
+                    if (cIdx === 1) leftOffset = getColWidth('Partida de Control');
+                    if (cIdx === 2) leftOffset = getColWidth('Partida de Control') + getColWidth('Recurso N1');
+
+                    if (isSticky) {
+                        td.className += ' sticky z-50 bg-clip-padding';
+                        if (cIdx === 2) td.className += ' shadow-[4px_0_10px_-4px_rgba(0,0,0,0.5)]';
+                        td.style.left = leftOffset + 'px';
+                    }
+
+                    applyColWidth(td, colKey);
+
+                    if (cIdx === 0) td.textContent = 'TOTALES RECONCILIADOS';
+                    else if (colKey === 'R Costo (Original)') {
+                        td.textContent = totalRCostoOriginalSum.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        td.className += ' text-right font-mono text-slate-300'; // TEXT-RIGHT
+                    } else if (colKey === 'R Costo Ajustado') {
+                        td.textContent = totalRCostoAjustadoSum.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        let diff = totalRCostoAjustadoSum - totalRCostoOriginalSum;
+                        td.className += ' text-right font-mono ' + (Math.abs(diff)>0.01 ? (diff>0?'text-emerald-300':'text-red-300') : 'text-emerald-400');
+                    } else if (colKey.includes('Reasignada')) {
+                        let diff = totalRCostoAjustadoSum - totalRCostoOriginalSum;
+                        td.textContent = Math.abs(diff)>0.01 ? `Variación: ${diff>0?'+':''}${diff.toLocaleString('es-PE', { minimumFractionDigits: 2 })}` : 'Sin variación';
+                        td.className += ' text-[11px] text-center ' + (Math.abs(diff)>0.01 ? 'text-amber-300' : 'text-slate-400 italic');
+                    }
+                    trTotal.appendChild(td);
+                });
+                tbody.appendChild(trTotal);
+
+            updatePaginationUI(startIndex + 1, endIndex, totalRows, currentPage, totalPages);
+        }
+
+        async function exportToExcel() {
+            if (consolidatedRows.length === 0 && roFilteredMatrix2D.length === 0) {
+                alert("No hay datos cargados para exportar.");
+                return;
+            }
+
+            // Cambiar el botón temporalmente para que muestre que está procesando
+            const btnExport = document.querySelector('button[onclick="exportToExcel()"]');
+            const originalHTML = btnExport.innerHTML;
+            btnExport.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando Excel...';
+            btnExport.disabled = true;
+
+            try {
+                // Crear el nuevo archivo Excel "Premium"
+                const wb = new ExcelJS.Workbook();
+                wb.creator = 'S10 RO Processor';
+                wb.created = new Date();
+
+                // ==========================================
+                // 1. ESTILIZAR HOJA "RESUMEN RO" (AHORA ES LA PRIMERA PESTAÑA)
+                // ==========================================
+                if (roFilteredMatrix2D.length > 0) {
+                    const wsRo = wb.addWorksheet("Resumen RO");
+                    const headers = roFilteredMatrix2D[0];
+
+                    wsRo.columns = headers.map((h, i) => {
+                        let w = 15;
+                        if (i === 0) w = 12; // Código
+                        if (i === 1) w = 50; // Descripción
+                        return { header: h, key: `col_${i}`, width: w };
+                    });
+
+                    // Pintar la cabecera con los colores de la web
+                    const headerRow = wsRo.getRow(1);
+                    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                    headerRow.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+                    
+                    headerRow.eachCell((cell, colNumber) => {
+                        const colName = headers[colNumber - 1] || '';
+                        let bgColor = 'FF475569'; // Slate (Neutral)
+                        let fontColor = 'FFFFFFFF'; // Blanco
+                        
+                        if (colName.includes('V_P')) bgColor = 'FF1E3A8A'; // Azul
+                        else if (colName.includes('V_V')) bgColor = 'FF7F1D1D'; // Rojo
+                        else if (colName.includes('Corregido')) bgColor = 'FFD97706'; // Dorado
+                        else if (colName.includes('Diferencia')) { bgColor = 'FFFDE047'; fontColor = 'FF713F12'; } 
+                        else if (colName.includes('Proyección') || colName.includes('Costo Final') || colName.includes('Sustento')) { bgColor = 'FFE0E7FF'; fontColor = 'FF312E81'; } // <-- NUEVO (Índigo)
+                        else if (colName.includes('R Costo') || colName.includes('Real')) bgColor = 'FF064E3B';
+
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+                        cell.font = { bold: true, color: { argb: fontColor } };
+                    });
+
+                    // Llenar datos y formato condicional (Por longitud del Código)
+                    for (let r = 1; r < roFilteredMatrix2D.length; r++) {
+                        const rowData = roFilteredMatrix2D[r];
+                        const excelRow = wsRo.addRow(rowData);
+                        
+                        let codeVal = String(rowData[0] || '').trim(); // Columna Código
+                        let rowFontColor = 'FFD946EF'; // Fucsia Claro (Equivalente al text-fuchsia-500)
+                        let isBold = false;
+                        let isRowRed = false, isRowBlue = false;
+
+                        if (codeVal.length === 2) { 
+                            rowFontColor = 'FFDC2626'; // Rojo
+                            isBold = true;
+                            isRowRed = true;
+                        } else if (codeVal.length === 4) {
+                            rowFontColor = 'FF2563EB'; // Azul
+                            isBold = true;
+                            isRowBlue = true;
+                        }
+                        
+                        excelRow.eachCell((cell, colNumber) => {
+                            const colName = headers[colNumber - 1] || '';
+                            if (colNumber > 2) cell.numFmt = '#,##0.00'; // Formato Contable
+
+                            // Aplicar el color base de la fila
+                            cell.font = { color: { argb: rowFontColor }, bold: isBold };
+
+                            // Formato Condicional en la columna Diferencia
+                            if (colName.includes('Diferencia')) {
+                                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF9C3' } }; 
+                                
+                                // Si es una fila fucsia claro, aplicamos la regla de +/- a esta celda
+                                if (!isRowRed && !isRowBlue) {
+                                    if (cell.value < 0) cell.font = { color: { argb: 'FFDC2626' }, bold: true }; 
+                                    else if (cell.value > 0) cell.font = { color: { argb: 'FF2563EB' }, bold: true }; 
+                                    else cell.font = { color: { argb: 'FF94A3B8' } }; 
+                                }
+                            }
+                            else if (colName.includes('Proyección') || colName.includes('Costo Final') || colName.includes('Sustento')) {
+                                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F3FF' } }; 
+                                if (colName === 'Costo Final (EAC)') cell.font = { color: { argb: 'FF4338CA' }, bold: true }; 
+                                else if (colName === 'Proyección (CTC)') cell.font = { color: { argb: 'FF312E81' }, bold: true }; 
+                                if (colName === 'Sustento / Nota') cell.alignment = { horizontal: 'left', wrapText: true };
+                            }
+                        });
+                    }
+
+                    // Inmovilizar las primeras 3 columnas y la fila de cabecera!
+                    wsRo.views = [{ state: 'frozen', xSplit: 3, ySplit: 1 }];
+                }
+
+                // ==========================================
+                // 2. ESTILIZAR HOJAS DE CONSOLIDADO Y PARTIDAS (SEGUNDO PLANO)
+                // ==========================================
+                const targetColsConsolidado = [
+                    { header: 'Partida de Control', key: 'p_orig', width: 40 },
+                    { header: 'Recurso N1', key: 'rec_n1', width: 15 },
+                    { header: 'Recurso', key: 'rec', width: 50 },
+                    { header: 'Unidad', key: 'und', width: 10 },
+                    { header: 'V Cantidad', key: 'v_cant', width: 15 },
+                    { header: 'V Costo', key: 'v_costo', width: 15 },
+                    { header: 'R Cantidad', key: 'r_cant', width: 15 },
+                    { header: 'R Costo (Original)', key: 'r_costo_orig', width: 20 },
+                    { header: 'Partida Reasignada', key: 'p_dest', width: 40 },
+                    { header: 'R Costo Ajustado', key: 'r_costo_adj', width: 20 }
+                ];
+
+                function styleConsolidadoSheet(ws) {
+                    ws.columns = targetColsConsolidado;
+                    const hRow = ws.getRow(1);
+                    hRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                    hRow.alignment = { horizontal: 'center', vertical: 'middle' };
+                    hRow.eachCell((cell, colNumber) => {
+                        cell.fill = {
+                            type: 'pattern', pattern: 'solid',
+                            fgColor: { argb: (colNumber >= 9) ? 'FF92400E' : 'FF1E293B' } // Ámbar para Reasignada, Gris oscuro para el resto
+                        };
+                    });
+                    ws.views = [{ state: 'frozen', xSplit: 3, ySplit: 1 }]; // Inmovilizar columnas A, B, C
+                }
+
+                if (consolidatedRows.length > 0) {
+                    // Generar "Consolidado General"
+                    const wsGen = wb.addWorksheet("Consolidado General");
+                    styleConsolidadoSheet(wsGen);
+
+                    let genSumOrig = 0, genSumAdj = 0;
+                    consolidatedRows.forEach(row => {
+                        let origCost = parseNumberValue(getConsolidadoRowValue(row, 'R Costo'));
+                        genSumOrig += origCost; genSumAdj += origCost;
+
+                        const eRow = wsGen.addRow({
+                            p_orig: row._PartidaOriginal,
+                            rec_n1: getConsolidadoRowValue(row, 'Recurso N1'),
+                            rec: getConsolidadoRowValue(row, 'Recurso'),
+                            und: getConsolidadoRowValue(row, 'Unidad'),
+                            v_cant: parseNumberValue(getConsolidadoRowValue(row, 'V Cantidad')),
+                            v_costo: parseNumberValue(getConsolidadoRowValue(row, 'V Costo')),
+                            r_cant: parseNumberValue(getConsolidadoRowValue(row, 'R Cantidad')),
+                            r_costo_orig: origCost, p_dest: row._PartidaActual, r_costo_adj: origCost
+                        });
+                        ['v_cant', 'v_costo', 'r_cant', 'r_costo_orig', 'r_costo_adj'].forEach(k => eRow.getCell(k).numFmt = '#,##0.00');
+                    });
+
+                    let tRowGen = wsGen.addRow({ p_orig: 'TOTALES', r_costo_orig: genSumOrig, r_costo_adj: genSumAdj });
+                    tRowGen.font = { bold: true };
+                    tRowGen.getCell('r_costo_orig').numFmt = '#,##0.00'; tRowGen.getCell('r_costo_adj').numFmt = '#,##0.00';
+
+                    // Generar pestañas individuales
+                    partidaListKeys.forEach((pName) => {
+                        let sheetName = pName.replace(/[\\/?*:[\]]/g, '').substring(0, 30) || 'Partida';
+                        const wsP = wb.addWorksheet(sheetName);
+                        styleConsolidadoSheet(wsP);
+
+                        let pSumOrig = 0, pSumAdj = 0;
+                        let itemsForPartida = partidasGrouped[pName] || [];
+
+                        itemsForPartida.forEach(row => {
+                            let origCost = parseNumberValue(getConsolidadoRowValue(row, 'R Costo'));
+                            let isMovedOut = (row._PartidaOriginal === pName) && (row._PartidaActual !== pName);
+                            let isMovedIn = (row._PartidaOriginal !== pName) && (row._PartidaActual === pName);
+
+                            let adjCost = isMovedOut ? 0 : origCost;
+                            if (row._PartidaOriginal === pName) pSumOrig += origCost;
+                            if (row._PartidaActual === pName) pSumAdj += origCost;
+
+                            const eRow = wsP.addRow({
+                                p_orig: row._PartidaOriginal, rec_n1: getConsolidadoRowValue(row, 'Recurso N1'), rec: getConsolidadoRowValue(row, 'Recurso'),
+                                und: getConsolidadoRowValue(row, 'Unidad'), v_cant: parseNumberValue(getConsolidadoRowValue(row, 'V Cantidad')),
+                                v_costo: parseNumberValue(getConsolidadoRowValue(row, 'V Costo')), r_cant: parseNumberValue(getConsolidadoRowValue(row, 'R Cantidad')),
+                                r_costo_orig: origCost, p_dest: row._PartidaActual + (isMovedOut ? ' [MOVIDO OUT]' : (isMovedIn ? ' [MOVIDO IN]' : '')), r_costo_adj: adjCost
+                            });
+
+                            ['v_cant', 'v_costo', 'r_cant', 'r_costo_orig', 'r_costo_adj'].forEach(k => eRow.getCell(k).numFmt = '#,##0.00');
+
+                            if (isMovedOut) {
+                                eRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } }; // Rojo suave
+                                eRow.getCell('r_costo_adj').font = { color: { argb: 'FFDC2626' }, strike: true };
+                            } else if (isMovedIn) {
+                                eRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD1FAE5' } }; // Verde suave
+                                eRow.getCell('r_costo_adj').font = { color: { argb: 'FF059669' }, bold: true };
+                            }
+                        });
+
+                        let tRowP = wsP.addRow({ p_orig: 'TOTALES', r_costo_orig: pSumOrig, r_costo_adj: pSumAdj });
+                        tRowP.font = { bold: true };
+                        tRowP.getCell('r_costo_orig').numFmt = '#,##0.00'; tRowP.getCell('r_costo_adj').numFmt = '#,##0.00';
+                    });
+                }
+                
+                // ==========================================
+            // EXPORTAR: PESTAÑA STOCK
+            // ==========================================
+            if (typeof stockRows !== 'undefined' && stockRows.length > 0) {
+                const wsStock = wb.addWorksheet('STOCK');
+                let rawKeys = Object.keys(stockRows[0]).filter(k => !k.startsWith('_'));
+                
+                // Formato de Cabecera (Verde)
+                let headerRow = wsStock.addRow(rawKeys);
+                headerRow.eachCell(cell => {
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF064E3B' } }; 
+                    cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+                    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                });
+
+                // Insertar Datos
+                stockRows.forEach(row => {
+                    let rData = rawKeys.map(k => row[k]);
+                    let addedRow = wsStock.addRow(rData);
+                    addedRow.eachCell((cell, colNumber) => {
+                        let val = row[rawKeys[colNumber - 1]];
+                        if (typeof val === 'number') {
+                            cell.numFmt = '#,##0.00'; // Formato moneda
+                        }
+                    });
+                });
+
+                wsStock.columns.forEach(column => { column.width = 20; });
+            }
+
+            // ==========================================
+            // EXPORTAR: PESTAÑA SUBCONTRATOS
+            // ==========================================
+            if (typeof subcontratoRows !== 'undefined' && subcontratoRows.length > 0) {
+                const wsSub = wb.addWorksheet('SUBCONTRATOS');
+                
+                // 1. Filtrar semanas activas
+                let excelFilteredSub = subcontratoRows.filter(row => {
+                    let colDesc = Object.keys(row).find(k => k.toLowerCase().includes('descripc')) || Object.keys(row)[0];
+                    let desc = String(row[colDesc] || '').trim();
+                    if (desc.toUpperCase().startsWith('SEMANA')) {
+                        let match = desc.match(/^SEMANA\s+\d+/i);
+                        if (match) {
+                            let yearMatch = desc.match(/\d{2}\/\d{2}\/(\d{4})/);
+                            let year = yearMatch ? yearMatch[1] : "S/A";
+                            if (typeof activeSemanas !== 'undefined' && activeSemanas.has && !activeSemanas.has(`${year} - ${match[0].toUpperCase()}`)) return false;
+                        }
+                    }
+                    return true;
+                });
+
+                // 2. Identificar columnas clave
+                let rawKeys = Object.keys(excelFilteredSub[0]).filter(k => !k.startsWith('_'));
+                let numericKeys = rawKeys.filter(k => subcontratoRows.some(r => typeof r[k] === 'number'));
+                
+                let colDesc = rawKeys.find(k => k.toLowerCase().includes('descripc')) || rawKeys[0];
+                let colVal = rawKeys.find(k => k.toLowerCase().includes('val')) || rawKeys[1];
+                let colEst = rawKeys.find(k => k.toLowerCase().includes('estado')) || rawKeys[2];
+
+                let keyContratado = numericKeys.find(k => k.toLowerCase().includes('contratado'));
+                let keyPerc = numericKeys.find(k => k === '%' || k.toLowerCase().includes('%'));
+                let keyAmortizado = numericKeys.find(k => k.toLowerCase().includes('adelanto') && k.toLowerCase().includes('amortizado'));
+                let keyBruto = numericKeys.find(k => k.toLowerCase().includes('bruto'));
+                
+                let keyPendienteVal = numericKeys.find(k => k.toLowerCase().includes('pendiente') && k.toLowerCase().includes('valorizar'));
+                let keyPendienteFac = numericKeys.find(k => k.toLowerCase().includes('pendiente') && k.toLowerCase().includes('facturar'));
+                let keyAdelantoFac = numericKeys.find(k => k.toLowerCase().includes('facturado') && k.toLowerCase().includes('adelanto')) || numericKeys.find(k => k.toLowerCase().includes('adelanto') && k.toLowerCase().includes('otorgado') && k !== keyAmortizado);
+
+                // 🔥 AQUÍ DECLARAMOS sumKeys (Lo que faltaba)
+                let sumKeys = numericKeys.filter(k => {
+                    if (k === keyContratado || k === keyPerc) return false;
+                    return subcontratoRows.some(row => {
+                        let tDesc = String(row[colDesc] || '').replace(/[^a-zA-Z0-9]/g, '');
+                        let tVal = String(row[colVal] || '').replace(/[^a-zA-Z0-9]/g, '');
+                        let tEst = String(row[colEst] || '').replace(/[^a-zA-Z0-9]/g, '');
+                        let isBlack = tDesc.length > 0 && tVal.length > 0 && tDesc.toUpperCase() !== 'SUBCONTRATOS';
+                        return isBlack && typeof row[k] === 'number' && row[k] !== 0;
+                    });
+                });
+
+                if (keyPendienteVal && !sumKeys.includes(keyPendienteVal)) sumKeys.push(keyPendienteVal);
+                if (keyPendienteFac && !sumKeys.includes(keyPendienteFac)) sumKeys.push(keyPendienteFac);
+
+                // 3. Motor de Cálculo para Excel
+                let excelDisplayRows = excelFilteredSub.map(r => ({...r}));
+                let runRed = {}, runBlue = {}, runGlobal = {};
+                sumKeys.forEach(k => { runRed[k] = 0; runBlue[k] = 0; runGlobal[k] = 0; });
+                let runRedPerc = 0, runBlueWeightedPerc = 0, runGlobalWeightedPerc = 0;
+                let hasBlackDataForPendingFac = false;
+
+                for (let i = excelDisplayRows.length - 1; i >= 0; i--) {
+                    let row = excelDisplayRows[i];
+                    let tDesc = String(row[colDesc] || '').replace(/[^a-zA-Z0-9]/g, '');
+                    let tVal = String(row[colVal] || '').replace(/[^a-zA-Z0-9]/g, '');
+                    let tEst = String(row[colEst] || '').replace(/[^a-zA-Z0-9]/g, '');
+
+                    let isGlobal = tDesc.toUpperCase() === 'SUBCONTRATOS';
+                    let isBlue = !isGlobal && tDesc.length > 0 && tVal.length === 0 && tEst.length === 0;
+                    let isRed = !isGlobal && !isBlue && tDesc.length > 0 && tVal.length === 0;
+                    let isBlack = !isGlobal && !isBlue && !isRed; 
+                    
+                    let cont = keyContratado && typeof row[keyContratado] === 'number' ? row[keyContratado] : 0;
+                    let perc = keyPerc && typeof row[keyPerc] === 'number' ? row[keyPerc] : 0;
+
+                    if (isBlack) {
+                        sumKeys.forEach(k => { runRed[k] += (typeof row[k] === 'number' ? row[k] : 0); });
+                        if (keyPerc) runRedPerc += perc;
+                        if (keyPendienteFac && typeof row[keyPendienteFac] === 'number') hasBlackDataForPendingFac = true;
+                    } else if (isRed) {
+                        sumKeys.forEach(k => { row[k] = runRed[k]; }); 
+                        let bruto = keyBruto && typeof row[keyBruto] === 'number' ? row[keyBruto] : 0;
+                        if (keyPendienteVal) {
+                            let amortizado = keyAmortizado && typeof row[keyAmortizado] === 'number' ? row[keyAmortizado] : 0;
+                            row[keyPendienteVal] = cont - amortizado - bruto;
+                        }
+                        if (keyPendienteFac) {
+                            let adelantoFac = keyAdelantoFac && typeof row[keyAdelantoFac] === 'number' ? row[keyAdelantoFac] : 0;
+                            let formulaFac = cont - bruto - adelantoFac;
+                            if (hasBlackDataForPendingFac) row[keyPendienteFac] = runRed[keyPendienteFac] + formulaFac;
+                            else row[keyPendienteFac] = formulaFac;
+                        }
+                        sumKeys.forEach(k => { runBlue[k] += row[k]; runRed[k] = 0; });
+                        if (keyPerc) { row[keyPerc] = runRedPerc; runBlueWeightedPerc += (row[keyPerc] * cont); runRedPerc = 0; }
+                        hasBlackDataForPendingFac = false;
+                    } else if (isBlue) {
+                        sumKeys.forEach(k => { row[k] = runBlue[k]; runGlobal[k] += runBlue[k]; runBlue[k] = 0; });
+                        if (keyPerc) { row[keyPerc] = cont !== 0 ? (runBlueWeightedPerc / cont) : 0; runGlobalWeightedPerc += (row[keyPerc] * cont); runBlueWeightedPerc = 0; }
+                        hasBlackDataForPendingFac = false;
+                    } else if (isGlobal) {
+                        sumKeys.forEach(k => { row[k] = runGlobal[k]; });
+                        if (keyPerc) { row[keyPerc] = cont !== 0 ? (runGlobalWeightedPerc / cont) : 0; }
+                        hasBlackDataForPendingFac = false;
+                    }
+                }
+
+                // 4. Dibujar en Excel con Estilos Jerárquicos
+                let headerRow = wsSub.addRow(rawKeys);
+                headerRow.eachCell(cell => {
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF8B4513' } }; // Marrón Cabecera
+                    cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+                    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                });
+
+                excelDisplayRows.forEach(row => {
+                    let rData = rawKeys.map(k => row[k]);
+                    let addedRow = wsSub.addRow(rData);
+                    
+                    let tDesc = String(row[colDesc] || '').replace(/[^a-zA-Z0-9]/g, '');
+                    let tVal = String(row[colVal] || '').replace(/[^a-zA-Z0-9]/g, '');
+                    let tEst = String(row[colEst] || '').replace(/[^a-zA-Z0-9]/g, '');
+
+                    let isGlobal = tDesc.toUpperCase() === 'SUBCONTRATOS';
+                    let isBlue = !isGlobal && tDesc.length > 0 && tVal.length === 0 && tEst.length === 0;
+                    let isRed = !isGlobal && !isBlue && tDesc.length > 0 && tVal.length === 0;
+
+                    addedRow.eachCell((cell, colNumber) => {
+                        let val = row[rawKeys[colNumber - 1]];
+                        if (typeof val === 'number') {
+                            cell.numFmt = '#,##0.00';
+                        }
+                        if (isBlue) {
+                            cell.font = { color: { argb: 'FF1E3A8A' }, bold: true }; // Azul
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDBEAFE' } }; // Fondo celeste
+                        } else if (isRed) {
+                            cell.font = { color: { argb: 'FFDC2626' }, bold: true }; // Rojo
+                        } else if (isGlobal) {
+                            cell.font = { bold: true };
+                        }
+                    });
+                });
+                
+                wsSub.columns.forEach(column => { column.width = 18; });
+            }
+                // Disparar la descarga del archivo
+                const buffer = await wb.xlsx.writeBuffer();
+                saveAs(new Blob([buffer]), "Reporte_S10_Consolidado_RO_Reconciliado.xlsx");
+
+            } catch (err) {
+                console.error("Error al exportar:", err);
+                alert("Hubo un error al exportar: " + err.message);
+            } finally {
+                // Restaurar el botón a la normalidad
+                btnExport.innerHTML = originalHTML;
+                btnExport.disabled = false;
+            }
+        }
+// ==========================================
+        // MOTOR EXPERTO DE AUDITORÍA IA (2 PASOS)
+        // ==========================================
+        const auditRules = [
+            { keywords: ['ACERO CORRUGADO', 'FIERRO CORRUGADO', 'ALAMBRE NEGRO'], targetMatch: 'ACERO' },
+            { keywords: ['COLOCACIÓN DE ACERO'], targetMatch: 'ACERO MANO DE OBRA' },
+            { keywords: ['GUANTES DE LATEX'], targetMatch: 'LIMPIEZA PERMANENTE Y ELIMINACION DE EXCEDENTES' },
+            { keywords: ['CEMENTO', 'MEZCLA', 'AGREGADO', 'HORMIGON'], targetMatch: 'CONCRETO ARMADO' },
+            { keywords: ['TRIPLAY', 'MADERA TORNILLO', 'PUNTAL', 'DESENCOFRANTE', 'CLAVOS', 'FENOLICO'], targetMatch: 'ENCOFRADO' },
+            { keywords: ['LADRILLO', 'MORTERO', 'KING KONG', 'PANDERETA'], targetMatch: 'ALBAÑILERIA' },
+            { keywords: ['PINTURA', 'LATEX', 'IMPRIMANTE', 'RODILLO'], targetMatch: 'PINTURA' },
+            { keywords: ['CERAMICO', 'PORCELANATO', 'PEGAMENTO', 'FRAGUA'], targetMatch: 'PISO' },
+            { keywords: ['CASCO', 'GUANTES', 'BOTAS', 'LENTES', 'ARNES', 'EPP'], targetMatch: 'SEGURIDAD' }
+        ];
+
+        function detectInconsistencies() {
+            if (consolidatedRows.length === 0) return alert("No hay datos cargados.");
+            
+            let suggestCount = 0;
+
+            consolidatedRows.forEach(row => {
+                row._SuggestedPartida = null; // Limpiar sugerencias previas
+                
+                let recursoText = String(getConsolidadoRowValue(row, 'Recurso')).toUpperCase();
+                let currentPartida = row._PartidaActual;
+                let suggestedPartida = null;
+
+                for (let rule of auditRules) {
+                    if (rule.keywords.some(kw => recursoText.includes(kw))) {
+                        // Buscar una partida destino real que haga match
+                        suggestedPartida = partidaListKeys.find(p => p.toUpperCase().includes(rule.targetMatch));
+                        if (suggestedPartida) break;
+                    }
+                }
+
+                if (suggestedPartida && suggestedPartida !== currentPartida) {
+                    row._SuggestedPartida = suggestedPartida;
+                    suggestCount++;
+                }
+            });
+
+            if (suggestCount > 0) {
+                document.getElementById('btnAuditDetect').classList.add('hidden');
+                document.getElementById('auditActions').classList.remove('hidden');
+                document.getElementById('auditCountBadge').textContent = suggestCount;
+                
+                // 🔄 RECONSTRUIR PESTAÑAS PARA QUE APAREZCAN LAS MORADAS
+                buildPartidaTabsAndSelect();
+
+                // Cambiar a la pestaña "ALL" para que el usuario vea todos los resaltados
+                switchPartidaTab('ALL'); 
+            } else {
+                alert("🤖 Todo en orden: La IA no encontró ítems mal cargados bajo las reglas actuales.");
+            }
+        }
+
+        function applyAuditSuggestions() {
+            consolidatedRows.forEach(row => {
+                if (row._SuggestedPartida) {
+                    row._PartidaActual = row._SuggestedPartida;
+                    row._SuggestedPartida = null;
+                    row._reassignedTimestamp = Date.now();
+                }
+            });
+
+            clearAuditSuggestionsUI();
+            
+            groupDataByPartida();
+            buildPartidaTabsAndSelect();
+            updateReassignmentCountUI();
+
+            const horizontalFiles = rawDataFiles.filter(f => f.category === 'HORIZ');
+            if (horizontalFiles.length > 0) {
+                const mergedRes = mergeHorizontalFiles(horizontalFiles);
+                roFilteredMatrix2D = applyRoColumnFilterAndSum(mergedRes.matrix, mergedRes.headerRowsCount);
+            }
+            renderTableData();
+        }
+
+        function clearAuditSuggestions() {
+            consolidatedRows.forEach(row => { row._SuggestedPartida = null; });
+            clearAuditSuggestionsUI();
+            
+            // 🔄 RECONSTRUIR PESTAÑAS PARA QUITAR EL MORADO AL DESCARTAR
+            buildPartidaTabsAndSelect();
+            
+            renderTableData();
+        }
+
+        function clearAuditSuggestionsUI() {
+            document.getElementById('btnAuditDetect').classList.remove('hidden');
+            document.getElementById('auditActions').classList.add('hidden');
+        }
+
+        window.onload = function() {
+            updateFileListUI();
+        }
+        // ==========================================
+        // GUARDADO DE PROYECCIONES
+        // ==========================================
+        function saveProjection(code, type, value) {
+            if (!roProjections[code]) roProjections[code] = { amount: 0, note: '' };
+            
+            if (type === 'amount') roProjections[code].amount = parseFloat(value) || 0;
+            else roProjections[code].note = String(value).trim();
+            
+            localStorage.setItem('s10_ro_projections', JSON.stringify(roProjections));
+            
+            // Recalcular y repintar la tabla en vivo
+            const horizontalFiles = rawDataFiles.filter(f => f.category === 'HORIZ');
+            if (horizontalFiles.length > 0) {
+                const mergedRes = mergeHorizontalFiles(horizontalFiles);
+                roFilteredMatrix2D = applyRoColumnFilterAndSum(mergedRes.matrix, mergedRes.headerRowsCount);
+            }
+            renderTableData();
+        }
+        // ==========================================
+        // CONTROL INDIVIDUAL DE AUDITORÍA IA
+        // ==========================================
+        function acceptSingleSuggestion(rowId) {
+            const row = consolidatedRows.find(r => r._id === rowId);
+            if (row && row._SuggestedPartida) {
+                let destino = row._SuggestedPartida;
+                row._SuggestedPartida = null; // Limpiamos la sugerencia
+                
+                // Reutilizamos tu función que ya calcula todo maravillosamente
+                reassignItemPartida(rowId, destino); 
+                updateGlobalAuditCount();
+            }
+        }
+
+        function rejectSingleSuggestion(rowId) {
+            const row = consolidatedRows.find(r => r._id === rowId);
+            if (row && row._SuggestedPartida) {
+                row._SuggestedPartida = null; // Solo limpiamos la sugerencia, no movemos nada
+                updateGlobalAuditCount();
+                renderTableData(); // Repintamos para quitar el color fucsia de esta fila
+            }
+        }
+
+        function updateGlobalAuditCount() {
+            let suggestCount = consolidatedRows.filter(r => r._SuggestedPartida).length;
+            if (suggestCount > 0) {
+                document.getElementById('auditCountBadge').textContent = suggestCount;
+            } else {
+                clearAuditSuggestionsUI(); // Si ya no quedan sugerencias, ocultamos el menú global
+            }
+        }
+        // ==========================================
+        // LÓGICA DE FILTRO DE SEMANAS (SUBCONTRATOS)
+        // ==========================================
+        let subcontratoSemanas = new Set();
+        let activeSemanas = new Set();
+
+        function extractSemanasFromSubcontratos() {
+            subcontratoSemanas.clear();
+            activeSemanas.clear();
+            
+            subcontratoRows.forEach(row => {
+                let colDesc = Object.keys(row).find(k => k.toLowerCase().includes('descripc')) || Object.keys(row)[0];
+                let desc = String(row[colDesc] || '').trim();
+                
+                // Si empieza con la palabra SEMANA
+                if (desc.toUpperCase().startsWith('SEMANA')) {
+                    let match = desc.match(/^SEMANA\s+\d+/i); // Extrae "Semana XX"
+                    if (match) {
+                        // Extraemos el año buscando el patrón de fecha DD/MM/YYYY
+                        let yearMatch = desc.match(/\d{2}\/\d{2}\/(\d{4})/);
+                        let year = yearMatch ? yearMatch[1] : "S/A"; // S/A = Sin Año (por si acaso)
+                        
+                        // Creamos la llave combinada: "2026 - SEMANA 27"
+                        let key = `${year} - ${match[0].toUpperCase()}`;
+                        subcontratoSemanas.add(key);
+                        activeSemanas.add(key);
+                    }
+                }
+            });
+
+            // Construir el menú visual
+            const listEl = document.getElementById('semanasList');
+            listEl.innerHTML = '';
+            
+            // Al ordenar, los años se agruparán naturalmente (2025 primero, 2026 después)
+            let sortedSemanas = Array.from(subcontratoSemanas).sort();
+            sortedSemanas.forEach(semana => {
+                let lbl = document.createElement('label');
+                lbl.className = 'flex items-center gap-2 cursor-pointer text-slate-600 hover:text-slate-900';
+                lbl.innerHTML = `
+                    <input type="checkbox" checked value="${semana}" onchange="toggleSemana(this.value, this.checked)" class="semana-chk rounded text-amber-600 focus:ring-amber-500">
+                    ${semana}
+                `;
+                listEl.appendChild(lbl);
+            });
+            document.getElementById('chkAllSemanas').checked = true;
+        }
+
+        function toggleSemana(semana, isChecked) {
+            if (isChecked) activeSemanas.add(semana);
+            else activeSemanas.delete(semana);
+            
+            // Actualizar estado del checkbox "Todas"
+            document.getElementById('chkAllSemanas').checked = (activeSemanas.size === subcontratoSemanas.size);
+            renderTableData(); // Repintar tabla en vivo
+        }
+
+        function toggleAllSemanas(isChecked) {
+            document.querySelectorAll('.semana-chk').forEach(chk => {
+                chk.checked = isChecked;
+                if (isChecked) activeSemanas.add(chk.value);
+            });
+            if (!isChecked) activeSemanas.clear();
+            renderTableData();
+        }
+        // ==========================================
+        // CERRAR DROPDOWN DE SEMANAS AL HACER CLIC AFUERA
+        // ==========================================
+        document.addEventListener('click', function(event) {
+            const filterContainer = document.getElementById('semanasFilterContainer');
+            const dropdown = document.getElementById('semanasDropdown');
+            
+            // Si el contenedor existe, el menú no está oculto, y el clic fue AFUERA del contenedor...
+            if (filterContainer && !filterContainer.contains(event.target) && dropdown && !dropdown.classList.contains('hidden')) {
+                dropdown.classList.add('hidden'); // Lo ocultamos
+            }
+        });
+        // ==========================================
+        // PUENTE DE DATOS: SUBCONTRATOS -> RO (SIN IGV)
+        // ==========================================
+        function getTotalesSubcontratosParaRO() {
+            const cleanText = (txt) => String(txt).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/\s+/g, ' ').trim();
+            
+            const dicRaw = {
+                "SISTEMA CCTV": "SISTEMA DE CCTV",
+                "DETECCIÓN DE ALARMA CONTRA INCENDIO": "SISTEMA DE DETECCIÓN DE INCENDIOS",
+                "MURO ANCLADO": "ANCLAJES POSTENSADOS EN MURO SOTANO",
+                "TABIQUERÍA": "TABIQUE SILICO CALCAREA / UNICON",
+                "INSTALACIONES MECÁNICAS": "SISTEMA DE VENTILACION Y EXTRACCION DE MONOXIDO",
+                "PINTURA": "PINTURA INTERIOR", 
+                "SISTEMA DE PUESTA A TIERRA": "INSTALACIONES ELECTRICAS",
+                "ACERO MO": "ACERO MANO DE OBRA",
+                "AFECTACIÓN VECINOS": "AFECTACIONES CASA VECINAS",
+                "CLOSET": "MUEBLES DE CLOSETS",
+                "CARPINTERÍA DE MADERA": "CARPINTERIA DE MADERA",
+                "PAPEL MURAL": "PINTURA INTERIOR",
+                "CARPINTERÍA METÁLICA": "CARPINTERIA METALICA",
+                "INTERCOMUNICADORES": "SISTEMA DE INTERCOMUNICADORES",
+                "GAS NATURAL": "GAS",
+                "IMPERMEABILIZACIÓN VARIOS": "JARDINES Y VARIOS",
+                "SUMINISTRO DE EQUIPOS DE BOMBEO": "SISTEMA DE BOMBAS DE AGUA Y DESAGUE",
+                "INSTALACIÓN DE EQUIPOS DE BOMBEO Y REDES ACI": "SISTEMA DE AGUA CONTRAINCENDIO",
+                "MUEBLES DE COCINAS": "MUEBLES DE COCINA",
+                "DRYWALL": "DRYWALL",
+                "PISO SPC": "PISOS Y CONTRAZOCALOS DE MADERA",
+                "MOVIMIENTO DE TIERRAS": "DEMOLICION Y EXCAVACION MASIVA",
+                "OBRAS PROVISIONALES": "OBRAS PROVISIONALES",
+                "SEGURIDAD": "SEGURIDAD Y MEDIO AMBIENTE",
+                "INSTALACIONES SANITARIAS": "INSTALACIONES SANITARIAS",
+                "ENCHAPE": "ENCHAPES DE PISOS Y PAREDES",
+                "GRUPO ELECTRÓGENO": "GRUPO ELECTROGENO",
+                "PUERTAS": "PUERTAS DE MADERA",
+                "ASCENSORES": "ASCENSORES",
+                "PUERTA CORTAFUEGO": "CARPINTERIA METALICA",
+                "PUERTAS DE CLOSETS DE MONTANTES": "MUEBLES DE CLOSETS",
+                "TABLERO DE GRANITO": "MUEBLES DE COCINA",
+                "PROYECTO": "CARPINTERIA DE MADERA",
+                "TRANSPORTE VERTICAL Y HORIZONTAL": "TRANSPORTE VERTICAL Y HORIZONTAL",
+                "VENTANAS Y MAMPARAS": "VENTANAS Y MAMPARAS"
+            };
+
+            const dicEspecialidad = {};
+            Object.keys(dicRaw).forEach(k => dicEspecialidad[cleanText(k)] = cleanText(dicRaw[k]));
+
+            let totals = {};
+            if (typeof subcontratoRows === 'undefined' || subcontratoRows.length === 0) return totals;
+
+            let filtered = subcontratoRows.filter(row => {
+                let colDesc = Object.keys(row).find(k => k.toLowerCase().includes('descripc')) || Object.keys(row)[0];
+                let desc = String(row[colDesc] || '').trim();
+                if (desc.toUpperCase().startsWith('SEMANA')) {
+                    let match = desc.match(/^SEMANA\s+\d+/i);
+                    if (match) {
+                        let yearMatch = desc.match(/\d{2}\/\d{2}\/(\d{4})/);
+                        let year = yearMatch ? yearMatch[1] : "S/A";
+                        if (typeof activeSemanas !== 'undefined' && activeSemanas.has && !activeSemanas.has(`${year} - ${match[0].toUpperCase()}`)) return false;
+                    }
+                }
+                return true;
+            });
+
+            if(filtered.length === 0) return totals;
+
+            let rawKeys = Object.keys(filtered[0]).filter(k => !k.startsWith('_'));
+            let numericKeys = rawKeys.filter(k => subcontratoRows.some(r => typeof r[k] === 'number'));
+            
+            let colDesc = rawKeys.find(k => k.toLowerCase().includes('descripc')) || rawKeys[0];
+            let colVal = rawKeys.find(k => k.toLowerCase().includes('val')) || rawKeys[1];
+            let colEst = rawKeys.find(k => k.toLowerCase().includes('estado')) || rawKeys[2];
+            let keyEsp = rawKeys.find(k => k.toLowerCase().includes('especialidad'));
+
+            let keyContratado = numericKeys.find(k => k.toLowerCase().includes('contratado'));
+            let keyPerc = numericKeys.find(k => k === '%' || k.toLowerCase().includes('%'));
+            let keyAmortizado = numericKeys.find(k => k.toLowerCase().includes('adelanto') && k.toLowerCase().includes('amortizado'));
+            let keyBruto = numericKeys.find(k => k.toLowerCase().includes('bruto'));
+            
+            let keyPendienteVal = numericKeys.find(k => k.toLowerCase().includes('pendiente') && k.toLowerCase().includes('valorizar'));
+            let keyPendienteFac = numericKeys.find(k => k.toLowerCase().includes('pendiente') && k.toLowerCase().includes('facturar'));
+            let keyAdelantoFac = numericKeys.find(k => k.toLowerCase().includes('facturado') && k.toLowerCase().includes('adelanto')) || numericKeys.find(k => k.toLowerCase().includes('adelanto') && k.toLowerCase().includes('otorgado') && k !== keyAmortizado);
+
+            let sumKeys = numericKeys.filter(k => {
+                if (k === keyContratado || k === keyPerc) return false;
+                return subcontratoRows.some(row => {
+                    let tDesc = String(row[colDesc] || '').replace(/[^a-zA-Z0-9]/g, '');
+                    let tVal = String(row[colVal] || '').replace(/[^a-zA-Z0-9]/g, '');
+                    let tEst = String(row[colEst] || '').replace(/[^a-zA-Z0-9]/g, '');
+                    let isBlack = tDesc.length > 0 && tVal.length > 0 && tDesc.toUpperCase() !== 'SUBCONTRATOS';
+                    return isBlack && typeof row[k] === 'number' && row[k] !== 0;
+                });
+            });
+
+            if (keyPendienteVal && !sumKeys.includes(keyPendienteVal)) sumKeys.push(keyPendienteVal);
+            if (keyPendienteFac && !sumKeys.includes(keyPendienteFac)) sumKeys.push(keyPendienteFac);
+
+            let displayRows = filtered.map(r => ({...r})); 
+            let runRed = {}, runBlue = {}, runGlobal = {};
+            sumKeys.forEach(k => { runRed[k] = 0; runBlue[k] = 0; runGlobal[k] = 0; });
+            
+            let runRedPerc = 0, runBlueWeightedPerc = 0, runGlobalWeightedPerc = 0;
+            let hasBlackDataForPendingFac = false;
+
+            for (let i = displayRows.length - 1; i >= 0; i--) {
+                let row = displayRows[i];
+                let tDesc = String(row[colDesc] || '').replace(/[^a-zA-Z0-9]/g, '');
+                let tVal = String(row[colVal] || '').replace(/[^a-zA-Z0-9]/g, '');
+                let tEst = String(row[colEst] || '').replace(/[^a-zA-Z0-9]/g, '');
+
+                let isGlobal = tDesc.toUpperCase() === 'SUBCONTRATOS';
+                let isBlue = !isGlobal && tDesc.length > 0 && tVal.length === 0 && tEst.length === 0;
+                let isRed = !isGlobal && !isBlue && tDesc.length > 0 && tVal.length === 0;
+                let isBlack = !isGlobal && !isBlue && !isRed; 
+                
+                let cont = keyContratado && typeof row[keyContratado] === 'number' ? row[keyContratado] : 0;
+                let perc = keyPerc && typeof row[keyPerc] === 'number' ? row[keyPerc] : 0;
+
+                if (isBlack) {
+                    sumKeys.forEach(k => { runRed[k] += (typeof row[k] === 'number' ? row[k] : 0); });
+                    if (keyPerc) runRedPerc += perc;
+                    if (keyPendienteFac && typeof row[keyPendienteFac] === 'number') hasBlackDataForPendingFac = true;
+                } else if (isRed) {
+                    sumKeys.forEach(k => { row[k] = runRed[k]; }); 
+                    
+                    let bruto = keyBruto && typeof row[keyBruto] === 'number' ? row[keyBruto] : 0;
+
+                    if (keyPendienteVal) {
+                        let amortizado = keyAmortizado && typeof row[keyAmortizado] === 'number' ? row[keyAmortizado] : 0;
+                        row[keyPendienteVal] = cont - amortizado - bruto; 
+                    }
+
+                    if (keyPendienteFac) {
+                        let adelantoFac = keyAdelantoFac && typeof row[keyAdelantoFac] === 'number' ? row[keyAdelantoFac] : 0;
+                        let formulaFac = cont - bruto - adelantoFac; 
+                        if (hasBlackDataForPendingFac) row[keyPendienteFac] = runRed[keyPendienteFac] + formulaFac;
+                        else row[keyPendienteFac] = formulaFac;
+                    }
+
+                    // 🔥 EXTRACCIÓN AL RO (QUITANDO EL 18% DE IGV)
+                    let pendienteReal = keyPendienteVal ? row[keyPendienteVal] : 0;
+                    let pendienteSinIGV = pendienteReal / 1.18; // <-- LA MAGIA AQUÍ
+                    
+                    let originalEspName = keyEsp ? String(row[keyEsp] || '').trim() : "";
+                    let espName = cleanText(originalEspName);
+                    
+                    if (espName && dicEspecialidad[espName]) {
+                        let partidaRO = dicEspecialidad[espName];
+                        if (!totals[partidaRO]) totals[partidaRO] = 0;
+                        totals[partidaRO] += pendienteSinIGV;
+                    }
+
+                    sumKeys.forEach(k => { runBlue[k] += row[k]; runRed[k] = 0; }); 
+                    if (keyPerc) { row[keyPerc] = runRedPerc; runBlueWeightedPerc += (row[keyPerc] * cont); runRedPerc = 0; }
+                    hasBlackDataForPendingFac = false; 
+                } else if (isBlue) {
+                    sumKeys.forEach(k => { row[k] = runBlue[k]; runGlobal[k] += runBlue[k]; runBlue[k] = 0; });
+                    if (keyPerc) { row[keyPerc] = cont !== 0 ? (runBlueWeightedPerc / cont) : 0; runGlobalWeightedPerc += (row[keyPerc] * cont); runBlueWeightedPerc = 0; }
+                    hasBlackDataForPendingFac = false; 
+                } else if (isGlobal) {
+                    sumKeys.forEach(k => { row[k] = runGlobal[k]; });
+                    if (keyPerc) { row[keyPerc] = cont !== 0 ? (runGlobalWeightedPerc / cont) : 0; }
+                    hasBlackDataForPendingFac = false;
+                }
+            }
+            return totals;
+        }
+    </script>
+    <!-- ========================================== -->
+    <!-- LÓGICA DE AUTENTICACIÓN Y NUBE FIREBASE -->
+    <!-- ========================================== -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyASckduFNJFvovV-8QP62wL3QQQ-LrD07A",
+            authDomain: "erp-controlcostos.firebaseapp.com",
+            projectId: "erp-controlcostos",
+            storageBucket: "erp-controlcostos.firebasestorage.app",
+            messagingSenderId: "295124881031",
+            appId: "1:295124881031:web:2883e1956aefbc35d9b222"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+        
+        provider.setCustomParameters({ prompt: 'select_account' }); 
+
+        window.firebaseAuth = auth;
+        window.firebaseDb = db;
+        window.googleProvider = provider;
+        window.signInWithPopup = signInWithPopup;
+        window.onAuthStateChanged = onAuthStateChanged;
+        window.signOut = signOut;
+        window.fsDoc = doc;
+        window.fsGetDoc = getDoc;
+        window.fsSetDoc = setDoc;
+    </script>
+
+    <script>
+        function handleGoogleLogin() {
+            const btn = document.getElementById('btnGoogleLogin');
+            const msg = document.getElementById('loginMessage');
+            
+            if(!window.firebaseAuth) {
+                msg.textContent = "Conectando al servidor, intenta de nuevo...";
+                msg.className = "text-sm mb-6 text-center font-bold text-amber-500";
+                return;
+            }
+
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            msg.textContent = "Abriendo ventana segura...";
+
+            window.signInWithPopup(window.firebaseAuth, window.googleProvider)
+                .then((result) => {
+                    // Esperar a onAuthStateChanged
+                }).catch((error) => {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    msg.textContent = "Acceso cancelado o fallido. Intenta de nuevo.";
+                    msg.className = "text-sm mb-6 text-center font-bold text-red-500";
+                });
+        }
+
+        async function verifyUserAccess(user) {
+            const msg = document.getElementById('loginMessage');
+            const btn = document.getElementById('btnGoogleLogin');
+            const btnLogout = document.getElementById('btnLogout');
+            const statusColor = document.getElementById('loginStatusColor');
+            const loginScreen = document.getElementById('loginScreen');
+
+            const email = user.email.toLowerCase();
+            if (!email.includes('@marcan.com')) { 
+                msg.textContent = "Acceso denegado. Solo correos corporativos autorizados.";
+                msg.className = "text-sm mb-6 text-center font-bold text-red-500";
+                statusColor.className = "absolute top-0 left-0 w-full h-2 bg-red-600 transition-colors";
+                btn.classList.add('hidden');
+                btnLogout.classList.remove('hidden');
+                return;
+            }
+
+            msg.textContent = "Verificando credenciales...";
+            
+            try {
+                const userRef = window.fsDoc(window.firebaseDb, "usuarios", email);
+                const userSnap = await window.fsGetDoc(userRef);
+
+                if (userSnap.exists()) {
+                    const data = userSnap.data();
+                    if (data.estado === 'aprobado') {
+                        msg.textContent = "¡Bienvenido!";
+                        msg.className = "text-sm mb-6 text-center font-bold text-emerald-600";
+                        statusColor.className = "absolute top-0 left-0 w-full h-2 bg-emerald-500 transition-colors";
+                        setTimeout(() => {
+                            loginScreen.style.opacity = '0';
+                            setTimeout(() => loginScreen.style.display = 'none', 500);
+                        }, 800);
+                    } else {
+                        msg.innerHTML = "Tu cuenta está <b>pendiente de aprobación</b>.<br>Solicita acceso al administrador.";
+                        msg.className = "text-sm mb-6 text-center font-medium text-amber-600";
+                        statusColor.className = "absolute top-0 left-0 w-full h-2 bg-amber-500 transition-colors";
+                        btn.classList.add('hidden');
+                        btnLogout.classList.remove('hidden');
+                    }
+                } else {
+                    await window.fsSetDoc(userRef, {
+                        email: email,
+                        nombre: user.displayName,
+                        estado: 'pendiente',
+                        fechaRegistro: new Date().toISOString()
+                    });
+                    
+                    msg.innerHTML = "Hemos registrado tu solicitud.<br>Cuenta <b>pendiente de aprobación</b>.";
+                    msg.className = "text-sm mb-6 text-center font-medium text-amber-600";
+                    statusColor.className = "absolute top-0 left-0 w-full h-2 bg-amber-500 transition-colors";
+                    btn.classList.add('hidden');
+                    btnLogout.classList.remove('hidden');
+                }
+            } catch (error) {
+                msg.textContent = "Error conectando a la base de datos.";
+                msg.className = "text-sm mb-6 text-center font-bold text-red-500";
+                btn.classList.add('hidden');
+                btnLogout.classList.remove('hidden');
+            }
+        }
+
+        setTimeout(() => {
+            if(window.onAuthStateChanged && window.firebaseAuth) {
+                window.onAuthStateChanged(window.firebaseAuth, (user) => {
+                    const loginScreen = document.getElementById('loginScreen');
+                    const btn = document.getElementById('btnGoogleLogin');
+                    const btnLogout = document.getElementById('btnLogout');
+                    const msg = document.getElementById('loginMessage');
+                    const statusColor = document.getElementById('loginStatusColor');
+
+                    if (user) {
+                        verifyUserAccess(user);
+                    } else {
+                        loginScreen.style.display = 'flex';
+                        loginScreen.style.opacity = '1';
+                        btn.classList.remove('hidden', 'opacity-50', 'cursor-not-allowed');
+                        btn.disabled = false;
+                        btnLogout.classList.add('hidden');
+                        msg.textContent = "Acceso exclusivo para personal autorizado.";
+                        msg.className = "text-sm text-slate-500 mb-6 text-center font-medium";
+                        statusColor.className = "absolute top-0 left-0 w-full h-2 bg-indigo-600 transition-colors";
+                    }
+                });
+            }
+        }, 1500);
+    </script>
+</body>
+</html>
