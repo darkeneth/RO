@@ -1764,6 +1764,12 @@ function resetReassignments() {
                         if (cName === 'V costo') val_VCosto = typeof v === 'number' ? v : 0;
                         if (cName.includes('R Costo Corregido')) val_P = typeof v === 'number' ? v : 0;
                         if (cName.includes('Proyección (CTC)')) val_R = typeof v === 'number' ? v : 0;
+                        // 🔥 CONEXIÓN MULTIJUGADOR: Leer valor de la nube si existe
+                    let notaNube = '';
+                    if (window.proyeccionesNube && window.proyeccionesNube[codeVal]) {
+                        if (window.proyeccionesNube[codeVal].amount !== undefined) val_R = window.proyeccionesNube[codeVal].amount;
+                        if (window.proyeccionesNube[codeVal].note !== undefined) notaNube = window.proyeccionesNube[codeVal].note;
+                    }
                     });
 
                     // Las nuevas fórmulas en tiempo real
@@ -1798,10 +1804,12 @@ function resetReassignments() {
                             td.textContent = '';
                             if (cIdx === 2) td.className += ' bg-emerald-50';
                         } else if (colName === 'Proyección (CTC)') {
-                            if (codeVal.length > 4 && !isRowStock) td.innerHTML = `<input type="number" step="0.01" value="${val !== 0 ? val : ''}" class="w-24 text-center bg-white border border-indigo-300 rounded px-1 py-1 text-xs text-indigo-900 font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="0.00" onchange="saveProjection('${codeVal}', 'amount', this.value)">`;
-                            else { td.textContent = val !== 0 ? val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'; td.className += ' text-right font-mono font-bold text-indigo-900'; }
+                            let renderAmount = val_R !== 0 ? val_R : '';
+                            if (codeVal.length > 4 && !isRowStock) td.innerHTML = `<input type="number" step="0.01" value="${renderAmount}" class="w-24 text-center bg-white border border-indigo-300 rounded px-1 py-1 text-xs text-indigo-900 font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="0.00" onchange="window.saveProjection('${codeVal}', 'amount', this.value)">`;
+                            else { td.textContent = val_R !== 0 ? val_R.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'; td.className += ' text-right font-mono font-bold text-indigo-900'; }
                         } else if (colName === 'Sustento / Nota') {
-                            if (codeVal.length > 4 && !isRowStock) td.innerHTML = `<input type="text" value="${val || ''}" class="w-full min-w-[150px] bg-white border border-indigo-300 rounded px-1 py-1 text-xs text-slate-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Sustento..." onchange="saveProjection('${codeVal}', 'note', this.value)">`;
+                            let renderNote = notaNube || val || '';
+                            if (codeVal.length > 4 && !isRowStock) td.innerHTML = `<input type="text" value="${renderNote}" class="w-full min-w-[150px] bg-white border border-indigo-300 rounded px-1 py-1 text-xs text-slate-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Sustento..." onchange="window.saveProjection('${codeVal}', 'note', this.value)">`;
                             else td.textContent = '';
                         } else if (typeof val === 'number') {
                             td.textContent = val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -3178,12 +3186,12 @@ function resetReassignments() {
         }
     </script>
     <!-- ========================================== -->
-    <!-- LÓGICA DE AUTENTICACIÓN Y NUBE FIREBASE -->
+    <!-- MOTOR DE FIREBASE (NUBE + MULTIJUGADOR) -->
     <!-- ========================================== -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyASckduFNJFvovV-8QP62wL3QQQ-LrD07A",
@@ -3210,6 +3218,9 @@ function resetReassignments() {
         window.fsDoc = doc;
         window.fsGetDoc = getDoc;
         window.fsSetDoc = setDoc;
+        // 🔥 NUEVOS PODERES DE TIEMPO REAL
+        window.fsCollection = collection;
+        window.fsOnSnapshot = onSnapshot; 
     </script>
 
     <script>
@@ -3271,6 +3282,7 @@ function resetReassignments() {
 
                 // ¡ACCESO CONCEDIDO INMEDIATAMENTE!
                 msg.textContent = "¡Bienvenido, equipo Marcan!";
+                window.iniciarMultijugador();
                 msg.className = "text-sm mb-6 text-center font-bold text-emerald-600";
                 statusColor.className = "absolute top-0 left-0 w-full h-2 bg-emerald-500 transition-colors";
                 
@@ -3310,6 +3322,49 @@ function resetReassignments() {
                 });
             }
         }, 1500);
+    </script>
+    <!-- ========================================== -->
+    <!-- MAGIA MULTIJUGADOR (SINCRONIZACIÓN EN VIVO) -->
+    <!-- ========================================== -->
+    <script>
+        // 1. Diccionario global para guardar lo que viene de la nube
+        window.proyeccionesNube = {};
+
+        // 2. Función para GUARDAR en la nube cuando editas
+        window.saveProjection = async function(code, field, value) {
+            if(!window.firebaseAuth || !window.firebaseAuth.currentUser) return; 
+            
+            // Si es 'amount' (monto) guardamos como número, si es 'note' como texto
+            let finalValue = field === 'amount' ? (parseFloat(value) || 0) : value;
+            
+            try {
+                const docRef = window.fsDoc(window.firebaseDb, "proyecciones", code);
+                await window.fsSetDoc(docRef, {
+                    [field]: finalValue,
+                    actualizadoPor: window.firebaseAuth.currentUser.email,
+                    fecha: new Date().toISOString()
+                }, { merge: true });
+                // Al guardar con éxito, Firebase disparará automáticamente el "Escuchador"
+            } catch(e) {
+                console.error("Error guardando en la nube:", e);
+            }
+        };
+
+        // 3. El "Escuchador" que actualiza la pantalla de TODOS al mismo tiempo
+        window.iniciarMultijugador = function() {
+            const coleccionRef = window.fsCollection(window.firebaseDb, "proyecciones");
+            
+            window.fsOnSnapshot(coleccionRef, (snapshot) => {
+                snapshot.forEach(doc => {
+                    window.proyeccionesNube[doc.id] = doc.data();
+                });
+                
+                // Si la tabla está en pantalla, la redibujamos para mostrar el cambio de tu compañero
+                if(typeof renderTableData === 'function' && currentMainView === 'RO') {
+                    renderTableData(); 
+                }
+            });
+        };
     </script>
 </body>
 </html>
