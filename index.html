@@ -69,53 +69,7 @@
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
-    <!-- ========================================== -->
-    <!-- BARRA SUPERIOR: SELECTOR DE PROYECTO Y FECHA -->
-    <!-- ========================================== -->
-    <header class="bg-slate-900 text-white shadow-md z-40 relative border-b-4 border-indigo-500">
-        <div class="max-w-[1400px] mx-auto px-4 h-16 flex items-center justify-between">
-            <!-- Izquierda: Logo y Usuario -->
-            <div class="flex items-center gap-4">
-                <div class="w-10 h-10 bg-indigo-600 rounded flex items-center justify-center font-bold text-xl shadow-inner">
-                    RO
-                </div>
-                <div>
-                    <h1 class="text-sm font-bold leading-tight">Control de Costos</h1>
-                    <p id="userDisplay" class="text-xs text-indigo-300">Cargando usuario...</p>
-                </div>
-            </div>
-
-            <!-- Centro: Selector de Proyecto y Mes -->
-            <div class="flex items-center gap-3 bg-slate-800 p-1.5 rounded-lg border border-slate-700">
-                <div class="flex items-center gap-2 px-2 border-r border-slate-600">
-                    <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
-                    <select id="proyectoSelect" class="bg-transparent text-sm font-bold text-white focus:outline-none cursor-pointer appearance-none pr-4">
-                        <option value="ELYSEE" class="bg-slate-800">ELYSÉE</option>
-                        <option value="PARC" class="bg-slate-800">PARC</option>
-                        <option value="MIDTOWN" class="bg-slate-800">MIDTOWN</option>
-                        <option value="PRISMA" class="bg-slate-800">PRISMA</option>
-                        <option value="CV" class="bg-slate-800">CV</option>
-                    </select>
-                </div>
-                <div class="flex items-center gap-2 px-2">
-                    <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                    <input type="month" id="mesSelect" class="bg-transparent text-sm font-bold text-white focus:outline-none cursor-pointer [color-scheme:dark]">
-                </div>
-            </div>
-
-            <!-- Derecha: Botón Guardar Nube (Aún inactivo) y Salir -->
-            <div class="flex items-center gap-4">
-                <button id="btnGuardarNube" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-1.5 px-3 rounded shadow transition flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-                    Guardar RO en Nube
-                </button>
-                <button onclick="window.signOut(window.firebaseAuth)" class="text-xs text-slate-400 hover:text-red-400 transition font-semibold">
-                    Cerrar Sesión
-                </button>
-            </div>
-        </div>
-    </header>
-
+    
     <!-- ========================================== -->
     <!-- PANTALLA DE LOGIN (ACCESO CORPORATIVO) -->
     <!-- ========================================== -->
@@ -136,28 +90,499 @@
         </div>
     </div>
 
-    <header class="bg-slate-900 text-white shadow-md border-b border-slate-800">
-        <div class="w-full px-6 lg:px-8 py-4 flex flex-wrap justify-between items-center gap-4">
-            <div class="flex items-center space-x-3">
-                <div class="bg-blue-600 p-2.5 rounded-lg text-white font-bold shadow-lg">
-                    <i class="fa-solid fa-hard-hat text-2xl"></i>
-                </div>
+    <!-- ========================================== -->
+    <!-- BARRA SUPERIOR (NUEVA PARA EL LOBBY) -->
+    <!-- ========================================== -->
+    <header class="bg-slate-900 text-white shadow-md z-40 relative border-b-4 border-indigo-500">
+        <div class="max-w-[1400px] mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-10 h-10 bg-indigo-600 rounded flex items-center justify-center font-bold text-xl shadow-inner">RO</div>
                 <div>
-                    <h1 class="text-xl font-bold tracking-wide">RO - S10</h1>
-                    <p class="text-xs text-slate-400">Inmobiliaria y Constructora Marcan</p>
+                    <h1 class="text-sm font-bold leading-tight">Control de Costos</h1>
+                    <p id="userDisplay" class="text-xs text-indigo-300">Cargando usuario...</p>
                 </div>
             </div>
-            <div class="flex items-center space-x-3 text-xs">
-                <span class="bg-slate-800 text-slate-300 px-3 py-1.5 rounded-full border border-slate-700 flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    Estado: <strong id="statusText">Esperando Archivos</strong>
-                </span>
-                <button onclick="resetApp()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg transition border border-slate-700 cursor-pointer">
-                    <i class="fa-solid fa-rotate-right mr-1"></i> Reiniciar
+            <div class="flex items-center gap-3 bg-slate-800 p-1.5 rounded-lg border border-slate-700">
+                <div class="flex items-center gap-2 px-2 border-r border-slate-600">
+                    <select id="proyectoSelect" class="bg-transparent text-sm font-bold text-white focus:outline-none cursor-pointer appearance-none pr-4">
+                        <option value="" disabled selected>Seleccione un proyecto...</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2 px-2">
+                    <input type="month" id="mesSelect" class="bg-transparent text-sm font-bold text-white focus:outline-none cursor-pointer [color-scheme:dark]">
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <!-- Botón Guardar Nube (Se mostrará al abrir un reporte) -->
+                <button id="btnGuardarNube" onclick="window.guardarReporteNube()" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-1.5 px-3 rounded shadow transition flex items-center gap-2 cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                    Guardar RO en Nube
                 </button>
+                <button id="btnAjustes" onclick="abrirAjustes()" class="hidden bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-1.5 px-3 rounded shadow transition flex items-center gap-2">⚙️ Ajustes</button>
+                <button onclick="window.signOut(window.firebaseAuth)" class="text-xs text-slate-400 hover:text-red-400 transition font-semibold">Cerrar Sesión</button>
             </div>
         </div>
     </header>
+
+    <!-- ========================================== -->
+    <!-- MODAL DE AJUSTES (SOLO PARA ROOT) -->
+    <!-- ========================================== -->
+    <div id="modalAjustes" class="fixed inset-0 z-[200] bg-slate-900/80 hidden flex items-center justify-center backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl w-[600px] max-w-[95%] overflow-hidden flex flex-col border border-slate-700">
+            <div class="bg-slate-800 p-4 flex justify-between items-center text-white border-b-4 border-indigo-500">
+                <h2 class="text-lg font-bold flex items-center gap-2">⚙️ Panel de Administración (Root)</h2>
+                <button onclick="cerrarAjustes()" class="hover:text-red-400 font-bold text-2xl leading-none transition">&times;</button>
+            </div>
+            <!-- Cuerpo del Modal -->
+            <div class="p-6 flex-1 bg-slate-50 overflow-y-auto max-h-[80vh]">
+                <!-- Botones de Pestañas -->
+                <div class="flex gap-4 border-b border-slate-300 pb-2 mb-6">
+                    <button id="btnTabProyectos" onclick="window.cambiarTabAjustes('proyectos')" class="font-bold text-indigo-700 border-b-2 border-indigo-700 px-2 pb-1 cursor-pointer">🏢 Proyectos</button>
+                    <button id="btnTabUsuarios" onclick="window.cambiarTabAjustes('usuarios')" class="font-bold text-slate-400 hover:text-slate-600 px-2 pb-1 transition cursor-pointer">👥 Usuarios y Permisos</button>
+                </div>
+
+                <!-- Pestaña 1: Proyectos -->
+                <div id="tabProyectos">
+                    <h3 class="text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">Crear Nuevo Proyecto</h3>
+                    <div class="flex flex-col gap-3 mb-6 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                        <input type="text" id="nuevoNombreProyecto" placeholder="Nombre del proyecto (Ej: ELYSÉE)" class="w-full border border-slate-300 p-2 rounded focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm font-bold">
+                        <div class="flex items-center gap-3">
+                            <input type="file" id="nuevoLogoProyecto" accept="image/png, image/jpeg" class="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 flex-1">
+                            <button id="btnGuardarProyecto" onclick="window.guardarNuevoProyecto()" class="bg-indigo-600 text-white font-bold px-4 py-2 rounded hover:bg-indigo-700 text-sm shadow transition cursor-pointer">Guardar Proyecto</button>
+                        </div>
+                    </div>
+
+                    <h3 class="text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">Proyectos Activos</h3>
+                    <div id="listaProyectosAdmin" class="bg-white border border-slate-200 rounded-lg p-3 min-h-[120px] shadow-inner text-sm text-slate-500 flex flex-col gap-2">
+                        Cargando proyectos de la base de datos...
+                    </div>
+                </div>
+
+                <!-- Pestaña 2: Usuarios (NUEVA) -->
+                <div id="tabUsuarios" class="hidden">
+                    <h3 class="text-sm font-bold text-slate-700 mb-1 uppercase tracking-wide">Asignación de Proyectos por Correo</h3>
+                    <p class="text-xs text-slate-500 mb-4">Marca los proyectos que cada usuario registrado tendrá permitido ver y editar.</p>
+                    <div id="listaUsuariosAdmin" class="bg-white border border-slate-200 rounded-lg p-3 min-h-[180px] shadow-inner text-sm flex flex-col gap-3">
+                        Cargando lista de usuarios...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ========================================== -->
+    <!-- PANTALLA DE HISTORIAL DEL PROYECTO -->
+    <!-- ========================================== -->
+    <div id="vistaHistorial" class="hidden max-w-[1400px] mx-auto px-4 py-8 flex-1 w-full flex-col">
+        
+        <!-- Cabecera de la Vista -->
+        <div class="flex items-center justify-between mb-8">
+            <div class="flex items-center gap-4">
+                <!-- Botón Volver -->
+                <button onclick="window.volverAlLobby()" class="text-slate-500 hover:text-indigo-600 transition bg-white border border-slate-200 hover:border-indigo-300 rounded-lg p-2 shadow-sm flex items-center justify-center cursor-pointer">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                </button>
+                <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                    <svg class="w-7 h-7 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                    Proyecto: <span id="tituloHistorialProyecto" class="text-indigo-600 ml-1"></span>
+                </h2>
+            </div>
+            
+            <!-- Botón Agregar Nuevo RO -->
+            <button onclick="window.iniciarNuevoReporte()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-5 rounded-lg shadow-md flex items-center gap-2 transition cursor-pointer">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                Agregar Nuevo RO
+            </button>
+        </div>
+        
+        <!-- Cuerpo / Lista de Reportes -->
+        <div class="flex-1 bg-white border border-slate-200 rounded-xl p-8 shadow-sm flex flex-col min-h-[500px]">
+            <h3 class="text-lg font-bold text-slate-700 mb-6 border-b border-slate-100 pb-3">Historial de Reportes Guardados</h3>
+            
+            <div id="listaReportesProyecto" class="flex-1 flex flex-col items-center justify-center">
+                <div class="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-4 border border-slate-100 shadow-inner">
+                    <svg class="w-12 h-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                </div>
+                <p class="text-slate-500 font-bold text-lg">Aún no hay reportes históricos</p>
+                <p class="text-slate-400 text-sm mt-1">Haz clic en "Agregar Nuevo RO" arriba a la derecha para crear el primero.</p>
+            </div>
+        </div>
+    </div>
+    <!-- ========================================== -->
+    <!-- LOBBY DE PROYECTOS -->
+    <!-- ========================================== -->
+    <div id="lobbyProyectos" class="max-w-[1400px] mx-auto px-4 py-8 flex-1 w-full">
+        <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+            <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+            Mis Proyectos Asignados
+        </h2>
+        <div id="gridProyectos" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8">
+            <div class="col-span-full text-center py-12 text-slate-400 font-medium italic">
+                Cargando proyectos desde la nube...
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT CORREGIDO DEL LOBBY -->
+    <script>
+        window.proyectosNube = {};
+        window.cargarLobbyProyectos = async function() {
+            const emailUser = window.firebaseAuth.currentUser ? window.firebaseAuth.currentUser.email.toLowerCase() : '';
+            const isRoot = emailUser === 'kalderete@marcan.com.pe';
+            
+            let proyectosPermitidos = ['TODOS'];
+            if (!isRoot && emailUser) {
+                const uSnap = await window.fsGetDoc(window.fsDoc(window.firebaseDb, "usuarios", emailUser));
+                if (uSnap.exists()) {
+                    proyectosPermitidos = uSnap.data().proyectosAsignados || [];
+                }
+            }
+
+            const coleccionRef = window.fsCollection(window.firebaseDb, "proyectos");
+            window.fsOnSnapshot(coleccionRef, (snapshot) => {
+                const selectSup = document.getElementById('proyectoSelect');
+                const grid = document.getElementById('gridProyectos');
+                const listaAdmin = document.getElementById('listaProyectosAdmin');
+                
+                selectSup.innerHTML = '<option value="" disabled selected>Seleccione un proyecto...</option>';
+                grid.innerHTML = '';
+                if(listaAdmin) listaAdmin.innerHTML = '';
+
+                if (snapshot.empty) {
+                    grid.innerHTML = '<div class="col-span-full text-center py-12 text-slate-400 font-medium">No hay proyectos creados aún.</div>';
+                    if(listaAdmin) listaAdmin.innerHTML = '<div class="w-full text-center py-4">Sin proyectos</div>';
+                    return;
+                }
+
+                let proyectosVisibles = 0;
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    window.proyectosNube[data.nombre] = data;
+
+                    // Lista para el Admin
+                    if(listaAdmin) {
+                        listaAdmin.innerHTML += `
+                            <div class="flex items-center gap-3 p-2 border-b border-slate-100 last:border-0 w-full hover:bg-slate-50 transition">
+                                <img src="${data.logo}" class="w-8 h-8 rounded bg-white shadow-sm object-contain border border-slate-200">
+                                <span class="font-bold text-slate-700">${data.nombre}</span>
+                            </div>
+                        `;
+                    }
+
+                    // FILTRO DE SEGURIDAD: Solo dibujar si es ROOT o si el proyecto está asignado al usuario
+                    if (isRoot || proyectosPermitidos.includes(data.nombre)) {
+                        proyectosVisibles++;
+                        selectSup.innerHTML += `<option value="${data.nombre}" class="bg-slate-800">${data.nombre}</option>`;
+
+                        grid.innerHTML += `
+                            <div onclick="abrirHistorialProyecto('${data.nombre}')" class="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-slate-200 overflow-hidden cursor-pointer group flex flex-col transform hover:-translate-y-1">
+                                <div class="h-32 bg-white relative p-4 flex items-center justify-center border-b border-slate-100">
+                                    <img src="${data.logo}" class="h-full w-full object-contain group-hover:scale-105 transition duration-500">
+                                </div>
+                                <div class="p-4 bg-slate-50 border-t-4 border-indigo-500 flex flex-col items-center">
+                                    <h3 class="font-bold text-lg text-slate-800">${data.nombre}</h3>
+                                    <p class="text-[11px] font-semibold text-slate-500 mt-1 uppercase tracking-wide group-hover:text-indigo-600 transition">Ver Historial de Reportes →</p>
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+
+                if (proyectosVisibles === 0 && !isRoot) {
+                    grid.innerHTML = `
+                        <div class="col-span-full text-center py-16 bg-white rounded-xl border border-slate-200 p-8 shadow-xs">
+                            <div class="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <i class="fa-solid fa-lock text-2xl"></i>
+                            </div>
+                            <h3 class="text-lg font-bold text-slate-700 mb-1">Sin Proyectos Asignados</h3>
+                            <p class="text-sm text-slate-400">Ponte en contacto con el Administrador Principal para que te asigne acceso a tus obras.</p>
+                        </div>
+                    `;
+                }
+            });
+        };
+
+        // 1. Oculta el Lobby y muestra la Vista de Historial (Pantalla Completa)
+        window.abrirHistorialProyecto = function(nombreProyecto) {
+            document.getElementById('tituloHistorialProyecto').textContent = nombreProyecto;
+            const selectProyecto = document.getElementById('proyectoSelect');
+            if(selectProyecto) selectProyecto.value = nombreProyecto;
+            
+            document.getElementById('lobbyProyectos').classList.add('hidden');
+            document.getElementById('vistaHistorial').classList.remove('hidden');
+
+            // 🔥 NUEVO: Cargar los reportes al abrir la ventana
+            window.cargarHistorialReportes(nombreProyecto);
+        };
+
+        // 🔥 NUEVO: Función que lee la Base de Datos y dibuja las tarjetas de los reportes
+        window.cargarHistorialReportes = function(nombreProyecto) {
+            const contenedor = document.getElementById('listaReportesProyecto');
+            contenedor.innerHTML = '<div class="text-slate-400 italic font-medium py-10 flex items-center gap-2"><i class="fa-solid fa-spinner fa-spin"></i> Buscando reportes en la nube...</div>';
+
+            // Apuntamos a la carpeta de reportes de este proyecto en específico
+            const reportesRef = window.fsCollection(window.firebaseDb, `proyectos/${nombreProyecto}/reportes`);
+            
+            // onSnapshot hace que la lista se actualice en vivo si alguien guarda un nuevo RO
+            window.fsOnSnapshot(reportesRef, (snapshot) => {
+                if (snapshot.empty) {
+                    contenedor.innerHTML = `
+                        <div class="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-4 border border-slate-100 shadow-inner">
+                            <svg class="w-12 h-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        </div>
+                        <p class="text-slate-500 font-bold text-lg">Aún no hay reportes históricos</p>
+                        <p class="text-slate-400 text-sm mt-1">Haz clic en "Agregar Nuevo RO" arriba a la derecha para crear el primero.</p>
+                    `;
+                    return;
+                }
+
+                // Preparamos la cuadrícula para acomodar los meses
+                contenedor.innerHTML = '<div class="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 content-start h-full p-2"></div>';
+                const grid = contenedor.querySelector('div');
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const periodo = doc.id; // El mes que eligieron (ej. 2026-08)
+                    
+                    grid.innerHTML += `
+                        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-xl transition-all transform hover:-translate-y-1 cursor-pointer flex flex-col justify-between group">
+                            <div class="flex items-center gap-4 mb-4 border-b border-slate-100 pb-4">
+                                <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center font-bold shadow-inner group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                    <i class="fa-regular fa-calendar-check text-2xl"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-lg font-bold text-slate-800">Periodo: ${periodo}</h4>
+                                    <p class="text-[10px] text-slate-400 uppercase tracking-wide font-medium mt-0.5" title="${data.creadoPor}">
+                                        Por: ${data.creadoPor.split('@')[0]}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 text-xs text-slate-500 mb-4 bg-slate-50 p-2 rounded border border-slate-100 shadow-inner">
+                                <div class="text-center border-r border-slate-200">
+                                    <span class="block font-bold text-slate-700 text-sm">${data.estadisticas?.partidas || 0}</span>
+                                    Partidas
+                                </div>
+                                <div class="text-center">
+                                    <span class="block font-bold text-slate-700 text-sm">${data.estadisticas?.filas || 0}</span>
+                                    Filas procesadas
+                                </div>
+                            </div>
+                            <button onclick="window.cargarReporteExistente('${nombreProyecto}', '${periodo}')" class="w-full bg-slate-800 hover:bg-indigo-600 text-white font-bold py-2.5 px-4 rounded-lg transition text-sm flex items-center justify-center gap-2 shadow-sm">
+                                <i class="fa-solid fa-folder-open"></i> Abrir Reporte
+                            </button>
+                        </div>
+                    `;
+                });
+            });
+        };
+
+        // 4. Volver al Historial desde adentro de la App
+        window.volverAlHistorialDesdeApp = function() {
+            // Limpiamos la app por dentro para que no quede data sucia
+            if(typeof resetApp === 'function') resetApp();
+            
+            // Ocultamos la app y mostramos el historial de nuevo
+            document.getElementById('zonaCargaArchivos').classList.add('hidden');
+            document.getElementById('btnGuardarNube').classList.add('hidden');
+            document.getElementById('vistaHistorial').classList.remove('hidden');
+        };
+
+        // 5. Cargar reporte histórico descargando de Storage e inyectando a variables locales
+        window.cargarReporteExistente = async function(proyecto, periodo) {
+            try {
+                document.getElementById('vistaHistorial').classList.add('hidden');
+                document.getElementById('zonaCargaArchivos').classList.remove('hidden');
+                document.getElementById('uploadSection').classList.add('hidden');
+                
+                const statusText = document.getElementById('statusText');
+                statusText.textContent = "Descargando desde la nube...";
+                statusText.className = "text-amber-400 animate-pulse font-bold";
+
+                // 1. Obtener registro en Firestore
+                const reporteRef = window.fsDoc(window.firebaseDb, `proyectos/${proyecto}/reportes/${periodo}`);
+                const snap = await window.fsGetDoc(reporteRef);
+
+                if (!snap.exists()) {
+                    alert("❌ El registro del reporte no existe en la base de datos.");
+                    window.volverAlHistorialDesdeApp();
+                    return;
+                }
+
+                // 2. Descargar el archivo JSON desde Storage
+                let dataPesada = null;
+                const storageRef = window.fsRef(window.firebaseStorage, `proyectos/${proyecto}/reportes/${periodo}_data.json`);
+
+                if (window.fsGetBlob) {
+                    const blob = await window.fsGetBlob(storageRef);
+                    const jsonText = await blob.text();
+                    dataPesada = JSON.parse(jsonText);
+                } else if (snap.data().archivoUrl) {
+                    const response = await fetch(snap.data().archivoUrl);
+                    dataPesada = await response.json();
+                } else {
+                    throw new Error("No se encontró método de lectura para el archivo.");
+                }
+
+                // 3. Inyección Doble (Variables Locales + Objeto Window)
+                const matrixVal = dataPesada.matrizRO || [];
+                const consolVal = dataPesada.consolidado || [];
+                const stockVal = dataPesada.stock || [];
+                const subcontVal = dataPesada.subcontratos || [];
+
+                roFilteredMatrix2D = matrixVal; window.roFilteredMatrix2D = matrixVal;
+                consolidatedRows = consolVal; window.consolidatedRows = consolVal;
+                stockRows = stockVal; window.stockRows = stockVal;
+                subcontratoRows = subcontVal; window.subcontratoRows = subcontVal;
+                
+                const proy = dataPesada.proyecciones || {};
+                localStorage.setItem('s10_ro_projections', JSON.stringify(proy));
+                roProjections = proy; window.roProjections = proy;
+
+                // 4. Iniciar motor de renderizado
+                if (typeof extractSemanasFromSubcontratos === 'function') extractSemanasFromSubcontratos();
+                groupDataByPartida();
+                
+                document.getElementById('metricsSection').classList.remove('hidden');
+                document.getElementById('resultSection').classList.remove('hidden');
+                
+                document.getElementById('metricPartidas').textContent = partidaListKeys.length;
+                document.getElementById('metricRegistros').textContent = consolidatedRows.length;
+                document.getElementById('metricArchivos').textContent = "NUBE";
+                
+                statusText.textContent = `Reporte Cargado (${periodo})`;
+                statusText.className = "text-emerald-400 font-bold";
+                
+                document.getElementById('btnGuardarNube').classList.add('hidden');
+
+                buildPartidaTabsAndSelect();
+                switchMainView('CONSOLIDADO');
+                if (typeof updateReassignmentCountUI === 'function') updateReassignmentCountUI();
+
+            } catch (error) {
+                console.error("Error detallado al cargar reporte:", error);
+                
+                if (error.code === 'storage/object-not-found') {
+                    alert("⚠️ Este reporte antiguo no tiene archivo en Storage. Por favor, crea un 'Nuevo RO', procesa los Excels y guárdalo de nuevo.");
+                } else {
+                    alert("❌ Fallo al renderizar datos: " + (error.message || error));
+                }
+                
+                window.volverAlHistorialDesdeApp();
+            }
+        };
+
+        // 2. Botón "Volver": Oculta todo y regresa al Lobby principal
+        window.volverAlLobby = function() {
+            document.getElementById('vistaHistorial').classList.add('hidden');
+            document.getElementById('zonaCargaArchivos').classList.add('hidden');
+            document.getElementById('lobbyProyectos').classList.remove('hidden');
+        };
+
+        // 3. Oculta el historial y muestra tu aplicación del S10
+        window.iniciarNuevoReporte = function() {
+            document.getElementById('vistaHistorial').classList.add('hidden');
+            document.getElementById('zonaCargaArchivos').classList.remove('hidden');
+            document.getElementById('btnGuardarNube').classList.remove('hidden');
+        };
+
+        // ==========================================
+        // GUARDAR EL REPORTE COMPLETO EN LA NUBE (STORAGE + FIRESTORE)
+        // ==========================================
+        window.guardarReporteNube = async function() {
+            const proyecto = document.getElementById('proyectoSelect').value;
+            const mes = document.getElementById('mesSelect').value; 
+            const btn = document.getElementById('btnGuardarNube');
+
+            if (!proyecto) return alert("⚠️ Por favor, selecciona un Proyecto en la barra superior.");
+            if (!mes) return alert("⚠️ Por favor, selecciona un Mes/Periodo en la barra superior.");
+            if (typeof consolidatedRows === 'undefined' || consolidatedRows.length === 0) {
+                return alert("⚠️ No hay datos para guardar. Sube y procesa los archivos S10 primero.");
+            }
+
+            const textoOriginal = btn.innerHTML;
+            btn.innerHTML = '⏳ Subiendo data (Puede tardar)...';
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            try {
+                // 1. EMPAQUETAR LA DATA PESADA
+                const dataPesada = {
+                    matrizRO: roFilteredMatrix2D || [],
+                    consolidado: consolidatedRows || [],
+                    stock: typeof stockRows !== 'undefined' ? stockRows : [],
+                    subcontratos: typeof subcontratoRows !== 'undefined' ? subcontratoRows : [],
+                    proyecciones: typeof roProjections !== 'undefined' ? roProjections : {}
+                };
+
+                // Convertir todo a un archivo virtual (Blob)
+                const jsonString = JSON.stringify(dataPesada);
+                const blob = new Blob([jsonString], { type: "application/json" });
+
+                // 2. SUBIR AL DISCO DURO (Firebase Storage)
+                const storageRef = window.fsRef(window.firebaseStorage, `proyectos/${proyecto}/reportes/${mes}_data.json`);
+                await window.fsUploadBytes(storageRef, blob);
+                
+                // Obtener el enlace público del archivo
+                const archivoUrl = await window.fsGetDownloadURL(storageRef);
+
+                // 3. GUARDAR EL "ÍNDICE" EN LA BASE DE DATOS (Firestore)
+                const reporteData = {
+                    proyecto: proyecto,
+                    periodo: mes,
+                    fechaGuardado: new Date().toISOString(),
+                    creadoPor: window.firebaseAuth.currentUser.email,
+                    archivoUrl: archivoUrl, // <- Aquí está la magia (El enlace a la data pesada)
+                    estadisticas: {
+                        partidas: document.getElementById('metricPartidas').textContent,
+                        filas: consolidatedRows.length
+                    }
+                };
+
+                const reporteRef = window.fsDoc(window.firebaseDb, `proyectos/${proyecto}/reportes/${mes}`);
+                await window.fsSetDoc(reporteRef, reporteData);
+                
+                alert(`✅ ¡El reporte de ${mes} se guardó exitosamente en la nube!`);
+            } catch (error) {
+                console.error("Error guardando el reporte:", error);
+                alert("❌ Ocurrió un error al guardar en la nube. Revisa la consola.");
+            } finally {
+                btn.innerHTML = textoOriginal;
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        };
+    </script>
+
+    <!-- ========================================== -->
+    <!-- ZONA APP VIEJA (OCULTA HASTA ABRIR REPORTE) -->
+    <!-- ========================================== -->
+    <div id="zonaCargaArchivos" class="hidden flex-1 flex flex-col w-full">
+        <header class="bg-slate-900 text-white shadow-md border-b border-slate-800">
+            <div class="w-full px-6 lg:px-8 py-4 flex flex-wrap justify-between items-center gap-4">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-blue-600 p-2.5 rounded-lg text-white font-bold shadow-lg">
+                        <i class="fa-solid fa-hard-hat text-2xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold tracking-wide">RO - S10</h1>
+                        <p class="text-xs text-slate-400">Inmobiliaria y Constructora Marcan</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3 text-xs">
+                    <span class="bg-slate-800 text-slate-300 px-3 py-1.5 rounded-full border border-slate-700 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        Estado: <strong id="statusText">Esperando Archivos</strong>
+                    </span>
+                    <!-- Botón para salir del RO y volver al Historial -->
+                    <button onclick="window.volverAlHistorialDesdeApp()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg transition border border-indigo-700 cursor-pointer flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-arrow-left"></i> Volver al Historial
+                    </button>
+                    <button onclick="resetApp()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg transition border border-slate-700 cursor-pointer">
+                        <i class="fa-solid fa-rotate-right mr-1"></i> Reiniciar
+                    </button>
+                </div>
+            </div>
+        </header>
 
     <main class="flex-grow w-full px-6 lg:px-8 py-6 flex flex-col gap-6">
 
@@ -3229,14 +3654,16 @@ function resetReassignments() {
             return totals;
         }
     </script>
+    </div> <!-- FIN ZONA CARGA ARCHIVOS -->
     <!-- ========================================== -->
-    <!-- MOTOR DE FIREBASE (NUBE + MULTIJUGADOR) -->
+    <!-- MOTOR DE FIREBASE (NUBE + MULTIJUGADOR + STORAGE) -->
     <!-- ========================================== -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
+        // 🔥 NUEVO: Importaciones para subir imágenes
+        import { getStorage, ref, uploadBytes, getDownloadURL, getBlob } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
         const firebaseConfig = {
             apiKey: "AIzaSyASckduFNJFvovV-8QP62wL3QQQ-LrD07A",
             authDomain: "erp-controlcostos.firebaseapp.com",
@@ -3249,22 +3676,30 @@ function resetReassignments() {
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        const storage = getStorage(app); // Inicializar Disco Duro
         const provider = new GoogleAuthProvider();
         
         provider.setCustomParameters({ prompt: 'select_account' }); 
 
         window.firebaseAuth = auth;
         window.firebaseDb = db;
+        window.firebaseStorage = storage; // Lo hacemos global
         window.googleProvider = provider;
+        
         window.signInWithPopup = signInWithPopup;
         window.onAuthStateChanged = onAuthStateChanged;
         window.signOut = signOut;
         window.fsDoc = doc;
         window.fsGetDoc = getDoc;
         window.fsSetDoc = setDoc;
-        // 🔥 NUEVOS PODERES DE TIEMPO REAL
         window.fsCollection = collection;
         window.fsOnSnapshot = onSnapshot; 
+        
+        // 🔥 NUEVAS HERRAMIENTAS GLOBALES PARA ARCHIVOS
+        window.fsRef = ref;
+        window.fsUploadBytes = uploadBytes;
+        window.fsGetDownloadURL = getDownloadURL;
+        window.fsGetBlob = getBlob;
     </script>
 
     <script>
@@ -3302,7 +3737,7 @@ function resetReassignments() {
 
             const email = user.email.toLowerCase();
             
-            // 🔥 FILTRO ESTRICTO: Solo entra @marcan.com.pe
+            // Filtro Marcan
             if (!email.endsWith('@marcan.com.pe')) { 
                 msg.textContent = "Acceso denegado. Solo correos corporativos autorizados.";
                 msg.className = "text-sm mb-6 text-center font-bold text-red-500";
@@ -3312,24 +3747,50 @@ function resetReassignments() {
                 return;
             }
 
-            msg.textContent = "Acceso corporativo verificado...";
+            msg.textContent = "Verificando nivel de acceso...";
             
             try {
-                // (Opcional) Registramos quién entró en tu base de datos para tu control
                 const userRef = window.fsDoc(window.firebaseDb, "usuarios", email);
-                await window.fsSetDoc(userRef, {
+                const userSnap = await window.fsGetDoc(userRef);
+                
+                // 🔥 DEFINICIÓN DE ROLES FORZADA
+                const isRoot = email === 'kalderete@marcan.com.pe';
+                
+                // Leemos el rol actual o le ponemos 'user' por defecto
+                let rolDefinitivo = userSnap.exists() && userSnap.data().rol ? userSnap.data().rol : 'user';
+                
+                // SI ERES TÚ, TE FORZAMOS A ROOT SÍ O SÍ
+                if (isRoot) {
+                    rolDefinitivo = 'root';
+                }
+
+                let userData = {
                     email: email,
                     nombre: user.displayName,
-                    estado: 'aprobado_automaticamente',
+                    rol: rolDefinitivo,
                     ultimoAcceso: new Date().toISOString()
-                }, { merge: true });
+                };
 
-                // ¡ACCESO CONCEDIDO INMEDIATAMENTE!
-                msg.textContent = "¡Bienvenido, equipo Marcan!";
-                window.iniciarMultijugador();
+                if (!userSnap.exists()) {
+                    userData.proyectosAsignados = isRoot ? ['TODOS'] : [];
+                }
+
+                await window.fsSetDoc(userRef, userData, { merge: true });
+                window.currentUserRole = rolDefinitivo;
+
+                msg.textContent = isRoot ? "¡Bienvenido, Administrador Principal!" : "¡Bienvenido, equipo Marcan!";
                 msg.className = "text-sm mb-6 text-center font-bold text-emerald-600";
                 statusColor.className = "absolute top-0 left-0 w-full h-2 bg-emerald-500 transition-colors";
                 
+                // 🔥 MOSTRAR EL BOTÓN SI ERES ROOT
+                if (window.currentUserRole === 'root') {
+                    const btnAjustes = document.getElementById('btnAjustes');
+                    if (btnAjustes) btnAjustes.classList.remove('hidden');
+                }
+                
+                // 🔥 AQUÍ ENCENDEMOS EL LOBBY
+                window.cargarLobbyProyectos();
+
                 setTimeout(() => {
                     loginScreen.style.opacity = '0';
                     setTimeout(() => loginScreen.style.display = 'none', 500);
@@ -3337,7 +3798,6 @@ function resetReassignments() {
 
             } catch (error) {
                 console.error("Error registrando acceso:", error);
-                // Si la BD falla por un milisegundo, igual lo dejamos entrar porque su correo es correcto
                 loginScreen.style.display = 'none';
             }
         }
@@ -3408,6 +3868,159 @@ function resetReassignments() {
                     renderTableData(); 
                 }
             });
+        };
+    </script>
+    <!-- ========================================== -->
+    <!-- LÓGICA DEL PANEL DE ADMINISTRADOR (ROOT) -->
+    <!-- ========================================== -->
+    <script>
+        // Funciones conectadas a la ventana global para que los botones las encuentren
+        window.abrirAjustes = function() {
+            document.getElementById('modalAjustes').classList.remove('hidden');
+        };
+        
+        window.cerrarAjustes = function() {
+            document.getElementById('modalAjustes').classList.add('hidden');
+        };
+
+        // Función Maestra: Sube la foto y guarda el proyecto
+        window.guardarNuevoProyecto = async function() {
+            const nombre = document.getElementById('nuevoNombreProyecto').value.trim().toUpperCase();
+            const logoInput = document.getElementById('nuevoLogoProyecto');
+            const btn = document.getElementById('btnGuardarProyecto');
+
+            if (!nombre) {
+                alert("⚠️ Por favor, ingresa un nombre para el proyecto.");
+                return;
+            }
+
+            btn.textContent = "⏳ Subiendo...";
+            btn.disabled = true;
+
+            try {
+                let logoUrl = "";
+
+                // 1. Si el Root seleccionó una imagen, la subimos a Storage
+                if (logoInput.files.length > 0) {
+                    const archivo = logoInput.files[0];
+                    // Creamos la ruta: logos/PARC_mifoto.png
+                    const storageRef = window.fsRef(window.firebaseStorage, `logos/${nombre}_${archivo.name}`);
+                    await window.fsUploadBytes(storageRef, archivo);
+                    // Obtenemos el link público de la foto
+                    logoUrl = await window.fsGetDownloadURL(storageRef);
+                } else {
+                    // Si no sube logo, le generamos uno automático con sus iniciales
+                    logoUrl = `https://ui-avatars.com/api/?name=${nombre}&background=random&color=fff&size=150`;
+                }
+
+                // 2. Guardamos el proyecto en la Base de Datos
+                const docRef = window.fsDoc(window.firebaseDb, "proyectos", nombre);
+                await window.fsSetDoc(docRef, {
+                    nombre: nombre,
+                    logo: logoUrl,
+                    fechaCreacion: new Date().toISOString()
+                });
+
+                alert(`✅ ¡El proyecto ${nombre} se creó con éxito!`);
+                
+                // Limpiar formulario
+                document.getElementById('nuevoNombreProyecto').value = '';
+                logoInput.value = '';
+                
+            } catch (error) {
+                console.error("Error al guardar:", error);
+                alert("❌ Hubo un error al guardar el proyecto. Revisa la consola.");
+            } finally {
+                btn.textContent = "Guardar Proyecto";
+                btn.disabled = false;
+            }
+        };
+        // Alternar entre pestañas en el modal de Ajustes
+        window.cambiarTabAjustes = function(tab) {
+            const p = document.getElementById('tabProyectos');
+            const u = document.getElementById('tabUsuarios');
+            const bp = document.getElementById('btnTabProyectos');
+            const bu = document.getElementById('btnTabUsuarios');
+
+            if (tab === 'proyectos') {
+                p.classList.remove('hidden'); u.classList.add('hidden');
+                bp.className = "font-bold text-indigo-700 border-b-2 border-indigo-700 px-2 pb-1 cursor-pointer";
+                bu.className = "font-bold text-slate-400 hover:text-slate-600 px-2 pb-1 transition cursor-pointer";
+            } else {
+                u.classList.remove('hidden'); p.classList.add('hidden');
+                bu.className = "font-bold text-indigo-700 border-b-2 border-indigo-700 px-2 pb-1 cursor-pointer";
+                bp.className = "font-bold text-slate-400 hover:text-slate-600 px-2 pb-1 transition cursor-pointer";
+                window.cargarUsuariosAdmin();
+            }
+        };
+
+        // Leer la lista de usuarios registrados y pintar sus casillas de verificación
+        window.cargarUsuariosAdmin = function() {
+            const cont = document.getElementById('listaUsuariosAdmin');
+            const userCol = window.fsCollection(window.firebaseDb, "usuarios");
+            
+            window.fsOnSnapshot(userCol, (snapshot) => {
+                cont.innerHTML = '';
+                const arrayProyectos = Object.keys(window.proyectosNube || {});
+
+                let countOthers = 0;
+                snapshot.forEach(docSnap => {
+                    const u = docSnap.data();
+                    if (u.email === 'kalderete@marcan.com.pe') return; // Saltear al Root
+                    countOthers++;
+
+                    const asignados = u.proyectosAsignados || [];
+                    
+                    let checksHtml = arrayProyectos.map(pName => {
+                        const isChecked = asignados.includes(pName) ? 'checked' : '';
+                        return `
+                            <label class="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded border border-slate-200 text-xs font-semibold cursor-pointer">
+                                <input type="checkbox" ${isChecked} onchange="window.guardarAsignacionProyecto('${u.email}', '${pName}', this.checked)" class="rounded text-indigo-600 focus:ring-indigo-500">
+                                ${pName}
+                            </label>
+                        `;
+                    }).join('');
+
+                    cont.innerHTML += `
+                        <div class="flex flex-col gap-2 p-3 border border-slate-200 bg-slate-50/50 rounded-lg shadow-2xs">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <span class="font-bold text-slate-800 text-sm block">${u.nombre || u.email}</span>
+                                    <span class="text-xs text-slate-400 font-mono">${u.email}</span>
+                                </div>
+                                <span class="text-[10px] bg-indigo-100 text-indigo-800 font-bold px-2 py-0.5 rounded-full uppercase">Usuario Marcan</span>
+                            </div>
+                            <div class="flex flex-wrap gap-2 mt-1 pt-2 border-t border-slate-200">
+                                ${checksHtml || '<span class="text-xs text-slate-400 italic">No hay proyectos creados aún.</span>'}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                if (countOthers === 0) {
+                    cont.innerHTML = '<div class="text-center py-8 text-slate-400 italic">No se han registrado otros usuarios aún. Pide a tu equipo que inicie sesión con su correo corporativo para asignarles proyectos.</div>';
+                }
+            });
+        };
+
+        // Guardar la casilla marcada inmediatamente en la base de datos
+        window.guardarAsignacionProyecto = async function(email, proyecto, checked) {
+            try {
+                const userRef = window.fsDoc(window.firebaseDb, "usuarios", email);
+                const userSnap = await window.fsGetDoc(userRef);
+                let asignados = userSnap.exists() && userSnap.data().proyectosAsignados ? userSnap.data().proyectosAsignados : [];
+
+                if (checked) {
+                    if (!asignados.includes(proyecto)) asignados.push(proyecto);
+                } else {
+                    asignados = asignados.filter(p => p !== proyecto);
+                }
+
+                await window.fsSetDoc(userRef, { proyectosAsignados: asignados }, { merge: true });
+            } catch (e) {
+                console.error("Error guardando asignación:", e);
+                alert("❌ No se pudo guardar el permiso.");
+            }
         };
     </script>
 </body>
