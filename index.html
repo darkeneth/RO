@@ -4546,6 +4546,118 @@ window.iniciarNuevoReporte = function() {
             if (tab === 'usuarios') window.cargarUsuariosAdmin();
         };
 
+        // ==========================================
+        // MOTOR DE ADMINISTRACIÓN DE USUARIOS Y PERMISOS
+        // ==========================================
+        window.cargarUsuariosAdmin = function() {
+            const contenedor = document.getElementById('listaUsuariosAdmin');
+            if (!contenedor) return;
+            
+            contenedor.innerHTML = '<div class="text-slate-500 italic py-4"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Cargando equipo desde la nube...</div>';
+
+            const usuariosRef = window.fsCollection(window.firebaseDb, "usuarios");
+            
+            // Firebase OnSnapshot nos permite ver en tiempo real si alguien nuevo se loguea
+            window.fsOnSnapshot(usuariosRef, (snapshot) => {
+                if (snapshot.empty) {
+                    contenedor.innerHTML = '<div class="text-slate-500 italic py-4 text-center">No hay usuarios registrados.</div>';
+                    return;
+                }
+
+                let html = '<div class="flex flex-col gap-4 w-full">';
+                const proyectosTotales = Object.keys(window.proyectosNube || {});
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const email = doc.id;
+                    const asignados = data.proyectosAsignados || [];
+                    const isRoot = data.rol === 'root';
+                    
+                    let checksHtml = '';
+                    if (isRoot) {
+                        checksHtml = '<span class="text-[11px] font-bold text-purple-700 bg-purple-100 px-3 py-1.5 rounded-full shadow-sm border border-purple-200">ACCESO TOTAL (ROOT)</span>';
+                    } else {
+                        if (proyectosTotales.length === 0) {
+                            checksHtml = '<span class="text-xs text-slate-400 italic">Crea un proyecto primero en la pestaña "Gestión de Proyectos".</span>';
+                        } else {
+                            // Crear un Checkbox por cada proyecto que exista en el sistema
+                            proyectosTotales.forEach(proy => {
+                                const isChecked = asignados.includes(proy) ? 'checked' : '';
+                                const bgClass = isChecked ? 'bg-indigo-50 border-indigo-300' : 'bg-slate-50 border-slate-200 hover:bg-slate-100';
+                                
+                                checksHtml += `
+                                    <label class="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700 ${bgClass} border px-3 py-1.5 rounded-lg transition-colors">
+                                        <input type="checkbox" ${isChecked} onchange="window.togglePermisoUsuario('${email}', '${proy}', this.checked)" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer">
+                                        ${proy}
+                                    </label>
+                                `;
+                            });
+                        }
+                    }
+
+                    const initial = data.nombre ? data.nombre.charAt(0).toUpperCase() : email.charAt(0).toUpperCase();
+
+                    html += `
+                        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row gap-5 hover:shadow-md transition">
+                            <!-- Info del Usuario -->
+                            <div class="flex flex-col gap-1 min-w-[250px] border-b md:border-b-0 md:border-r border-slate-100 pb-4 md:pb-0 pr-4">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-black text-xl shadow-inner border border-indigo-200 shrink-0">
+                                        ${initial}
+                                    </div>
+                                    <div class="overflow-hidden">
+                                        <h4 class="text-sm font-extrabold text-slate-800 truncate">${data.nombre || 'Miembro del Equipo'}</h4>
+                                        <p class="text-xs text-slate-500 truncate">${email}</p>
+                                    </div>
+                                </div>
+                                <span class="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md w-max ${isRoot ? 'bg-purple-100 text-purple-700 border border-purple-200' : 'bg-slate-100 text-slate-500 border border-slate-200'}">
+                                    ${isRoot ? '<i class="fa-solid fa-crown mr-1"></i> Administrador' : '<i class="fa-solid fa-user mr-1"></i> Usuario Base'}
+                                </span>
+                            </div>
+                            
+                            <!-- Panel de Permisos -->
+                            <div class="flex-1 flex flex-col justify-center">
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Obras Asignadas (Activar para dar acceso):</p>
+                                <div class="flex flex-wrap gap-2">
+                                    ${checksHtml}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                contenedor.innerHTML = html;
+            }, (error) => {
+                console.error("Error cargando usuarios:", error);
+                contenedor.innerHTML = '<div class="text-red-500 italic py-4">Error de conexión al cargar el equipo.</div>';
+            });
+        };
+
+        // 🔥 FUNCIÓN QUE GUARDA EL PERMISO EN FIREBASE AL INSTANTE
+        window.togglePermisoUsuario = async function(email, proyecto, asignar) {
+            try {
+                const userRef = window.fsDoc(window.firebaseDb, "usuarios", email);
+                const snap = await window.fsGetDoc(userRef);
+                if (!snap.exists()) return;
+                
+                let asignados = snap.data().proyectosAsignados || [];
+                
+                if (asignar) {
+                    if (!asignados.includes(proyecto)) asignados.push(proyecto);
+                } else {
+                    asignados = asignados.filter(p => p !== proyecto);
+                }
+                
+                // Actualiza la base de datos en milisegundos
+                await window.fsSetDoc(userRef, { proyectosAsignados: asignados }, { merge: true });
+                
+                // (Opcional) Mostrar notificación sutil o dejar que el color del botón cambie solo
+            } catch (error) {
+                console.error("Error actualizando permisos:", error);
+                alert("❌ Ocurrió un error al intentar cambiar los accesos del usuario.");
+            }
+        };
+
         window.guardarFondoInicio = async function() {
             const input = document.getElementById('inputFondoInicio');
             const btn = document.getElementById('btnSubirFondo');
