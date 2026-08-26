@@ -555,14 +555,20 @@
                     const data = doc.data();
                     const periodo = doc.id;
                     
-                    // 🔥 1. RECOLECTAR DATOS PARA EL DASHBOARD EN CADA VUELTA
+                    // 🔥 1. RECOLECTAR DATOS (A PRUEBA DE FALLOS)
+                    periodos.push(periodo); // Siempre agregamos el mes al eje X
+                    
                     if (data.estadisticas && data.estadisticas.resumen) {
-                        periodos.push(periodo);
                         margenes.push(data.estadisticas.resumen.margen);
+                        
+                        // Como Firebase lee en orden, el último en procesarse actualizará las tarjetas
                         ultimoVCosto = data.estadisticas.resumen.vCosto;
                         ultimoEAC = data.estadisticas.resumen.eac;
                         ultimoMargen = data.estadisticas.resumen.margen;
                         dashboardActivo = true;
+                    } else {
+                        // Si es un reporte viejo sin datos, lo graficamos en 0
+                        margenes.push(0);
                     }
                     
                     // 🔥 2. DIBUJAR LA TARJETA DEL REPORTE
