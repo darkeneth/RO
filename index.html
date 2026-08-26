@@ -4702,6 +4702,16 @@ window.iniciarNuevoReporte = function() {
         };
 
         window.iniciarNuevoReporte = function(pushHistory = true) {
+            // 🔥 LIMPIAR MEMORIA RESIDUAL DE PROYECCIONES ANTERIORES
+            window.roProjections = {};
+            window.proyeccionesNube = {};
+            localStorage.removeItem('s10_ro_projections');
+            
+            // Apagar cualquier "escuchador" de Firebase del reporte anterior
+            if (window.semanasUnsubscribe) {
+                window.semanasUnsubscribe();
+                window.semanasUnsubscribe = null;
+            }
             if (pushHistory) history.pushState({ vista: 'reporte_nuevo' }, '', '#nuevo-reporte');
             
             document.getElementById('vistaHistorial').classList.add('hidden');
@@ -4716,6 +4726,7 @@ window.iniciarNuevoReporte = function() {
             
             document.getElementById('btnGuardarNube').classList.remove('hidden');
             document.getElementById('selectorHeaderContainer').classList.remove('hidden');
+            document.getElementById('vistaHistorial').classList.add('hidden');
             
             // 🔥 MOSTRAR Y LIMPIAR FECHA CENTRADA PARA NUEVO REPORTE
             const mesSel = document.getElementById('mesSelectContainer');
