@@ -6,6 +6,8 @@
     <title>S10 - RO</title>
     
     <!-- Tailwind CSS -->
+    <!-- Chart.js para Gráficos Dinámicos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -123,21 +125,18 @@
                     <span class="text-white font-bold text-lg tracking-wide hidden sm:block">COSTOS</span>
                 </div>
 
-                <!-- Centro-Izquierda: Proyecto y Mes (Sin marcos) -->
+                <!-- Centro-Izquierda: Proyecto (Sin marcos) -->
                 <div id="selectorHeaderContainer" class="hidden flex items-center gap-2">
                     <div class="h-6 w-px bg-slate-700 hidden sm:block mx-1"></div>
-                    
-                    <!-- Proyecto Grande y Transparente -->
                     <select id="proyectoSelect" class="bg-transparent text-lg sm:text-xl font-extrabold text-indigo-400 focus:outline-none cursor-pointer appearance-none tracking-widest uppercase hover:text-indigo-300 transition pr-2">
                         <option value="" disabled selected>Seleccione...</option>
                     </select>
-
-                    <!-- Mes más discreto -->
-                    <div id="mesSelectContainer" class="flex items-center">
-                        <div class="h-4 w-px bg-slate-700 mx-2"></div>
-                        <input type="month" id="mesSelect" class="bg-transparent text-xs font-bold text-slate-400 hover:text-white transition focus:outline-none cursor-pointer [color-scheme:dark]">
-                    </div>
                 </div>
+            </div>
+
+            <!-- 🔥 CENTRO ABSOLUTO: MES / PERIODO BLANCO Y ELEGANTE -->
+            <div id="mesSelectContainer" class="hidden absolute left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-auto">
+                <input type="month" id="mesSelect" class="bg-transparent text-sm font-bold text-slate-400 hover:text-white transition focus:outline-none cursor-pointer [color-scheme:dark] text-center">
             </div>
 
             <!-- Derecha: Botones -->
@@ -248,6 +247,31 @@
                 <button onclick="window.iniciarNuevoReporte()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold uppercase tracking-widest py-3.5 px-6 rounded-full shadow-md transition flex items-center gap-2 cursor-pointer transform hover:-translate-y-0.5">
                     <i class="fa-solid fa-plus text-sm"></i> NUEVO REPORTE RO
                 </button>
+            </div>
+
+            <!-- 🔥 DASHBOARD GERENCIAL (Tarjetas + Semáforo) -->
+            <div id="dashboardHistorico" class="w-full mb-10 hidden">
+                <!-- Tarjetas de Resumen -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-center">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Presupuesto (V Costo)</span>
+                        <span id="dashVCosto" class="text-2xl sm:text-3xl font-black text-slate-800">S/ 0.00</span>
+                    </div>
+                    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-center">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Costo Proyectado (EAC)</span>
+                        <span id="dashEAC" class="text-2xl sm:text-3xl font-black text-slate-800">S/ 0.00</span>
+                    </div>
+                    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-center relative overflow-hidden">
+                        <div id="dashBgMargen" class="absolute inset-0 bg-emerald-50 opacity-50"></div>
+                        <span class="relative text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Margen RO Actual</span>
+                        <span id="dashMargen" class="relative text-2xl sm:text-3xl font-black text-emerald-600">S/ 0.00</span>
+                    </div>
+                </div>
+                
+                <!-- Gráfico de Semáforo -->
+                <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm w-full h-[300px]">
+                    <canvas id="graficoRO"></canvas>
+                </div>
             </div>
             
             <!-- Contenedor de Tarjetas -->
@@ -521,10 +545,27 @@
                 contenedor.innerHTML = '<div class="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 content-start mt-4"></div>';
                 const grid = contenedor.querySelector('div');
 
+                // 🔥 VARIABLES PARA EL DASHBOARD
+                let periodos = [];
+                let margenes = [];
+                let ultimoVCosto = 0, ultimoEAC = 0, ultimoMargen = 0;
+                let dashboardActivo = false;
+
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     const periodo = doc.id;
                     
+                    // 🔥 1. RECOLECTAR DATOS PARA EL DASHBOARD EN CADA VUELTA
+                    if (data.estadisticas && data.estadisticas.resumen) {
+                        periodos.push(periodo);
+                        margenes.push(data.estadisticas.resumen.margen);
+                        ultimoVCosto = data.estadisticas.resumen.vCosto;
+                        ultimoEAC = data.estadisticas.resumen.eac;
+                        ultimoMargen = data.estadisticas.resumen.margen;
+                        dashboardActivo = true;
+                    }
+                    
+                    // 🔥 2. DIBUJAR LA TARJETA DEL REPORTE
                     grid.innerHTML += `
                         <div class="bg-white rounded-[24px] shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-slate-200 flex flex-col group transform hover:-translate-y-1">
                             
@@ -572,7 +613,49 @@
                             </button>
                         </div>
                     `;
-                });
+                }); // <-- ¡AQUÍ TERMINA EL BUCLE PARA LEER TODOS LOS REPORTES!
+
+                // 🔥 3. RENDERIZAR DASHBOARD SI HAY DATOS (FUERA DEL BUCLE)
+                if (dashboardActivo && window.miGraficoRO) window.miGraficoRO.destroy(); // Limpiar gráfico anterior
+                
+                if (periodos.length > 0) {
+                    document.getElementById('dashboardHistorico').classList.remove('hidden');
+                    
+                    document.getElementById('dashVCosto').textContent = 'S/ ' + ultimoVCosto.toLocaleString('es-PE', { minimumFractionDigits: 2 });
+                    document.getElementById('dashEAC').textContent = 'S/ ' + ultimoEAC.toLocaleString('es-PE', { minimumFractionDigits: 2 });
+                    
+                    const elMargen = document.getElementById('dashMargen');
+                    const bgMargen = document.getElementById('dashBgMargen');
+                    elMargen.textContent = 'S/ ' + ultimoMargen.toLocaleString('es-PE', { minimumFractionDigits: 2 });
+                    
+                    if (ultimoMargen >= 0) {
+                        elMargen.className = "relative text-2xl sm:text-3xl font-black text-emerald-600";
+                        bgMargen.className = "absolute inset-0 bg-emerald-50 opacity-50";
+                    } else {
+                        elMargen.className = "relative text-2xl sm:text-3xl font-black text-red-600";
+                        bgMargen.className = "absolute inset-0 bg-red-50 opacity-50";
+                    }
+
+                    // DIBUJAR GRÁFICO DE SEMÁFORO
+                    const ctx = document.getElementById('graficoRO').getContext('2d');
+                    window.miGraficoRO = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: periodos,
+                            datasets: [{
+                                label: 'Margen RO (S/)',
+                                data: margenes,
+                                backgroundColor: ctx => ctx.raw >= 0 ? '#10B981' : '#EF4444',
+                                borderRadius: 6
+                            }]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: { y: { grid: { color: '#f1f5f9' } }, x: { grid: { display: false } } }
+                        }
+                    });
+                }
             });
         };
 
@@ -622,8 +705,17 @@
                 const selectorHeader = document.getElementById('selectorHeaderContainer');
                 if (selectorHeader) selectorHeader.classList.remove('hidden'); 
 
+                // 🔥 Mostrar el periodo centrado en blanco
                 const mesSel = document.getElementById('mesSelectContainer');
-                if (mesSel) mesSel.classList.add('hidden');
+                if (mesSel) mesSel.classList.remove('hidden');
+                
+                const inputMes = document.getElementById('mesSelect');
+                if (inputMes) {
+                    inputMes.value = periodo;
+                    inputMes.disabled = true; // Bloqueado
+                    inputMes.className = "bg-transparent text-white text-base tracking-widest font-bold transition focus:outline-none cursor-pointer [color-scheme:dark] text-center";
+                }
+
                 const proySel = document.getElementById('proyectoSelect');
                 if (proySel) {
                     proySel.value = proyecto;
@@ -760,6 +852,24 @@ window.iniciarNuevoReporte = function() {
                 
                 const archivoUrl = await window.fsGetDownloadURL(storageRef);
 
+                // 🔥 Capturar totales de la tabla (Fila 01)
+                let t_V = 0, t_EAC = 0, t_Margen = 0;
+                
+                // Buscamos infaliblemente la fila cuyo código sea exactamente "01"
+                const fila01 = Array.from(document.querySelectorAll('#tableBody tr')).find(tr => {
+                    const celdaCodigo = tr.querySelector('td');
+                    return celdaCodigo && celdaCodigo.textContent.trim() === '01';
+                });
+                
+                if (fila01) {
+                    const tds = fila01.querySelectorAll('td');
+                    if(tds.length > 20) {
+                        t_V = parseFloat(tds[2].textContent.replace(/,/g, '')) || 0;      // Columna C (V Costo)
+                        t_EAC = parseFloat(tds[19].textContent.replace(/,/g, '')) || 0;    // Columna S (EAC)
+                        t_Margen = parseFloat(tds[20].textContent.replace(/,/g, '')) || 0; // Columna T (Diferencia C - S)
+                    }
+                }
+
                 const reporteData = {
                     proyecto: proyecto,
                     periodo: mes,
@@ -767,6 +877,7 @@ window.iniciarNuevoReporte = function() {
                     creadoPor: window.firebaseAuth.currentUser.email,
                     archivoUrl: archivoUrl,
                     estadisticas: {
+                        resumen: { vCosto: t_V, eac: t_EAC, margen: t_Margen },
                         partidas: document.getElementById('metricPartidas').textContent,
                         filas: consolidatedRows.length
                     }
@@ -2180,6 +2291,15 @@ window.iniciarNuevoReporte = function() {
             // Mostrar y habilitar controles
             const mesSel = document.getElementById('mesSelectContainer');
             if (mesSel) mesSel.classList.remove('hidden');
+            
+            const inputMes = document.getElementById('mesSelect');
+            if (inputMes) {
+                inputMes.disabled = false;
+                inputMes.value = ''; // Limpiarlo para el nuevo reporte
+                inputMes.classList.replace('text-amber-400', 'text-slate-400');
+                inputMes.classList.remove('text-base', 'tracking-widest');
+            }
+
             const proySel = document.getElementById('proyectoSelect');
             if (proySel) proySel.disabled = false;
             
@@ -2486,24 +2606,27 @@ window.iniciarNuevoReporte = function() {
                     const th = document.createElement('th');
                     const colorGroup = getColumnColorGroup(c);
                     let stickyClass = '';
-                    if (c === 0) stickyClass = 'sticky left-0 z-30 bg-slate-300 min-w-[90px] w-[90px] bg-clip-padding';
-                    else if (c === 1) stickyClass = 'sticky left-[90px] z-30 bg-slate-300 min-w-[220px] w-[220px] bg-clip-padding';
-                    else if (c === 2) stickyClass = 'sticky left-[310px] z-30 bg-slate-300 min-w-[110px] w-[110px] border-r-2 border-slate-500 shadow-md bg-clip-padding';
+                    
+                    // 🔥 CORRECCIÓN: Medidas y anclajes exactos a 350px y 440px
+                    if (c === 0) stickyClass = 'sticky left-0 z-30 bg-slate-300 min-w-[90px] w-[90px] max-w-[90px] bg-clip-padding';
+                    else if (c === 1) stickyClass = 'sticky left-[90px] z-30 bg-slate-300 min-w-[350px] w-[350px] max-w-[350px] bg-clip-padding';
+                    else if (c === 2) stickyClass = 'sticky left-[440px] z-30 bg-slate-300 min-w-[110px] w-[110px] max-w-[110px] border-r-2 border-slate-500 shadow-md bg-clip-padding';
 
-                    if (colorGroup === 'blue') th.className = `p-2 border-r border-blue-700 whitespace-nowrap text-center font-bold bg-blue-900 text-blue-100 ${stickyClass}`;
-                    else if (colorGroup === 'red') th.className = `p-2 border-r border-red-700 whitespace-nowrap text-center font-bold bg-red-900 text-red-100 ${stickyClass}`;
-                    else if (colorGroup === 'gold') th.className = `p-2 border-l-4 border-l-amber-600 whitespace-nowrap text-center font-bold bg-amber-800 text-amber-100 ${stickyClass}`;
-                    else if (colorGroup === 'emerald') th.className = `py-1 px-2 border-r border-emerald-500 bg-emerald-600 text-white font-bold text-center ${stickyClass}`;
-                    else if (colorGroup === 'light-yellow') th.className = `py-1 px-2 border-r border-yellow-300 bg-yellow-200 text-yellow-800 font-bold text-center ${stickyClass}`;
-                    else if (colorGroup === 'indigo') th.className = `p-2 border-r border-indigo-400 whitespace-nowrap text-center font-bold bg-indigo-100 text-indigo-900 shadow-inner ${stickyClass}`;
-                    else th.className = `py-1 px-2 border-r border-slate-400 text-slate-700 font-bold text-center ${stickyClass}`;
+                    // 🔥 MEJORA VISUAL: Reducción drástica del padding a 'py-0.5' para adelgazar la fila
+                    if (colorGroup === 'blue') th.className = `py-0.5 px-2 border-r border-blue-700 whitespace-nowrap text-center font-bold bg-blue-900 text-blue-100 ${stickyClass}`;
+                    else if (colorGroup === 'red') th.className = `py-0.5 px-2 border-r border-red-700 whitespace-nowrap text-center font-bold bg-red-900 text-red-100 ${stickyClass}`;
+                    else if (colorGroup === 'gold') th.className = `py-0.5 px-2 border-l-4 border-l-amber-600 whitespace-nowrap text-center font-bold bg-amber-800 text-amber-100 ${stickyClass}`;
+                    else if (colorGroup === 'emerald') th.className = `py-0.5 px-2 border-r border-emerald-500 bg-emerald-600 text-white font-bold text-center ${stickyClass}`;
+                    else if (colorGroup === 'light-yellow') th.className = `py-0.5 px-2 border-r border-yellow-300 bg-yellow-200 text-yellow-800 font-bold text-center ${stickyClass}`;
+                    else if (colorGroup === 'indigo') th.className = `py-0.5 px-2 border-r border-indigo-400 whitespace-nowrap text-center font-bold bg-indigo-100 text-indigo-900 shadow-inner ${stickyClass}`;
+                    else th.className = `py-0.5 px-2 border-r border-slate-400 text-slate-700 font-bold text-center ${stickyClass}`;
                     
                     th.textContent = getExcelColumnLetter(c);
                     trLetters.appendChild(th);
 
                     if (c === 16) {
                         const thLetExtra = document.createElement('th');
-                        thLetExtra.className = 'p-2 border-r border-indigo-500 whitespace-nowrap text-center font-bold bg-indigo-900 text-indigo-100';
+                        thLetExtra.className = 'py-0.5 px-2 border-r border-indigo-500 whitespace-nowrap text-center font-bold bg-indigo-900 text-indigo-100';
                         thLetExtra.textContent = 'SC / STOCK';
                         trLetters.appendChild(thLetExtra);
                     }
@@ -2641,9 +2764,10 @@ window.iniciarNuevoReporte = function() {
                                 td.className += ' text-right font-mono font-bold text-indigo-900'; 
                             }
                         } else if (colName === 'Sustento / Nota') {
-                            let renderNote = notaNube || val || '';
+                            // 🔥 CORRECCIÓN DEL BUG ZOMBIE: Si la memoria del usuario existe, úsala estrictamente (incluso si está vacía). Si no, usa el valor de Excel.
+                            let renderNote = (mem[codeVal] && mem[codeVal].note !== undefined) ? mem[codeVal].note : (val || '');
+                            
                             if (codeVal.length > 4 && !isRowStock) {
-                                // 🔥 CAMBIAMOS AL NUEVO CIRCUITO AISLADO
                                 td.innerHTML = `<input type="text" value="${renderNote}" class="w-full min-w-[150px] bg-white border border-indigo-300 rounded px-1 py-1 text-xs text-slate-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Sustento..." onchange="window.guardarDatoCTC('${codeVal}', 'note', this.value)">`;
                             } else {
                                 td.textContent = '';
@@ -2838,25 +2962,39 @@ window.iniciarNuevoReporte = function() {
                 let lastParent = null;
                 let currentParentTh = null;
 
-                rawKeys.forEach(k => {
+                rawKeys.forEach((k, cIdx) => {
                     let parentStr = k;
                     let childStr = null;
                     
-                    // Si detecta el separador, divide el padre del hijo
                     if (k.includes(' | ')) {
                         let parts = k.split(' | ');
                         parentStr = parts[0].trim();
                         childStr = parts[1].trim();
                     }
 
-                    // Fila Superior (Padres como "Descripción" o "Adelantos")
                     if (parentStr !== lastParent) {
                         currentParentTh = document.createElement('th');
-                        currentParentTh.className = 'p-2 border-r border-amber-700/50 whitespace-nowrap text-center font-bold';
-                        currentParentTh.textContent = parentStr;
-                        currentParentTh.colSpan = 1;
                         
-                        // Si no tiene hijo (ej. Descripción), ocupa las 2 filas hacia abajo (rowspan)
+                        // 🔥 INMOVILIZAR COLUMNA 0 (DESCRIPCIÓN) + POSICIÓN RELATIVA
+                        let stickyClass = cIdx === 0 ? 'sticky left-0 z-30 bg-amber-900 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)] bg-clip-padding' : 'relative';
+                        
+                        currentParentTh.className = `p-2 border-r border-amber-700/50 whitespace-nowrap text-center font-bold ${stickyClass}`;
+                        currentParentTh.innerHTML = `<span class="block truncate pr-2" title="${parentStr}">${parentStr}</span>`;
+                        currentParentTh.colSpan = 1;
+
+                        // 🔥 APLICAR ANCHO GUARDADO EN MEMORIA
+                        let colKey = 'SUB_' + parentStr;
+                        let w = colWidths[colKey] || (cIdx === 0 ? 350 : 120);
+                        currentParentTh.style.width = w + 'px';
+                        currentParentTh.style.minWidth = w + 'px';
+                        currentParentTh.style.maxWidth = w + 'px';
+
+                        // 🔥 INYECTAR BOTÓN INVISIBLE PARA ARRASTRAR (RESIZER)
+                        let resizer = document.createElement('div');
+                        resizer.className = 'resizer';
+                        resizer.addEventListener('mousedown', initColumnResize(currentParentTh, colKey, cIdx));
+                        currentParentTh.appendChild(resizer);
+                        
                         if (!childStr && hasSubHeaders) {
                             currentParentTh.rowSpan = 2;
                         }
@@ -2864,15 +3002,25 @@ window.iniciarNuevoReporte = function() {
                         trTop.appendChild(currentParentTh);
                         lastParent = parentStr;
                     } else if (currentParentTh) {
-                        // Si es el mismo padre (ej. otro Adelanto), combinamos la celda hacia la derecha (colspan)
                         currentParentTh.colSpan++;
                     }
 
-                    // Fila Inferior (Hijos como "Calculado", "Otorgado")
                     if (hasSubHeaders && childStr) {
                         let childTh = document.createElement('th');
-                        childTh.className = 'p-1.5 border-r border-amber-700/30 whitespace-nowrap text-center font-bold bg-amber-700';
-                        childTh.textContent = childStr;
+                        childTh.className = 'p-1.5 border-r border-amber-700/30 whitespace-nowrap text-center font-bold bg-amber-700 relative';
+                        childTh.innerHTML = `<span class="block truncate pr-2" title="${childStr}">${childStr}</span>`;
+                        
+                        let colKeyChild = 'SUB_' + childStr;
+                        let childW = colWidths[colKeyChild] || 120;
+                        childTh.style.width = childW + 'px';
+                        childTh.style.minWidth = childW + 'px';
+                        childTh.style.maxWidth = childW + 'px';
+                        
+                        let resizerChild = document.createElement('div');
+                        resizerChild.className = 'resizer';
+                        resizerChild.addEventListener('mousedown', initColumnResize(childTh, colKeyChild, cIdx));
+                        childTh.appendChild(resizerChild);
+
                         trBottom.appendChild(childTh);
                     }
                 });
@@ -2881,14 +3029,13 @@ window.iniciarNuevoReporte = function() {
                 if (hasSubHeaders) thead.appendChild(trBottom);
                 // -------------------------------------------------------------
 
-                // Usamos displayRows (que ya tiene las sumas calculadas) en lugar de filteredSub
-                const totalRows = displayRows.length; // <-- CAMBIAR AQUÍ
+                const totalRows = displayRows.length; 
                 const totalPages = pageSize === 999999 ? 1 : Math.ceil(totalRows / pageSize) || 1;
                 if (currentPage > totalPages) currentPage = totalPages;
 
                 const startIndex = (currentPage - 1) * pageSize;
                 const endIndex = Math.min(startIndex + pageSize, totalRows);
-                const pageRows = displayRows.slice(startIndex, endIndex); // <-- CAMBIAR AQUÍ
+                const pageRows = displayRows.slice(startIndex, endIndex); 
 
                 if (pageRows.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="15" class="text-center py-6 text-slate-400">No se encontraron resultados en SUBCONTRATOS.</td></tr>';
@@ -2897,43 +3044,55 @@ window.iniciarNuevoReporte = function() {
                 }
 
                 // --- 2. DIBUJAR FILAS DE DATOS Y PINTAR AGRUPADORES ---
-                // (Ya no declaramos las variables aquí porque ya existen en el motor de cálculo de arriba)
-
                 pageRows.forEach((row, idx) => {
                     const tr = document.createElement('tr');
                     
                     let isGroupHeader = false;
                     let isSecondHierarchy = false; 
                     
-                    // Usamos las variables que ya calculamos arriba
                     let tDesc = String(row[colDesc] || '').replace(/[^a-zA-Z0-9]/g, '');
                     let tVal = String(row[colVal] || '').replace(/[^a-zA-Z0-9]/g, '');
                     let tEst = String(row[colEst] || '').replace(/[^a-zA-Z0-9]/g, '');
                     
-                    // Si tiene texto en la descripción y no es el título global
                     if (tDesc.length > 0 && !tDesc.toUpperCase().includes('SUBCONTRATO')) {
                         if (tVal.length === 0 && tEst.length === 0) {
-                            // Jerarquía 1: Empresa (Sin Val, Sin Estado) -> Azul
                             isGroupHeader = true;
                         } else if (tVal.length === 0) {
-                            // Jerarquía 2: Contrato/Adicional (Sin Val, pero CON Estado) -> Rojo
                             isSecondHierarchy = true;
                         }
                     }
 
-                    // Fondo Azul si es Empresa, de lo contrario fondo normal intercalado
-                    let rowBgClass = isGroupHeader ? 'bg-blue-100/80' : (idx % 2 === 0 ? 'bg-white' : 'bg-slate-50');
-                    tr.className = `${rowBgClass} hover:bg-amber-50 transition text-xs border-b ${isGroupHeader ? 'border-blue-300' : 'border-slate-100'}`;
+                    let baseBg = isGroupHeader ? 'bg-blue-100/80' : (idx % 2 === 0 ? 'bg-white' : 'bg-slate-50');
+                    let solidBg = isGroupHeader ? 'bg-[#e0e7ff]' : (idx % 2 === 0 ? 'bg-white' : 'bg-slate-50');
                     
-                    rawKeys.forEach(k => {
+                    tr.className = `group ${baseBg} hover:bg-amber-50 transition text-xs border-b ${isGroupHeader ? 'border-blue-300' : 'border-slate-100'}`;
+                    
+                    rawKeys.forEach((k, cIdx) => {
                         const td = document.createElement('td');
-                        td.className = `p-2 border-r ${isGroupHeader ? 'border-blue-200' : 'border-slate-200'} whitespace-nowrap`;
                         
-                        // --- APLICACIÓN DE COLORES ---
+                        let stickyClass = '';
+                        if (cIdx === 0) {
+                            stickyClass = `sticky left-0 z-20 ${solidBg} group-hover:bg-amber-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] bg-clip-padding overflow-hidden text-ellipsis`;
+                        } else {
+                            stickyClass = 'overflow-hidden text-ellipsis';
+                        }
+
+                        td.className = `p-2 border-r ${isGroupHeader ? 'border-blue-200' : 'border-slate-200'} whitespace-nowrap ${stickyClass}`;
+                        
+                        // 🔥 APLICAR ANCHOS A LAS CELDAS DE DATOS
+                        let parentStr = k.includes(' | ') ? k.split(' | ')[0].trim() : k;
+                        let childStr = k.includes(' | ') ? k.split(' | ')[1].trim() : null;
+                        let wKey = 'SUB_' + (childStr && hasSubHeaders ? childStr : parentStr);
+                        let w = colWidths[wKey] || (cIdx === 0 ? 350 : 120);
+                        
+                        td.style.width = w + 'px';
+                        td.style.minWidth = w + 'px';
+                        td.style.maxWidth = w + 'px';
+                        
                         if (isGroupHeader) {
-                            td.style.cssText = 'color: #1E3A8A !important; font-weight: bold !important;'; // Azul
+                            td.style.cssText += 'color: #1E3A8A !important; font-weight: bold !important;'; 
                         } else if (isSecondHierarchy) {
-                            td.style.cssText = 'color: #DC2626 !important; font-weight: 500 !important;'; // Rojo 
+                            td.style.cssText += 'color: #DC2626 !important; font-weight: 500 !important;'; 
                         } else {
                             td.className += ' text-slate-700';
                         }
@@ -2944,6 +3103,7 @@ window.iniciarNuevoReporte = function() {
                             td.className += ' text-center font-mono';
                         } else {
                             td.textContent = (val !== undefined && val !== null) ? String(val) : '';
+                            if (cIdx === 0 && td.textContent.length > 30) td.title = td.textContent;
                         }
                         tr.appendChild(td);
                     });
@@ -4489,39 +4649,98 @@ window.iniciarNuevoReporte = function() {
         // ---------------------------------------------------------
         // LÓGICA DE NAVEGACIÓN GLOBAL
         // ---------------------------------------------------------
-        window.abrirAjustes = function() {
+        window.abrirAjustes = function(pushHistory = true) {
+            if (pushHistory) history.pushState({ vista: 'ajustes' }, '', '#ajustes');
             document.getElementById('lobbyProyectos').classList.add('hidden');
             document.getElementById('vistaHistorial').classList.add('hidden');
             document.getElementById('zonaCargaArchivos').classList.add('hidden');
             document.getElementById('selectorHeaderContainer').classList.add('hidden');
             document.getElementById('btnGuardarNube').classList.add('hidden');
             
+            // 🔥 OCULTAR FECHA CENTRADA
+            const mesSel = document.getElementById('mesSelectContainer');
+            if (mesSel) mesSel.classList.add('hidden');
+            
             document.getElementById('vistaAjustes').classList.remove('hidden');
-            window.cambiarTabAjustes('proyectos'); // Abre la primera pestaña por defecto
+            if(typeof window.cambiarTabAjustes === 'function') window.cambiarTabAjustes('proyectos');
         };
 
-        window.volverAlLobby = function() {
+        window.volverAlLobby = function(pushHistory = true) {
+            if (pushHistory) history.pushState({ vista: 'lobby' }, '', '#lobby');
             document.getElementById('vistaAjustes').classList.add('hidden');
             document.getElementById('vistaHistorial').classList.add('hidden');
             document.getElementById('zonaCargaArchivos').classList.add('hidden');
             document.getElementById('selectorHeaderContainer').classList.add('hidden');
             document.getElementById('btnGuardarNube').classList.add('hidden');
             
+            // 🔥 OCULTAR FECHA CENTRADA
+            const mesSel = document.getElementById('mesSelectContainer');
+            if (mesSel) mesSel.classList.add('hidden');
+            
             document.getElementById('lobbyProyectos').classList.remove('hidden');
         };
 
-        window.iniciarNuevoReporte = function() {
-            document.getElementById('vistaHistorial').classList.add('hidden');
-            document.getElementById('zonaCargaArchivos').classList.remove('hidden');
-            document.getElementById('btnGuardarNube').classList.remove('hidden');
-            document.getElementById('selectorHeaderContainer').classList.remove('hidden');
+        window.abrirHistorialProyecto = function(nombreProyecto, pushHistory = true) {
+            window.proyectoActualGlobal = nombreProyecto;
+            if (pushHistory) history.pushState({ vista: 'historial', proyecto: nombreProyecto }, '', '#historial');
+            
+            document.getElementById('tituloHistorialProyecto').textContent = nombreProyecto;
+            const selectProyecto = document.getElementById('proyectoSelect');
+            if(selectProyecto) selectProyecto.value = nombreProyecto;
+            
+            document.getElementById('lobbyProyectos').classList.add('hidden');
+            document.getElementById('vistaAjustes').classList.add('hidden');
+            document.getElementById('zonaCargaArchivos').classList.add('hidden');
+            document.getElementById('selectorHeaderContainer').classList.add('hidden');
+            
+            // 🔥 OCULTAR FECHA CENTRADA
+            const mesSel = document.getElementById('mesSelectContainer');
+            if (mesSel) mesSel.classList.add('hidden');
+            
+            document.getElementById('vistaHistorial').classList.remove('hidden');
+            if(typeof window.cargarHistorialReportes === 'function') window.cargarHistorialReportes(nombreProyecto);
         };
 
-        window.volverAlHistorialDesdeApp = function() {
+        window.iniciarNuevoReporte = function(pushHistory = true) {
+            if (pushHistory) history.pushState({ vista: 'reporte_nuevo' }, '', '#nuevo-reporte');
+            
+            document.getElementById('vistaHistorial').classList.add('hidden');
+            document.getElementById('zonaCargaArchivos').classList.remove('hidden');
+            
+            const uploadSec = document.getElementById('uploadSection');
+            if (uploadSec) uploadSec.classList.remove('hidden');
+            const metricsSec = document.getElementById('metricsSection');
+            if (metricsSec) metricsSec.classList.add('hidden');
+            const resultSec = document.getElementById('resultSection');
+            if (resultSec) resultSec.classList.add('hidden');
+            
+            document.getElementById('btnGuardarNube').classList.remove('hidden');
+            document.getElementById('selectorHeaderContainer').classList.remove('hidden');
+            
+            // 🔥 MOSTRAR Y LIMPIAR FECHA CENTRADA PARA NUEVO REPORTE
+            const mesSel = document.getElementById('mesSelectContainer');
+            if (mesSel) mesSel.classList.remove('hidden');
+            const inputMes = document.getElementById('mesSelect');
+            if (inputMes) {
+                inputMes.disabled = false;
+                inputMes.value = ''; 
+                inputMes.className = "bg-transparent text-slate-400 text-sm font-bold hover:text-white transition focus:outline-none cursor-pointer [color-scheme:dark] text-center";
+            }
+            const proySel = document.getElementById('proyectoSelect');
+            if (proySel) proySel.disabled = false;
+        };
+
+        window.volverAlHistorialDesdeApp = function(pushHistory = true) {
+            if (pushHistory) history.pushState({ vista: 'historial', proyecto: window.proyectoActualGlobal }, '', '#historial');
             if(typeof resetApp === 'function') resetApp();
             document.getElementById('zonaCargaArchivos').classList.add('hidden');
             document.getElementById('btnGuardarNube').classList.add('hidden');
             document.getElementById('selectorHeaderContainer').classList.add('hidden');
+            
+            // 🔥 OCULTAR FECHA CENTRADA
+            const mesSel = document.getElementById('mesSelectContainer');
+            if (mesSel) mesSel.classList.add('hidden');
+            
             document.getElementById('vistaHistorial').classList.remove('hidden');
         };
 
@@ -4876,6 +5095,14 @@ window.iniciarNuevoReporte = function() {
             // 5. Habilitar la selección de Mes y Proyecto
             const mesSel = document.getElementById('mesSelectContainer');
             if (mesSel) mesSel.classList.remove('hidden');
+            
+            const inputMes = document.getElementById('mesSelect');
+            if (inputMes) {
+                inputMes.disabled = false;
+                inputMes.value = ''; 
+                inputMes.className = "bg-transparent text-slate-400 text-sm font-bold hover:text-white transition focus:outline-none cursor-pointer [color-scheme:dark] text-center";
+            }
+
             const proySel = document.getElementById('proyectoSelect');
             if (proySel) proySel.disabled = false;
         };
@@ -4934,7 +5161,8 @@ window.iniciarNuevoReporte = function() {
                     document.getElementById('selectorHeaderContainer').classList.remove('hidden');
                     
                     const mesSel = document.getElementById('mesSelectContainer');
-                    if (mesSel) mesSel.classList.add('hidden');
+                    // 🔥 CORRECCIÓN: Asegurar que la fecha reaparezca al "Adelantar" hacia el reporte
+                    if (mesSel) mesSel.classList.remove('hidden');
                     break;
             }
         });
@@ -5013,6 +5241,27 @@ window.iniciarNuevoReporte = function() {
                 }
             });
         };
+    </script>
+    <!-- 🔥 GUARDIÁN VISUAL DE LA BARRA SUPERIOR (BIDIRECCIONAL) -->
+    <script>
+        (function() {
+            const zonaApp = document.getElementById('zonaCargaArchivos');
+            const mesSel = document.getElementById('mesSelectContainer');
+            
+            if (zonaApp && mesSel) {
+                const observer = new MutationObserver(() => {
+                    if (zonaApp.classList.contains('hidden')) {
+                        // Si salimos del reporte, ocultar fecha
+                        mesSel.classList.add('hidden');
+                    } else {
+                        // 🔥 Si volvemos a entrar al reporte, mostrar fecha
+                        mesSel.classList.remove('hidden');
+                    }
+                });
+                
+                observer.observe(zonaApp, { attributes: true, attributeFilter: ['class'] });
+            }
+        })();
     </script>
 </body>
 </html>
