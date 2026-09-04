@@ -47,6 +47,22 @@
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
+        /* Estilos para redimensionar columnas de la tabla */
+        .resizer {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 5px;
+            cursor: col-resize;
+            user-select: none;
+            height: 100%;
+        }
+        .resizer:hover, .resizing {
+            border-right: 2px solid #3b82f6; /* bg-blue-500 */
+        }
+        th {
+            position: relative;
+        }
         /* Estilos para el redimensionamiento de columnas */
         th {
             position: relative;
@@ -161,7 +177,7 @@
         <!-- Cabecera -->
         <div class="flex items-center justify-between mb-8 border-b border-slate-200 pb-4">
             <div class="flex items-center gap-4">
-                <button onclick="window.volverAlLobby()" class="text-slate-500 hover:text-indigo-600 transition bg-white border border-slate-200 hover:border-indigo-300 rounded-lg p-2 shadow-sm cursor-pointer">
+                <button onclick="window.navegarAtras()" class="text-slate-500 hover:text-indigo-600 transition bg-white border border-slate-200 hover:border-indigo-300 rounded-lg p-2 shadow-sm cursor-pointer">
                     <i class="fa-solid fa-arrow-left text-lg"></i>
                 </button>
                 <h2 class="text-2xl font-bold text-slate-800">Configuración y Administración</h2>
@@ -230,57 +246,310 @@
     <div id="vistaHistorial" class="hidden flex-1 w-full bg-slate-50">
         <div class="w-full px-6 lg:px-12 py-12">
             
-            <!-- Cabecera Premium -->
-            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-10 gap-6">
-                <div class="flex items-center gap-4">
-                    <button onclick="window.volverAlLobby()" class="text-slate-500 hover:text-slate-900 transition bg-white border-2 border-slate-200 hover:border-slate-400 rounded-full w-12 h-12 flex items-center justify-center cursor-pointer shadow-sm">
-                        <i class="fa-solid fa-arrow-left"></i>
-                    </button>
-                    <div>
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">PROYECTO SELECCIONADO</p>
-                        <h2 class="text-3xl font-extrabold text-slate-800 tracking-tight">
-                            <span id="tituloHistorialProyecto" class="text-indigo-600"></span>
-                        </h2>
-                    </div>
-                </div>
-                
-                <button onclick="window.iniciarNuevoReporte()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold uppercase tracking-widest py-3.5 px-6 rounded-full shadow-md transition flex items-center gap-2 cursor-pointer transform hover:-translate-y-0.5">
+            <!-- Cabecera Premium (Reducida) -->
+            <div class="flex justify-end mb-6 w-full">
+                <button id="btnNuevoReporteRO" onclick="window.iniciarNuevoReporte()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold uppercase tracking-widest py-3.5 px-6 rounded-full shadow-md transition flex items-center gap-2 cursor-pointer transform hover:-translate-y-0.5 hidden">
                     <i class="fa-solid fa-plus text-sm"></i> NUEVO REPORTE RO
                 </button>
             </div>
 
-            <!-- 🔥 DASHBOARD GERENCIAL (Tarjetas + Semáforo) -->
-            <div id="dashboardHistorico" class="w-full mb-10 hidden">
-                <!-- Tarjetas de Resumen -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-center">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Presupuesto (V Costo)</span>
-                        <span id="dashVCosto" class="text-2xl sm:text-3xl font-black text-slate-800">S/ 0.00</span>
+            <!-- ========================================== -->
+            <!-- LOBBY DE MÓDULOS DEL PROYECTO -->
+            <!-- ========================================== -->
+            <div id="lobbyModulosProyecto" class="w-full flex flex-col sm:flex-row gap-8 justify-center mt-12">
+                
+                <!-- Tarjeta: Control RO -->
+                <div onclick="window.abrirModulo('RO')" class="bg-white rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-200 cursor-pointer group flex flex-col items-center text-center w-full max-w-sm transform hover:-translate-y-2">
+                    <div class="w-24 h-24 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mb-6 shadow-inner group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-300">
+                        <i class="fa-solid fa-chart-pie text-4xl"></i>
                     </div>
-                    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-center">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Costo Proyectado (EAC)</span>
-                        <span id="dashEAC" class="text-2xl sm:text-3xl font-black text-slate-800">S/ 0.00</span>
+                    <h3 class="text-2xl font-extrabold text-slate-800 mb-2 tracking-tight">Control RO</h3>
+                    <p class="text-slate-500 text-sm">Gestión de Costos, Reasignaciones, Subcontratos y Almacén.</p>
+                </div>
+
+                <!-- Tarjeta: Tareo de Obra -->
+                <div onclick="window.abrirModulo('TAREOS')" class="bg-white rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-200 cursor-pointer group flex flex-col items-center text-center w-full max-w-sm transform hover:-translate-y-2">
+                    <div class="w-24 h-24 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mb-6 shadow-inner group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-300">
+                        <i class="fa-solid fa-users-gear text-4xl"></i>
                     </div>
-                    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-center relative overflow-hidden">
-                        <div id="dashBgMargen" class="absolute inset-0 bg-emerald-50 opacity-50"></div>
-                        <span class="relative text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Margen RO Actual</span>
-                        <span id="dashMargen" class="relative text-2xl sm:text-3xl font-black text-emerald-600">S/ 0.00</span>
+                    <h3 class="text-2xl font-extrabold text-slate-800 mb-2 tracking-tight">Tareo de Obra</h3>
+                    <p class="text-slate-500 text-sm">Procesamiento automático de planillas y cruce con el padrón S10.</p>
+                </div>
+
+            </div>
+
+            <!-- ========================================== -->
+            <!-- CONTENEDOR MÓDULO RO -->
+            <!-- ========================================== -->
+            <div id="moduloProyectoRO" class="w-full">
+                <!-- DASHBOARD GERENCIAL (Tarjetas + Semáforo) -->
+                <div id="dashboardHistorico" class="w-full mb-10 hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-center">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Presupuesto (V Costo)</span>
+                            <span id="dashVCosto" class="text-2xl sm:text-3xl font-black text-slate-800">S/ 0.00</span>
+                        </div>
+                        <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-center">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Costo Proyectado (EAC)</span>
+                            <span id="dashEAC" class="text-2xl sm:text-3xl font-black text-slate-800">S/ 0.00</span>
+                        </div>
+                        <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-center relative overflow-hidden">
+                            <div id="dashBgMargen" class="absolute inset-0 bg-emerald-50 opacity-50"></div>
+                            <span class="relative text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Margen RO Actual</span>
+                            <span id="dashMargen" class="relative text-2xl sm:text-3xl font-black text-emerald-600">S/ 0.00</span>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm w-full h-[300px]">
+                        <canvas id="graficoRO"></canvas>
                     </div>
                 </div>
                 
-                <!-- Gráfico de Semáforo -->
-                <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm w-full h-[300px]">
-                    <canvas id="graficoRO"></canvas>
+                <!-- Contenedor de Tarjetas RO -->
+                <div id="listaReportesProyecto" class="w-full min-h-[300px]">
                 </div>
             </div>
-            
-            <!-- Contenedor de Tarjetas -->
-            <div id="listaReportesProyecto" class="w-full flex flex-col min-h-[300px]">
-                <!-- Aquí inyectaremos las nuevas tarjetas con JavaScript -->
+
+            <!-- ========================================== -->
+            <!-- CONTENEDOR MÓDULO TAREOS -->
+            <!-- ========================================== -->
+            <div id="moduloProyectoTareos" class="hidden w-full">
+                
+                <!-- 🔥 PANTALLA 1: HISTORIAL DE TAREOS -->
+                <div id="historialTareos" class="w-full">
+                    <div class="flex justify-end mb-6 w-full">
+                        <button onclick="window.iniciarNuevoTareo()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold uppercase tracking-widest py-3.5 px-6 rounded-full shadow-md transition flex items-center gap-2 cursor-pointer transform hover:-translate-y-0.5">
+                            <i class="fa-solid fa-plus text-sm"></i> NUEVO TAREO
+                        </button>
+                    </div>
+                    <div id="listaTareosHistorico" class="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 content-start min-h-[300px]">
+                        <!-- Se llenará con JS -->
+                    </div>
+                </div>
+
+                <!-- 🔥 PANTALLA 2: ZONA DE CARGA (Oculta por defecto) -->
+                <div id="zonaCargaTareo" class="hidden w-full">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    <!-- COLUMNA IZQUIERDA: Zonas de Carga -->
+                    <div class="lg:col-span-1 flex flex-col gap-6">
+
+                    <!-- Selector de Fechas (Semana) -->
+                        <div class="bg-white rounded-[24px] p-6 border border-slate-200 shadow-sm relative overflow-hidden group">
+                            <div class="absolute top-0 left-0 w-1 h-full bg-amber-500"></div>
+                            <h3 class="text-sm font-bold text-slate-800 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <i class="fa-solid fa-calendar-week text-amber-500"></i> Periodo del Tareo
+                            </h3>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Desde:</label>
+                                    <input type="date" id="fechaInicioTareo" class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-xs rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2.5 font-bold cursor-pointer">
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Hasta:</label>
+                                    <input type="date" id="fechaFinTareo" class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-xs rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2.5 font-bold cursor-pointer">
+                                </div>
+                            </div>
+                            <div id="infoSemanaTareo" class="mt-4 hidden text-center border-t border-slate-100 pt-3">
+                                <span class="inline-flex items-center gap-2 bg-amber-100 text-amber-800 text-[11px] px-3 py-1.5 rounded-lg font-black uppercase tracking-widest">
+                                    <i class="fa-solid fa-hashtag"></i> Semana <span id="numSemanaCalculada" class="text-sm"></span>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- 1. Carga del Padrón S10 -->
+                        <div class="bg-white rounded-[24px] p-6 border border-slate-200 shadow-sm relative overflow-hidden group">
+                            <div class="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
+                            <h3 class="text-sm font-bold text-slate-800 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <i class="fa-solid fa-file-invoice text-indigo-500"></i> 1. Padrón Oficial S10
+                            </h3>
+                            <div class="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:bg-slate-50 hover:border-indigo-400 transition cursor-pointer relative">
+                                <input type="file" id="fileS10Padron" accept=".xls,.xlsx" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                                <i class="fa-solid fa-cloud-arrow-up text-3xl text-slate-400 mb-2 group-hover:text-indigo-500 transition-colors"></i>
+                                <p class="text-xs font-bold text-slate-600 mb-1">Exportable de Personal S10</p>
+                                <p class="text-[10px] font-semibold text-slate-400">Formato .XLS o .XLSX</p>
+                                <div id="statusPadron" class="mt-3 hidden">
+                                    <span class="inline-block bg-emerald-100 text-emerald-700 text-[10px] px-2 py-1 rounded font-bold uppercase tracking-widest">
+                                        <i class="fa-solid fa-check"></i> Cargado
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Carga de Excels de Capataces -->
+                        <div class="bg-white rounded-[24px] p-6 border border-slate-200 shadow-sm relative overflow-hidden group">
+                            <div class="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
+                            <h3 class="text-sm font-bold text-slate-800 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <i class="fa-solid fa-clipboard-user text-emerald-500"></i> 2. Tareos de Campo
+                            </h3>
+                            <div class="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:bg-slate-50 hover:border-emerald-400 transition cursor-pointer relative">
+                                <input type="file" id="fileTareosCampo" accept=".xls,.xlsx" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                                <i class="fa-solid fa-file-excel text-3xl text-slate-400 mb-2 group-hover:text-emerald-500 transition-colors"></i>
+                                <p class="text-xs font-bold text-slate-600 mb-1">Excels de Capataces/Maestros</p>
+                                <p class="text-[10px] font-semibold text-slate-400">Sube 1 o varios archivos</p>
+                                <div id="statusTareos" class="mt-3 hidden">
+                                    <span class="inline-block bg-emerald-100 text-emerald-700 text-[10px] px-2 py-1 rounded font-bold uppercase tracking-widest">
+                                        <i class="fa-solid fa-check"></i> Archivos Listos
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Botón de Procesamiento -->
+                        <button id="btnProcesarTareo" class="w-full bg-slate-800 hover:bg-emerald-600 text-white font-bold text-xs uppercase tracking-widest py-4 rounded-xl shadow transition-colors flex items-center justify-center gap-2 opacity-50 cursor-not-allowed">
+                            <i class="fa-solid fa-gears"></i> Procesar y Cruzar Datos
+                        </button>
+
+                    </div>
+
+                    <!-- COLUMNA DERECHA: Diccionarios y Alertas -->
+                    <div class="lg:col-span-2 flex flex-col gap-6">
+                        
+                        <div class="bg-white rounded-[24px] p-6 border border-slate-200 shadow-sm h-full flex flex-col min-h-[400px]">
+                            <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-4">
+                                <h3 class="text-sm font-bold text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                                    <i class="fa-solid fa-spell-check text-amber-500"></i> Panel de Resolución (Diccionarios)
+                                </h3>
+                                <button id="btnExportarTareoS10" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-widest py-1.5 px-4 rounded-full shadow transition-colors flex items-center gap-2">
+                                    <i class="fa-solid fa-download"></i> Exportar para S10
+                                </button>
+                            </div>
+                            
+                            <!-- Área de Resultados / Alertas -->
+                            <div id="zonaResolucionTareo" class="flex-1 flex flex-col items-center justify-center text-center p-6 bg-slate-50 rounded-xl border border-slate-100">
+                                <div class="w-16 h-16 bg-white text-slate-300 rounded-full flex items-center justify-center mb-4 shadow-sm">
+                                    <i class="fa-solid fa-network-wired text-2xl"></i>
+                                </div>
+                                <h4 class="text-lg font-extrabold text-slate-700 mb-1">Esperando Archivos</h4>
+                                <p class="text-xs text-slate-500 max-w-md">Sube el Padrón Oficial y los reportes de campo. El sistema cruzará los nombres y partidas de forma automática, y te mostrará aquí los que necesiten emparejamiento manual.</p>
+                            </div>
+                        </div>
+
+                    </div>
+                    
+                </div>
             </div>
+                    
+                </div>
+            </div> <!-- FIN DE moduloProyectoTareos -->
+
+            <!-- ========================================== -->
+            <!-- AQUÍ PEGAS LOS MODALES DE EMPAREJAMIENTO -->
+            <!-- ========================================== -->
             
-        </div>
-    </div>
+            <!-- Modal Trabajadores -->
+            <div id="modalTrabajadores" class="hidden fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-[24px] w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden shadow-2xl">
+                    <div class="bg-teal-700 p-5 flex justify-between items-center text-white">
+                        <h3 class="font-extrabold tracking-widest uppercase flex items-center gap-2">
+                            <i class="fa-solid fa-user-gear"></i> Vincular Trabajadores Desconocidos
+                        </h3>
+                        <button onclick="document.getElementById('modalTrabajadores').classList.add('hidden')" class="hover:text-teal-200 transition text-xl"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div class="p-6 overflow-y-auto bg-slate-50 flex-1" id="listaTrabajadoresPendientes">
+                        <!-- Aquí se inyectarán las filas a emparejar -->
+                    </div>
+                    <div class="p-5 border-t border-slate-200 bg-white">
+                        <button onclick="window.guardarMapeoTrabajadores()" class="w-full bg-slate-800 hover:bg-teal-600 text-white font-bold py-3 rounded-xl transition uppercase tracking-widest text-sm">
+                            <i class="fa-solid fa-floppy-disk mr-2"></i> Guardar Memoria de Trabajadores
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Actividades -->
+            <div id="modalActividades" class="hidden fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-[24px] w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden shadow-2xl">
+                    <div class="bg-indigo-900 p-5 flex justify-between items-center text-white">
+                        <h3 class="font-extrabold tracking-widest uppercase flex items-center gap-2">
+                            <i class="fa-solid fa-list-check"></i> Mapear Actividades Nuevas
+                        </h3>
+                        <button onclick="document.getElementById('modalActividades').classList.add('hidden')" class="hover:text-indigo-200 transition text-xl"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div class="p-6 overflow-y-auto bg-slate-50 flex-1" id="listaActividadesPendientes">
+                        <!-- Aquí se inyectarán las filas a emparejar -->
+                    </div>
+                    <div class="p-5 border-t border-slate-200 bg-white">
+                        <button onclick="window.guardarMapeoActividades()" class="w-full bg-slate-800 hover:bg-indigo-600 text-white font-bold py-3 rounded-xl transition uppercase tracking-widest text-sm">
+                            <i class="fa-solid fa-floppy-disk mr-2"></i> Guardar Memoria de Actividades
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- Modal Asignar Proyecto -->
+            <div id="modalProyecto" class="hidden fixed inset-0 bg-slate-900/90 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-[24px] w-full max-w-lg overflow-hidden shadow-2xl">
+                    <div class="bg-blue-600 p-5 flex justify-between items-center text-white">
+                        <h3 class="font-extrabold tracking-widest uppercase flex items-center gap-2">
+                            <i class="fa-solid fa-building"></i> Vincular Proyecto S10
+                        </h3>
+                        <button onclick="document.getElementById('modalProyecto').classList.add('hidden')" class="hover:text-slate-300 transition text-xl"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div class="p-6 bg-slate-50">
+                        <p class="text-xs text-slate-500 mb-4">Selecciona el proyecto al que se asignarán estos tareos. Los datos han sido extraídos de la columna D de la hoja "Proyecto".</p>
+                        <select id="selectorModalProyecto" class="w-full bg-white border border-slate-300 text-slate-700 text-xs rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 font-bold cursor-pointer shadow-sm">
+                            <!-- Llenado por JS -->
+                        </select>
+                    </div>
+                    <div class="p-5 border-t border-slate-200 bg-white flex justify-end">
+                        <button onclick="window.guardarProyecto()" class="bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs uppercase tracking-widest py-3 px-6 rounded-xl shadow transition-colors">
+                            <i class="fa-solid fa-floppy-disk mr-2"></i> Guardar Proyecto
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- ========================================== -->
+            <!-- VISTA PREVIA EXCEL (PANTALLA COMPLETA) -->
+            <!-- ========================================== -->
+            <div id="vistaPreviaExportacion" class="hidden w-full mt-6">
+                <div class="bg-white rounded-[24px] p-6 border border-slate-200 shadow-sm flex flex-col">
+                    <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
+                        <h3 class="text-sm font-bold text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                            <i class="fa-solid fa-table border text-emerald-600"></i> Vista Previa (Coordenadas Excel)
+                        </h3>
+                        <div class="flex gap-3">
+                            <button onclick="window.cerrarVistaPrevia()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-bold uppercase tracking-widest py-2 px-4 rounded-full transition-colors">
+                                Volver
+                            </button>
+                            <button id="btnGuardarTareoNube" onclick="window.guardarTareoEnNube()" class="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold uppercase tracking-widest py-2 px-4 rounded-full shadow transition-colors flex items-center gap-2">
+                                <i class="fa-solid fa-cloud-arrow-up"></i> Guardar en Nube
+                            </button>
+                            <button id="btnConfirmarExportacion" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-widest py-2 px-4 rounded-full shadow transition-colors flex items-center gap-2">
+                                <i class="fa-solid fa-file-excel"></i> Exportar S10
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto border border-slate-300 rounded-lg max-h-[60vh] resize-container">
+                        <table id="tablaCoordenadasExportacion" class="w-full text-left text-[10px] text-slate-600 whitespace-nowrap table-fixed border-collapse">
+                            <!-- Fila 0: LETRAS DEL EXCEL -->
+                            <thead class="bg-slate-800 text-white sticky top-0 z-30" id="headLetrasExcel">
+                                <!-- Generado por JS -->
+                            </thead>
+                            <!-- Fila 1: DÍAS COMBINADOS (S10) -->
+                            <thead class="bg-amber-100 text-amber-900 sticky top-[28px] z-20 border-b border-amber-300" id="headDiasCombinados">
+                                <!-- Generado por JS -->
+                            </thead>
+                            <!-- Fila 2: CABECERAS S10 -->
+                            <thead class="bg-slate-100 text-slate-700 sticky top-[56px] z-10 border-b border-slate-300" id="headNombresColumnas">
+                                <!-- Generado por JS -->
+                            </thead>
+                            <!-- Filas de Datos -->
+                            <tbody id="tablaVistaPreviaTareo" class="divide-y divide-slate-200 bg-white font-mono text-[11px]">
+                                <!-- Generado por JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-4 flex justify-between items-center">
+                        <p class="text-xs text-slate-500">Utiliza las coordenadas (Ej: "Mover el concepto de la columna F a la G") para indicar los ajustes.</p>
+                        <p class="text-xs font-bold text-slate-500" id="resumenVistaPrevia"></p>
+                    </div>
+                </div>
+            </div>
+
+        </div> <!-- ESTE ES EL CIERRE DEL CONTENEDOR INTERNO DE vistaHistorial -->
+    </div> <!-- ESTE ES EL CIERRE DE vistaHistorial -->
+
     <!-- ========================================== -->
     <!-- LOBBY DE PROYECTOS (ESTILO CLARO Y FULL WIDTH) -->
     <!-- ========================================== -->
@@ -452,9 +721,10 @@
                                             <h3 class="font-extrabold text-2xl text-white tracking-wide drop-shadow-md">${data.nombre}</h3>
                                         </div>
                                     </div>
+                                    
                                     <div class="mt-auto bg-slate-50 group-hover:bg-indigo-600 border-t border-slate-100 p-4 flex justify-between items-center transition-colors duration-300">
                                         <span class="text-xs font-semibold text-slate-500 group-hover:text-indigo-100 uppercase tracking-wider">Acceder a</span>
-                                        <span class="text-sm font-extrabold text-indigo-700 group-hover:text-white">REPORTES <i class="fa-solid fa-arrow-right ml-1"></i></span>
+                                        <span class="text-sm font-extrabold text-indigo-700 group-hover:text-white">PROYECTO <i class="fa-solid fa-arrow-right ml-1"></i></span>
                                     </div>
                                 </div>
                             `;
@@ -3472,15 +3742,20 @@ window.iniciarNuevoReporte = function() {
                     });
                     // ------------------------------------------------------------------------
 
-                    // Extender Headers para incluir la columna dinámica SC / STOCK
+                    // Extender Headers para incluir la columna dinámica SC / STOCK en la posición correcta
                     const originalHeaders = [...roFilteredMatrix2D[0]];
-                    const extendedHeaders = [...originalHeaders, 'Pendientes SC / Almacén'];
+                    const extendedHeaders = [...originalHeaders];
+                    
+                    // Buscar dónde insertar "Pendientes SC" (Justo antes de Proyección)
+                    let proyIdx = extendedHeaders.findIndex(h => h && h.includes('Proyección (CTC)'));
+                    if (proyIdx === -1) proyIdx = extendedHeaders.length;
+                    extendedHeaders.splice(proyIdx, 0, 'Pendientes SC / Almacén');
 
                     wsRo.columns = extendedHeaders.map((h, i) => {
                         let w = 15;
                         if (i === 0) w = 12; // Código
                         if (i === 1) w = 50; // Descripción
-                        if (i === extendedHeaders.length - 1) w = 22; // SC / STOCK
+                        if (h.includes('Pendientes SC')) w = 22; // SC / STOCK
                         return { header: h, key: `col_${i}`, width: w };
                     });
 
@@ -3508,10 +3783,13 @@ window.iniciarNuevoReporte = function() {
 
                     // Preparar las filas con la data de SC agregada y EAC/DIF recalculado en vivo
                     const rowsToExport = [];
+                    let mem = typeof window.proyeccionesNube !== 'undefined' ? window.proyeccionesNube : (window.roProjections || {});
+
                     for (let r = 1; r < roFilteredMatrix2D.length; r++) {
-                        // Respetar filas de cabecera múltiple
                         if (r < roHeaderRowCount) {
-                            rowsToExport.push([...roFilteredMatrix2D[r], '']);
+                            let padRow = [...roFilteredMatrix2D[r]];
+                            padRow.splice(proyIdx, 0, ''); // Respetar el espacio de la nueva columna
+                            rowsToExport.push(padRow);
                             continue;
                         }
 
@@ -3520,39 +3798,46 @@ window.iniciarNuevoReporte = function() {
                         let scValue = roPendientesMap[codeVal] || 0;
 
                         let val_VCosto = 0, val_P = 0, val_R = 0;
-                        let idxEAC = -1, idxDiffS = -1, idxNota = -1;
+                        let idxEAC = -1, idxDiffS = -1, idxNota = -1, idxProy = -1;
                         let notaNube = '';
 
                         rowData.forEach((v, i) => {
                             let cName = String(originalHeaders[i] || '');
                             if (cName === 'V costo') val_VCosto = typeof v === 'number' ? v : 0;
                             if (cName.includes('R Costo Corregido')) val_P = typeof v === 'number' ? v : 0;
-                            if (cName.includes('Proyección (CTC)')) val_R = typeof v === 'number' ? v : 0;
                             
                             if (cName.includes('Costo Final (EAC)')) idxEAC = i;
                             if (cName.includes('Diferencia Final')) idxDiffS = i;
                             if (cName.includes('Sustento / Nota')) idxNota = i;
+                            if (cName.includes('Proyección (CTC)')) idxProy = i;
                         });
 
-                        // Cargar valores de proyecciones desde la nube para exportar el último cambio
-                        if (window.proyeccionesNube && window.proyeccionesNube[codeVal]) {
-                            if (window.proyeccionesNube[codeVal].amount !== undefined) {
-                                val_R = window.proyeccionesNube[codeVal].amount;
-                                let ctcIdx = originalHeaders.findIndex(h => h.includes('Proyección (CTC)'));
-                                if(ctcIdx !== -1) rowData[ctcIdx] = val_R;
+                        // 🔥 CÁLCULO JERÁRQUICO DE PROYECCIONES (Igual que en la pantalla web)
+                        if (codeVal === 'STK') {
+                            val_R = 0;
+                        } else if (codeVal.length > 4) {
+                            if (mem[codeVal]) {
+                                val_R = parseFloat(mem[codeVal].amount) || 0;
+                                notaNube = mem[codeVal].note || '';
                             }
-                            if (window.proyeccionesNube[codeVal].note !== undefined) notaNube = window.proyeccionesNube[codeVal].note;
+                        } else if (codeVal.length === 2 || codeVal.length === 4) {
+                            val_R = 0;
+                            Object.keys(mem).forEach(k => {
+                                if (k.length > 4 && k.startsWith(codeVal)) val_R += parseFloat(mem[k].amount) || 0;
+                            });
                         }
 
                         // Matemáticas Finales Reales
                         let calc_CostoFinal_S = val_P + val_R + scValue;
                         let calc_Diferencia_T = val_VCosto - calc_CostoFinal_S;
 
+                        if (idxProy !== -1) rowData[idxProy] = val_R;
                         if (idxEAC !== -1) rowData[idxEAC] = calc_CostoFinal_S;
                         if (idxDiffS !== -1) rowData[idxDiffS] = calc_Diferencia_T;
                         if (idxNota !== -1 && notaNube) rowData[idxNota] = notaNube;
 
-                        rowData.push(scValue); // Append SC/Stock como última columna
+                        // Insertar SC/Stock en su posición exacta
+                        rowData.splice(proyIdx, 0, scValue);
                         rowsToExport.push(rowData);
                     }
 
@@ -3560,7 +3845,7 @@ window.iniciarNuevoReporte = function() {
                     let stockFakeRow = new Array(extendedHeaders.length).fill('');
                     stockFakeRow[0] = 'STK'; 
                     stockFakeRow[1] = 'VALORIZADO EN ALMACÉN (STOCK)'; 
-                    stockFakeRow[extendedHeaders.length - 1] = totalStockValorizado;
+                    stockFakeRow[proyIdx] = totalStockValorizado; // Ubicar en la columna SC/Almacén
                     rowsToExport.push(stockFakeRow);
 
                     // Llenar datos y estilos en Excel
@@ -3589,8 +3874,8 @@ window.iniciarNuevoReporte = function() {
                         excelRow.eachCell((cell, colNumber) => {
                             const colName = extendedHeaders[colNumber - 1] || '';
                             
-                            // Bloquear otras celdas para el Stock
-                            if (isRowStock && colNumber > 2 && colNumber < extendedHeaders.length) {
+                            // Bloquear celdas irrelevantes para la fila de Stock
+                            if (isRowStock && colNumber > 2 && colName !== 'Pendientes SC / Almacén') {
                                 cell.value = '';
                                 return; 
                             }
@@ -3624,7 +3909,7 @@ window.iniciarNuevoReporte = function() {
                     });
 
                     wsRo.views = [{ state: 'frozen', xSplit: 3, ySplit: 1 }];
-                }
+                } // <--- ¡ESTA ES LA LLAVE MÁGICA QUE FALTABA!
 
                 // ==========================================
                 // 2. ESTILIZAR HOJAS DE CONSOLIDADO Y PARTIDAS
@@ -4653,7 +4938,7 @@ window.iniciarNuevoReporte = function() {
             }
         };
         // ---------------------------------------------------------
-        // LÓGICA DE NAVEGACIÓN GLOBAL
+        // LÓGICA DE NAVEGACIÓN GLOBAL (BLINDADA)
         // ---------------------------------------------------------
         window.abrirAjustes = function(pushHistory = true) {
             if (pushHistory) history.pushState({ vista: 'ajustes' }, '', '#ajustes');
@@ -4663,7 +4948,6 @@ window.iniciarNuevoReporte = function() {
             document.getElementById('selectorHeaderContainer').classList.add('hidden');
             document.getElementById('btnGuardarNube').classList.add('hidden');
             
-            // 🔥 OCULTAR FECHA CENTRADA
             const mesSel = document.getElementById('mesSelectContainer');
             if (mesSel) mesSel.classList.add('hidden');
             
@@ -4679,461 +4963,132 @@ window.iniciarNuevoReporte = function() {
             document.getElementById('selectorHeaderContainer').classList.add('hidden');
             document.getElementById('btnGuardarNube').classList.add('hidden');
             
-            // 🔥 OCULTAR FECHA CENTRADA
             const mesSel = document.getElementById('mesSelectContainer');
             if (mesSel) mesSel.classList.add('hidden');
             
             document.getElementById('lobbyProyectos').classList.remove('hidden');
         };
 
+        // 🔥 NUEVA FUNCIÓN: Botón de Retroceso Inteligente
+        window.navegarAtras = function(pushHistory = true) {
+            const lobbyModulos = document.getElementById('lobbyModulosProyecto');
+            
+            // Si las 2 tarjetas están ocultas, significa que estamos DENTRO de un módulo (RO o Tareo)
+            if (lobbyModulos && lobbyModulos.classList.contains('hidden')) {
+                // Apagamos los módulos
+                const modRO = document.getElementById('moduloProyectoRO');
+                if (modRO) modRO.classList.add('hidden');
+                const modTareo = document.getElementById('moduloProyectoTareos');
+                if (modTareo) modTareo.classList.add('hidden');
+                const btnNuevoRO = document.getElementById('btnNuevoReporteRO');
+                if (btnNuevoRO) btnNuevoRO.classList.add('hidden');
+                
+                // Prendemos las 2 tarjetas
+                lobbyModulos.classList.remove('hidden');
+                if (pushHistory) history.pushState({ vista: 'historial', proyecto: window.proyectoActualGlobal }, '', '#historial');
+            } else {
+                // Si ya estamos viendo las 2 tarjetas, retroceder nos lleva al Lobby Principal
+                window.volverAlLobby(pushHistory);
+            }
+        };
+
+        // 1. Mostrar Lobby de Módulos (2 Tarjetas) al entrar a un Proyecto
         window.abrirHistorialProyecto = function(nombreProyecto, pushHistory = true) {
             window.proyectoActualGlobal = nombreProyecto;
             if (pushHistory) history.pushState({ vista: 'historial', proyecto: nombreProyecto }, '', '#historial');
             
-            document.getElementById('tituloHistorialProyecto').textContent = nombreProyecto;
+            // Colocar el nombre en la barra superior y bloquearlo para que sea una etiqueta
             const selectProyecto = document.getElementById('proyectoSelect');
-            if(selectProyecto) selectProyecto.value = nombreProyecto;
+            if(selectProyecto) {
+                selectProyecto.value = nombreProyecto;
+                selectProyecto.disabled = true; 
+            }
             
             document.getElementById('lobbyProyectos').classList.add('hidden');
             document.getElementById('vistaAjustes').classList.add('hidden');
             document.getElementById('zonaCargaArchivos').classList.add('hidden');
-            document.getElementById('selectorHeaderContainer').classList.add('hidden');
             
-            // 🔥 OCULTAR FECHA CENTRADA
+            // 🔥 LA MAGIA: Hacer visible el nombre en la barra negra superior
+            document.getElementById('selectorHeaderContainer').classList.remove('hidden');
+            
             const mesSel = document.getElementById('mesSelectContainer');
             if (mesSel) mesSel.classList.add('hidden');
             
+            // Apagado forzoso de módulos
+            const modRO = document.getElementById('moduloProyectoRO');
+            if (modRO) modRO.classList.add('hidden');
+            const modTareo = document.getElementById('moduloProyectoTareos');
+            if (modTareo) modTareo.classList.add('hidden');
+            const btnNuevoRO = document.getElementById('btnNuevoReporteRO');
+            if (btnNuevoRO) btnNuevoRO.classList.add('hidden');
+            
+            // Mostrar solo las 2 Tarjetas
             document.getElementById('vistaHistorial').classList.remove('hidden');
+            const lobbyModulos = document.getElementById('lobbyModulosProyecto');
+            if (lobbyModulos) lobbyModulos.classList.remove('hidden');
+            
             if(typeof window.cargarHistorialReportes === 'function') window.cargarHistorialReportes(nombreProyecto);
+        };
+        
+        // 2. Abrir Módulo Específico al hacer clic en una tarjeta
+        window.abrirModulo = function(modulo, pushHistory = true) {
+            const lobbyModulos = document.getElementById('lobbyModulosProyecto');
+            if (lobbyModulos) lobbyModulos.classList.add('hidden');
+            
+            const modRO = document.getElementById('moduloProyectoRO');
+            const modTareo = document.getElementById('moduloProyectoTareos');
+            const btnNuevoRO = document.getElementById('btnNuevoReporteRO');
+
+            if (modulo === 'RO') {
+                if (pushHistory) history.pushState({ vista: 'modulo_ro', proyecto: window.proyectoActualGlobal }, '', '#modulo-ro');
+                if (modRO) modRO.classList.remove('hidden');
+                if (modTareo) modTareo.classList.add('hidden');
+                if (btnNuevoRO) btnNuevoRO.classList.remove('hidden');
+            } else if (modulo === 'TAREOS') {
+                if (pushHistory) history.pushState({ vista: 'modulo_tareo', proyecto: window.proyectoActualGlobal }, '', '#modulo-tareo');
+                if (modTareo) modTareo.classList.remove('hidden');
+                if (modRO) modRO.classList.add('hidden');
+                if (btnNuevoRO) btnNuevoRO.classList.add('hidden');
+            }
         };
 
         window.iniciarNuevoReporte = function(pushHistory = true) {
-            // 🔥 LIMPIAR MEMORIA RESIDUAL DE PROYECCIONES ANTERIORES
-            window.roProjections = {};
-            window.proyeccionesNube = {};
-            localStorage.removeItem('s10_ro_projections');
-            
-            // Apagar cualquier "escuchador" de Firebase del reporte anterior
-            if (window.semanasUnsubscribe) {
-                window.semanasUnsubscribe();
-                window.semanasUnsubscribe = null;
-            }
+            window.roProjections = {}; window.proyeccionesNube = {}; localStorage.removeItem('s10_ro_projections');
+            if (window.semanasUnsubscribe) { window.semanasUnsubscribe(); window.semanasUnsubscribe = null; }
             if (pushHistory) history.pushState({ vista: 'reporte_nuevo' }, '', '#nuevo-reporte');
             
             document.getElementById('vistaHistorial').classList.add('hidden');
             document.getElementById('zonaCargaArchivos').classList.remove('hidden');
-            
-            const uploadSec = document.getElementById('uploadSection');
-            if (uploadSec) uploadSec.classList.remove('hidden');
-            const metricsSec = document.getElementById('metricsSection');
-            if (metricsSec) metricsSec.classList.add('hidden');
-            const resultSec = document.getElementById('resultSection');
-            if (resultSec) resultSec.classList.add('hidden');
+            const uploadSec = document.getElementById('uploadSection'); if (uploadSec) uploadSec.classList.remove('hidden');
+            const metricsSec = document.getElementById('metricsSection'); if (metricsSec) metricsSec.classList.add('hidden');
+            const resultSec = document.getElementById('resultSection'); if (resultSec) resultSec.classList.add('hidden');
             
             document.getElementById('btnGuardarNube').classList.remove('hidden');
             document.getElementById('selectorHeaderContainer').classList.remove('hidden');
-            document.getElementById('vistaHistorial').classList.add('hidden');
             
-            // 🔥 MOSTRAR Y LIMPIAR FECHA CENTRADA PARA NUEVO REPORTE
             const mesSel = document.getElementById('mesSelectContainer');
             if (mesSel) mesSel.classList.remove('hidden');
             const inputMes = document.getElementById('mesSelect');
             if (inputMes) {
-                inputMes.disabled = false;
-                inputMes.value = ''; 
+                inputMes.disabled = false; inputMes.value = ''; 
                 inputMes.className = "bg-transparent text-slate-400 text-sm font-bold hover:text-white transition focus:outline-none cursor-pointer [color-scheme:dark] text-center";
             }
-            const proySel = document.getElementById('proyectoSelect');
-            if (proySel) proySel.disabled = false;
+            const proySel = document.getElementById('proyectoSelect'); if (proySel) proySel.disabled = false;
         };
 
         window.volverAlHistorialDesdeApp = function(pushHistory = true) {
-            if (pushHistory) history.pushState({ vista: 'historial', proyecto: window.proyectoActualGlobal }, '', '#historial');
+            if (pushHistory) history.pushState({ vista: 'modulo_ro', proyecto: window.proyectoActualGlobal }, '', '#modulo-ro');
             if(typeof resetApp === 'function') resetApp();
             document.getElementById('zonaCargaArchivos').classList.add('hidden');
             document.getElementById('btnGuardarNube').classList.add('hidden');
             document.getElementById('selectorHeaderContainer').classList.add('hidden');
+            const mesSel = document.getElementById('mesSelectContainer'); if (mesSel) mesSel.classList.add('hidden');
             
-            // 🔥 OCULTAR FECHA CENTRADA
-            const mesSel = document.getElementById('mesSelectContainer');
-            if (mesSel) mesSel.classList.add('hidden');
-            
-            document.getElementById('vistaHistorial').classList.remove('hidden');
+            // Volver directo al módulo RO
+            window.abrirHistorialProyecto(window.proyectoActualGlobal, false);
+            window.abrirModulo('RO', false);
         };
 
-        // ---------------------------------------------------------
-        // LÓGICA DE PESTAÑAS DE AJUSTES Y FOTO DE INICIO
-        // ---------------------------------------------------------
-        window.cambiarTabAjustes = function(tab) {
-            const tabs = ['tabProyectos', 'tabUsuarios', 'tabInicio'];
-            const btns = ['btnTabProyectos', 'btnTabUsuarios', 'btnTabInicio'];
-
-            tabs.forEach(t => document.getElementById(t).classList.add('hidden'));
-            btns.forEach(b => {
-                document.getElementById(b).className = "text-center px-4 py-2.5 rounded-full font-bold text-[11px] uppercase tracking-widest border-2 border-slate-300 text-slate-500 hover:border-slate-400 hover:text-slate-700 transition cursor-pointer";
-            });
-
-            const tabActivo = 'tab' + tab.charAt(0).toUpperCase() + tab.slice(1);
-            const btnActivo = 'btnTab' + tab.charAt(0).toUpperCase() + tab.slice(1);
-            
-            document.getElementById(tabActivo).classList.remove('hidden');
-            document.getElementById(btnActivo).className = "text-center px-4 py-2.5 rounded-full font-bold text-[11px] uppercase tracking-widest border-2 border-slate-900 text-slate-900 transition cursor-pointer shadow-sm";
-
-            if (tab === 'usuarios') window.cargarUsuariosAdmin();
-        };
-
-        // ==========================================
-        // MOTOR DE ADMINISTRACIÓN DE USUARIOS Y PERMISOS
-        // ==========================================
-        window.cargarUsuariosAdmin = function() {
-            const contenedor = document.getElementById('listaUsuariosAdmin');
-            if (!contenedor) return;
-            
-            contenedor.innerHTML = '<div class="text-slate-500 italic py-4"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Cargando equipo desde la nube...</div>';
-
-            const usuariosRef = window.fsCollection(window.firebaseDb, "usuarios");
-            
-            // Firebase OnSnapshot nos permite ver en tiempo real si alguien nuevo se loguea
-            window.fsOnSnapshot(usuariosRef, (snapshot) => {
-                if (snapshot.empty) {
-                    contenedor.innerHTML = '<div class="text-slate-500 italic py-4 text-center">No hay usuarios registrados.</div>';
-                    return;
-                }
-
-                let html = '<div class="flex flex-col gap-4 w-full">';
-                const proyectosTotales = Object.keys(window.proyectosNube || {});
-
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    const email = doc.id;
-                    const asignados = data.proyectosAsignados || [];
-                    const isRoot = data.rol === 'root';
-                    
-                    let checksHtml = '';
-                    if (isRoot) {
-                        checksHtml = '<span class="text-[11px] font-bold text-purple-700 bg-purple-100 px-3 py-1.5 rounded-full shadow-sm border border-purple-200">ACCESO TOTAL (ROOT)</span>';
-                    } else {
-                        if (proyectosTotales.length === 0) {
-                            checksHtml = '<span class="text-xs text-slate-400 italic">Crea un proyecto primero en la pestaña "Gestión de Proyectos".</span>';
-                        } else {
-                            // Crear un Checkbox por cada proyecto que exista en el sistema
-                            proyectosTotales.forEach(proy => {
-                                const isChecked = asignados.includes(proy) ? 'checked' : '';
-                                const bgClass = isChecked ? 'bg-indigo-50 border-indigo-300' : 'bg-slate-50 border-slate-200 hover:bg-slate-100';
-                                
-                                checksHtml += `
-                                    <label class="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700 ${bgClass} border px-3 py-1.5 rounded-lg transition-colors">
-                                        <input type="checkbox" ${isChecked} onchange="window.togglePermisoUsuario('${email}', '${proy}', this.checked)" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer">
-                                        ${proy}
-                                    </label>
-                                `;
-                            });
-                        }
-                    }
-
-                    const initial = data.nombre ? data.nombre.charAt(0).toUpperCase() : email.charAt(0).toUpperCase();
-
-                    html += `
-                        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row gap-5 hover:shadow-md transition">
-                            <!-- Info del Usuario -->
-                            <div class="flex flex-col gap-1 min-w-[250px] border-b md:border-b-0 md:border-r border-slate-100 pb-4 md:pb-0 pr-4">
-                                <div class="flex items-center gap-3 mb-2">
-                                    <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-black text-xl shadow-inner border border-indigo-200 shrink-0">
-                                        ${initial}
-                                    </div>
-                                    <div class="overflow-hidden">
-                                        <h4 class="text-sm font-extrabold text-slate-800 truncate">${data.nombre || 'Miembro del Equipo'}</h4>
-                                        <p class="text-xs text-slate-500 truncate">${email}</p>
-                                    </div>
-                                </div>
-                                <span class="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md w-max ${isRoot ? 'bg-purple-100 text-purple-700 border border-purple-200' : 'bg-slate-100 text-slate-500 border border-slate-200'}">
-                                    ${isRoot ? '<i class="fa-solid fa-crown mr-1"></i> Administrador' : '<i class="fa-solid fa-user mr-1"></i> Usuario Base'}
-                                </span>
-                            </div>
-                            
-                            <!-- Panel de Permisos -->
-                            <div class="flex-1 flex flex-col justify-center">
-                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Obras Asignadas (Activar para dar acceso):</p>
-                                <div class="flex flex-wrap gap-2">
-                                    ${checksHtml}
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-                html += '</div>';
-                contenedor.innerHTML = html;
-            }, (error) => {
-                console.error("Error cargando usuarios:", error);
-                contenedor.innerHTML = '<div class="text-red-500 italic py-4">Error de conexión al cargar el equipo.</div>';
-            });
-        };
-
-        // 🔥 FUNCIÓN QUE GUARDA EL PERMISO EN FIREBASE AL INSTANTE
-        window.togglePermisoUsuario = async function(email, proyecto, asignar) {
-            try {
-                const userRef = window.fsDoc(window.firebaseDb, "usuarios", email);
-                const snap = await window.fsGetDoc(userRef);
-                if (!snap.exists()) return;
-                
-                let asignados = snap.data().proyectosAsignados || [];
-                
-                if (asignar) {
-                    if (!asignados.includes(proyecto)) asignados.push(proyecto);
-                } else {
-                    asignados = asignados.filter(p => p !== proyecto);
-                }
-                
-                // Actualiza la base de datos en milisegundos
-                await window.fsSetDoc(userRef, { proyectosAsignados: asignados }, { merge: true });
-                
-                // (Opcional) Mostrar notificación sutil o dejar que el color del botón cambie solo
-            } catch (error) {
-                console.error("Error actualizando permisos:", error);
-                alert("❌ Ocurrió un error al intentar cambiar los accesos del usuario.");
-            }
-        };
-
-        window.guardarFondoInicio = async function() {
-            const input = document.getElementById('inputFondoInicio');
-            const btn = document.getElementById('btnSubirFondo');
-            
-            if (!input.files || input.files.length === 0) return alert("⚠️ Selecciona una imagen primero.");
-            
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Subiendo imagen...';
-            btn.disabled = true;
-            
-            try {
-                const archivo = input.files[0];
-                const storageRef = window.fsRef(window.firebaseStorage, `assets/landing_background`);
-                await window.fsUploadBytes(storageRef, archivo);
-                const url = await window.fsGetDownloadURL(storageRef);
-                
-                await window.fsSetDoc(window.fsDoc(window.firebaseDb, "ajustes", "landing"), { url: url });
-                alert("✅ Fondo de pantalla de inicio actualizado con éxito.");
-                input.value = '';
-            } catch (error) {
-                console.error(error);
-                alert("❌ Ocurrió un error al subir la imagen.");
-            } finally {
-                btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Actualizar Fondo';
-                btn.disabled = false;
-            }
-        };
-
-        // Escuchador que aplica la imagen de fondo en vivo al abrir la app
-        setTimeout(() => {
-            const landingRef = window.fsDoc(window.firebaseDb, "ajustes", "landing");
-            window.fsOnSnapshot(landingRef, (doc) => {
-                if (doc.exists() && doc.data().url) {
-                    document.getElementById('loginScreen').style.backgroundImage = `url('${doc.data().url}')`;
-                }
-            });
-        }, 1000);
-        // Lógica de Edición y Eliminación de Proyectos
-        window.actualizarLogoProyecto = async function(nombre, inputElement) {
-            if (!inputElement.files || inputElement.files.length === 0) return;
-            try {
-                const archivo = inputElement.files[0];
-                const storageRef = window.fsRef(window.firebaseStorage, `logos/${nombre}_${archivo.name}`);
-                await window.fsUploadBytes(storageRef, archivo);
-                const logoUrl = await window.fsGetDownloadURL(storageRef);
-                
-                await window.fsSetDoc(window.fsDoc(window.firebaseDb, "proyectos", nombre), { logo: logoUrl }, { merge: true });
-                alert(`✅ Foto del proyecto ${nombre} actualizada exitosamente.`);
-            } catch (error) {
-                console.error(error);
-                alert("❌ Error actualizando la foto del proyecto.");
-            }
-        };
-
-        window.eliminarProyecto = async function(nombre) {
-            if (!confirm(`⚠️ ¿Estás totalmente seguro de ELIMINAR el proyecto ${nombre}?\n\nPerderás el acceso directo desde el Lobby, aunque los reportes de Excel guardados seguirán existiendo ocultos en el disco duro.`)) return;
-            try {
-                await window.fsDeleteDoc(window.fsDoc(window.firebaseDb, "proyectos", nombre));
-                alert(`🗑️ El proyecto ${nombre} ha sido eliminado.`);
-            } catch (error) {
-                console.error(error);
-                alert("❌ Error al intentar eliminar el proyecto.");
-            }
-        };
-
-        // Lector Inmediato de Fondo de Landing Page (Con Caché Local)
-        function aplicarFondoGlobal() {
-            if (!window.firebaseDb) {
-                setTimeout(aplicarFondoGlobal, 100); // Esperar a que firebaseDb se inicialice
-                return;
-            }
-            const landingRef = window.fsDoc(window.firebaseDb, "ajustes", "landing");
-            window.fsOnSnapshot(landingRef, (doc) => {
-                if (doc.exists() && doc.data().url) {
-                    const bgUrl = doc.data().url;
-                    
-                    // 🔥 GUARDAR EN MEMORIA RÁPIDA PARA QUE CARGUE INSTANTÁNEO LA PRÓXIMA VEZ
-                    localStorage.setItem('s10_landing_bg', bgUrl);
-                    
-                    const loginScreen = document.getElementById('loginScreen');
-                    if (loginScreen) {
-                        loginScreen.style.backgroundImage = `url('${bgUrl}')`;
-                    }
-                }
-            });
-        }
-        aplicarFondoGlobal(); // Arrancar el lector
-        // ==========================================
-        // MOTOR DE ACTUALIZACIÓN EN VIVO (PARA LA NUBE)
-        // ==========================================
-        window.actualizarMatrizROEnVivo = function() {
-            if (!roFilteredMatrix2D || roFilteredMatrix2D.length === 0) return;
-
-            const headers = roFilteredMatrix2D[0];
-            const codeIdx = headers.indexOf('Código');
-            const descIdx = headers.indexOf('Descripción');
-            const vCostoIdx = headers.indexOf('V costo');
-            const rCorregidoIdx = headers.indexOf('R Costo Corregido');
-            const diffCPIdx = headers.indexOf('Diferencia (C - P)');
-
-            if (codeIdx === -1 || rCorregidoIdx === -1) return;
-
-            // 1. Agrupar Costos Reasignados desde el Consolidado
-            const partidaCostsMap = {};
-            if (consolidatedRows && consolidatedRows.length > 0) {
-                consolidatedRows.forEach(r => {
-                    let pAct = String(r._PartidaActual || '').trim();
-                    let origCost = parseNumberValue(getConsolidadoRowValue(r, 'R Costo') || r.rCostoOriginal || r['R Costo']);
-                    if (pAct) partidaCostsMap[pAct] = (partidaCostsMap[pAct] || 0) + origCost;
-                });
-            }
-
-            // 2. Inyectar valores exactos en la Matriz RO
-            for (let r = roHeaderRowCount; r < roFilteredMatrix2D.length; r++) {
-                const row = roFilteredMatrix2D[r];
-                if (!row) continue;
-                
-                let rawCode = String(row[codeIdx] || '').trim();
-                let rawDesc = normStr(row[descIdx] || '');
-                if (rawCode === 'STK') continue;
-
-                let sumCorregido = 0;
-                Object.keys(partidaCostsMap).forEach(partName => {
-                    let partClean = normStr(partName);
-                    let partCode = partName.split(' ')[0].trim();
-                    let isMatch = false;
-
-                    if (rawCode.length > 0 && (partCode.startsWith(rawCode) || partName.startsWith(rawCode) || (/^\d+$/.test(rawCode) && partCode.endsWith(rawCode)))) {
-                        isMatch = true;
-                    } else if (!isMatch && rawDesc.length > 3 && partClean.includes(rawDesc)) {
-                        isMatch = true;
-                    }
-                    if (isMatch) sumCorregido += partidaCostsMap[partName];
-                });
-
-                // Escribir el nuevo costo corregido
-                row[rCorregidoIdx] = sumCorregido !== 0 ? sumCorregido : 0;
-
-                // Escribir la nueva diferencia
-                if (diffCPIdx !== -1 && vCostoIdx !== -1) {
-                    let vCostoVal = parseNumberValue(row[vCostoIdx]);
-                    row[diffCPIdx] = vCostoVal - sumCorregido;
-                }
-            }
-        };
-    </script>
-    <!-- ========================================== -->
-    <!-- MOTOR DE NAVEGACIÓN (FLECHAS DEL NAVEGADOR) -->
-    <!-- ========================================== -->
-    <script>
-        window.proyectoActualGlobal = "";
-
-        // 1. Redefinir funciones de navegación para que inyecten estado en el navegador
-        window.abrirAjustes = function(pushHistory = true) {
-            if (pushHistory) history.pushState({ vista: 'ajustes' }, '', '#ajustes');
-            document.getElementById('lobbyProyectos').classList.add('hidden');
-            document.getElementById('vistaHistorial').classList.add('hidden');
-            document.getElementById('zonaCargaArchivos').classList.add('hidden');
-            document.getElementById('selectorHeaderContainer').classList.add('hidden');
-            document.getElementById('btnGuardarNube').classList.add('hidden');
-            
-            document.getElementById('vistaAjustes').classList.remove('hidden');
-            if(typeof window.cambiarTabAjustes === 'function') window.cambiarTabAjustes('proyectos');
-        };
-
-        window.volverAlLobby = function(pushHistory = true) {
-            if (pushHistory) history.pushState({ vista: 'lobby' }, '', '#lobby');
-            document.getElementById('vistaAjustes').classList.add('hidden');
-            document.getElementById('vistaHistorial').classList.add('hidden');
-            document.getElementById('zonaCargaArchivos').classList.add('hidden');
-            document.getElementById('selectorHeaderContainer').classList.add('hidden');
-            document.getElementById('btnGuardarNube').classList.add('hidden');
-            
-            document.getElementById('lobbyProyectos').classList.remove('hidden');
-        };
-
-        window.abrirHistorialProyecto = function(nombreProyecto, pushHistory = true) {
-            window.proyectoActualGlobal = nombreProyecto;
-            if (pushHistory) history.pushState({ vista: 'historial', proyecto: nombreProyecto }, '', '#historial');
-            
-            document.getElementById('tituloHistorialProyecto').textContent = nombreProyecto;
-            const selectProyecto = document.getElementById('proyectoSelect');
-            if(selectProyecto) selectProyecto.value = nombreProyecto;
-            
-            document.getElementById('lobbyProyectos').classList.add('hidden');
-            document.getElementById('vistaAjustes').classList.add('hidden');
-            document.getElementById('zonaCargaArchivos').classList.add('hidden');
-            document.getElementById('selectorHeaderContainer').classList.add('hidden');
-            
-            document.getElementById('vistaHistorial').classList.remove('hidden');
-            if(typeof window.cargarHistorialReportes === 'function') window.cargarHistorialReportes(nombreProyecto);
-        };
-
-        window.iniciarNuevoReporte = function(pushHistory = true) {
-            if (pushHistory) history.pushState({ vista: 'reporte_nuevo' }, '', '#nuevo-reporte');
-            
-            // 1. Ocultar el historial
-            document.getElementById('vistaHistorial').classList.add('hidden');
-            
-            // 2. Mostrar la zona general de trabajo
-            document.getElementById('zonaCargaArchivos').classList.remove('hidden');
-            
-            // 🔥 3. LA CLAVE: Mostrar la ventana de Carga y ocultar las tablas anteriores
-            const uploadSec = document.getElementById('uploadSection');
-            if (uploadSec) uploadSec.classList.remove('hidden');
-            
-            const metricsSec = document.getElementById('metricsSection');
-            if (metricsSec) metricsSec.classList.add('hidden');
-            
-            const resultSec = document.getElementById('resultSection');
-            if (resultSec) resultSec.classList.add('hidden');
-            
-            // 4. Mostrar botones superiores
-            document.getElementById('btnGuardarNube').classList.remove('hidden');
-            document.getElementById('selectorHeaderContainer').classList.remove('hidden');
-            
-            // 5. Habilitar la selección de Mes y Proyecto
-            const mesSel = document.getElementById('mesSelectContainer');
-            if (mesSel) mesSel.classList.remove('hidden');
-            
-            const inputMes = document.getElementById('mesSelect');
-            if (inputMes) {
-                inputMes.disabled = false;
-                inputMes.value = ''; 
-                inputMes.className = "bg-transparent text-slate-400 text-sm font-bold hover:text-white transition focus:outline-none cursor-pointer [color-scheme:dark] text-center";
-            }
-
-            const proySel = document.getElementById('proyectoSelect');
-            if (proySel) proySel.disabled = false;
-        };
-
-        window.volverAlHistorialDesdeApp = function(pushHistory = true) {
-            if (pushHistory) history.pushState({ vista: 'historial', proyecto: window.proyectoActualGlobal }, '', '#historial');
-            if(typeof resetApp === 'function') resetApp();
-            document.getElementById('zonaCargaArchivos').classList.add('hidden');
-            document.getElementById('btnGuardarNube').classList.add('hidden');
-            document.getElementById('selectorHeaderContainer').classList.add('hidden');
-            document.getElementById('vistaHistorial').classList.remove('hidden');
-        };
-
-        // 2. Parche de seguridad para la función de carga pesada
         if (!window.cargarReporteOriginalParcheado) {
             window.cargarReporteOriginal = window.cargarReporteExistente;
             window.cargarReporteOriginalParcheado = true;
@@ -5143,42 +5098,38 @@ window.iniciarNuevoReporte = function() {
             };
         }
 
-        // 3. El Cerebro: Escuchar los clics en las flechas del navegador
+        // 3. EL CEREBRO: Controlador de Flechas del Navegador (Chrome/Edge)
         window.addEventListener('popstate', (event) => {
             const state = event.state;
+            if (!state) { window.volverAlLobby(false); return; }
             
-            // Si retrocede hasta el inicio de la app, llevarlo al Lobby
-            if (!state) {
-                window.volverAlLobby(false);
-                return;
-            }
-            
-            // Enrutar a la pantalla correcta según el historial guardado
             switch(state.vista) {
-                case 'lobby':
-                    window.volverAlLobby(false);
-                    break;
-                case 'ajustes':
-                    window.abrirAjustes(false);
-                    break;
+                case 'lobby': window.volverAlLobby(false); break;
+                case 'ajustes': window.abrirAjustes(false); break;
                 case 'historial':
-                    if (state.proyecto) window.abrirHistorialProyecto(state.proyecto, false);
+                    if (state.proyecto) window.abrirHistorialProyecto(state.proyecto, false); // Muestra 2 tarjetas
                     else window.volverAlLobby(false);
                     break;
-                case 'reporte_nuevo':
-                    window.iniciarNuevoReporte(false);
+                case 'modulo_ro':
+                    if (state.proyecto) {
+                        window.abrirHistorialProyecto(state.proyecto, false);
+                        window.abrirModulo('RO', false); // Muestra RO
+                    }
                     break;
+                case 'modulo_tareo':
+                    if (state.proyecto) {
+                        window.abrirHistorialProyecto(state.proyecto, false);
+                        window.abrirModulo('TAREOS', false); // Muestra Tareo
+                    }
+                    break;
+                case 'reporte_nuevo': window.iniciarNuevoReporte(false); break;
                 case 'reporte_existente':
-                    // Restauración visual instantánea sin tener que volver a descargar de la nube
                     document.getElementById('lobbyProyectos').classList.add('hidden');
                     document.getElementById('vistaAjustes').classList.add('hidden');
                     document.getElementById('vistaHistorial').classList.add('hidden');
-                    
                     document.getElementById('zonaCargaArchivos').classList.remove('hidden');
                     document.getElementById('selectorHeaderContainer').classList.remove('hidden');
-                    
                     const mesSel = document.getElementById('mesSelectContainer');
-                    // 🔥 CORRECCIÓN: Asegurar que la fecha reaparezca al "Adelantar" hacia el reporte
                     if (mesSel) mesSel.classList.remove('hidden');
                     break;
             }
@@ -5279,6 +5230,986 @@ window.iniciarNuevoReporte = function() {
                 observer.observe(zonaApp, { attributes: true, attributeFilter: ['class'] });
             }
         })();
+
+        // ==========================================
+        // MÓDULO DE TAREOS - MOTOR DE PROCESAMIENTO
+        // ==========================================
+        let archivoPadronS10 = null;
+        let archivosTareoCampo = [];
+        let numeroSemanaTareo = null;
+
+        // Escuchadores de Fechas
+        document.getElementById('fechaInicioTareo')?.addEventListener('change', actualizarSemana);
+        document.getElementById('fechaFinTareo')?.addEventListener('change', actualizarSemana);
+
+        function actualizarSemana() {
+            const fInicio = document.getElementById('fechaInicioTareo').value;
+            const fFin = document.getElementById('fechaFinTareo').value;
+            
+            if (fInicio && fFin) {
+                // Lógica estándar para calcular el número de semana anual
+                const dateObj = new Date(fInicio + 'T00:00:00'); 
+                const target = new Date(dateObj.valueOf());
+                const dayNr = (dateObj.getDay() + 6) % 7;
+                target.setDate(target.getDate() - dayNr + 3);
+                const firstThursday = target.valueOf();
+                target.setMonth(0, 1);
+                if (target.getDay() !== 4) {
+                    target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+                }
+                const numSemana = 1 + Math.ceil((firstThursday - target) / 604800000);
+                
+                numeroSemanaTareo = numSemana;
+                window.semanaActualTareo = numSemana; // Guardamos globalmente para exportar luego
+                
+                document.getElementById('numSemanaCalculada').textContent = numSemana;
+                document.getElementById('infoSemanaTareo').classList.remove('hidden');
+            } else {
+                numeroSemanaTareo = null;
+                document.getElementById('infoSemanaTareo').classList.add('hidden');
+            }
+            verificarArchivosTareo();
+        }
+
+        // ESCUCHADORES DE ARCHIVO (EXISTENTES)
+        document.getElementById('fileS10Padron')?.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                archivoPadronS10 = e.target.files[0];
+                document.getElementById('statusPadron').classList.remove('hidden');
+                verificarArchivosTareo();
+            }
+        });
+
+        document.getElementById('fileTareosCampo')?.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                archivosTareoCampo = Array.from(e.target.files);
+                document.getElementById('statusTareos').classList.remove('hidden');
+                verificarArchivosTareo();
+            }
+        });
+
+        function verificarArchivosTareo() {
+            const btnProcesar = document.getElementById('btnProcesarTareo');
+            // 🔥 AHORA REQUIERE QUE EXISTA LA SEMANA PARA ACTIVARSE
+            if (archivoPadronS10 && archivosTareoCampo.length > 0 && numeroSemanaTareo) {
+                btnProcesar.classList.remove('opacity-50', 'cursor-not-allowed');
+                btnProcesar.classList.add('cursor-pointer', 'hover:bg-emerald-600');
+            } else {
+                btnProcesar.classList.add('opacity-50', 'cursor-not-allowed');
+                btnProcesar.classList.remove('cursor-pointer', 'hover:bg-emerald-600');
+            }
+        }
+
+        // 3. LA MAGIA: Leer, Ocultar Panel, Cruzar y Mostrar Resolución
+        document.getElementById('btnProcesarTareo')?.addEventListener('click', async function() {
+            if (!archivoPadronS10 || archivosTareoCampo.length === 0) return;
+
+            const colIzquierda = this.closest('.lg\\:col-span-1');
+            const colDerecha = colIzquierda.nextElementSibling;
+            const zonaRes = document.getElementById('zonaResolucionTareo');
+            const btnExport = document.getElementById('btnExportarTareoS10');
+
+            zonaRes.innerHTML = '<div class="text-indigo-600 font-bold flex flex-col items-center gap-4 py-10"><i class="fa-solid fa-spinner fa-spin text-5xl"></i> <span class="tracking-widest uppercase text-sm">Procesando y cruzando datos...</span></div>';
+
+            try {
+                // 🔥 PASO 3: Leer el Padrón S10 y crear el Diccionario Maestro
+                const arrayBufferS10 = await archivoPadronS10.arrayBuffer();
+                const workbookS10 = XLSX.read(arrayBufferS10, { type: 'array' });
+                const worksheetS10 = workbookS10.Sheets[workbookS10.SheetNames[0]];
+                const jsonS10 = XLSX.utils.sheet_to_json(worksheetS10, { header: 1 });
+
+                window.diccionarioPadronS10 = [];
+                let headerRowIdx = -1, colDNI = -1, colNombre = -1, colLinea = -1;
+
+                // Buscar dinámicamente las columnas
+                for (let i = 0; i < Math.min(20, jsonS10.length); i++) {
+                    const row = jsonS10[i] || [];
+                    for (let j = 0; j < row.length; j++) {
+                        const cellVal = String(row[j]).toUpperCase().trim();
+                        if (cellVal === 'DNI') { headerRowIdx = i; colDNI = j; }
+                        if (cellVal === 'NOMBRE') { colNombre = j; }
+                        if (cellVal === 'LINEA' || cellVal === 'LÍNEA') { colLinea = j; } // Atrpar columna Línea
+                    }
+                    if (headerRowIdx !== -1) break;
+                }
+
+                if (headerRowIdx === -1 || colDNI === -1 || colNombre === -1) {
+                    throw new Error("No se encontraron las columnas 'DNI' y 'Nombre' en el Padrón S10.");
+                }
+
+                for (let i = headerRowIdx + 1; i < jsonS10.length; i++) {
+                    const row = jsonS10[i];
+                    if (!row || row.length === 0) continue;
+                    
+                    const dniVal = row[colDNI];
+                    const nombreVal = row[colNombre];
+                    const lineaVal = colLinea !== -1 ? row[colLinea] : ''; // Extraer el valor de Línea
+                    
+                    if (dniVal && nombreVal && String(dniVal).trim().length >= 8) {
+                        const existe = window.diccionarioPadronS10.find(t => t.dni === String(dniVal).trim());
+                        if (!existe) {
+                            window.diccionarioPadronS10.push({
+                                dni: String(dniVal).trim(),
+                                nombreOficial: String(nombreVal).trim().toUpperCase(),
+                                lineaOriginal: lineaVal // Guardar la línea intacta en memoria
+                            });
+                        }
+                    }
+                }
+                
+                // (Aquí termina el paso 3 de leer los nombres...)
+            
+                // 🔥 PASO 3.5: Leer Hojas Ocultas (Actividad, Proyecto y Tipos de Hora)
+                window.catalogoPartidasS10 = [];
+                window.proyectosS10 = [];
+                window.conceptosS10 = [];
+                window.proyectoSeleccionadoGlobal = ""; // Memoria para el proyecto elegido
+                
+                workbookS10.SheetNames.forEach(nombreHoja => {
+                    const nombreUpper = nombreHoja.trim().toUpperCase();
+                    const hoja = workbookS10.Sheets[nombreHoja];
+                    const jsonData = XLSX.utils.sheet_to_json(hoja, { header: 1 });
+
+                    if (nombreUpper === 'ACTIVIDAD') {
+                        jsonData.forEach(row => {
+                            if (row && row[3] && String(row[3]).trim() !== '') {
+                                const val = String(row[3]).trim();
+                                if (!window.catalogoPartidasS10.includes(val)) window.catalogoPartidasS10.push(val);
+                            }
+                        });
+                        window.catalogoPartidasS10.sort();
+                    }
+                    else if (nombreUpper === 'PROYECTO') {
+                        // 🔥 TRUCO: header: "A" fuerza a leer usando las letras reales del Excel
+                        const rawDataProyecto = XLSX.utils.sheet_to_json(hoja, { header: "A", defval: "" });
+                        
+                        rawDataProyecto.forEach(row => {
+                            // Vamos directamente por la columna "D"
+                            let val = String(row["D"] || "").trim();
+                            
+                            // Plan B de respaldo: Si D está vacía, atrapamos la "C"
+                            if (val === "") val = String(row["C"] || "").trim();
+
+                            // Si tiene texto válido, lo guardamos
+                            if (val !== "" && val.length > 3 && !window.proyectosS10.includes(val)) {
+                                window.proyectosS10.push(val);
+                            }
+                        });
+                    }
+                    else if (nombreUpper === 'TIPOHORA') {
+                        jsonData.forEach(row => {
+                            if (row && row[3] && String(row[3]).trim() !== '') {
+                                const val = String(row[3]).trim();
+                                if (!window.conceptosS10.includes(val)) window.conceptosS10.push(val);
+                            }
+                        });
+                    }
+                });
+
+                // 🔥 PASO 4: Leer y Procesar el Tareo de Campo (CON DETECCIÓN DINÁMICA DE COLUMNAS)
+                window.traduccionPartidasTareo = {}; 
+                window.traduccionTrabajadoresTareo = {}; 
+
+                window.datosCampoProcesados = {}; 
+                const trabajadoresDesconocidos = []; 
+                const nuevasActividades = [];
+                const mapeosTrabajadores = {}; 
+
+                for (const archivoTareo of archivosTareoCampo) {
+                    const arrayBufferTareo = await archivoTareo.arrayBuffer();
+                    const workbookTareo = XLSX.read(arrayBufferTareo, { type: 'array' });
+                    
+                    workbookTareo.SheetNames.forEach(sheetName => {
+                        const worksheetTareo = workbookTareo.Sheets[sheetName];
+                        const jsonTareo = XLSX.utils.sheet_to_json(worksheetTareo, { header: 1 });
+                        if (!jsonTareo || jsonTareo.length < 10) return; 
+
+                        let fechaTareo = sheetName; 
+
+                        // 🧠 DETECCIÓN DINÁMICA DE CABECERAS Y DATOS
+                        let headerRowIdx = 23; // Respaldo: Fila 24 del Excel
+                        let dataRowIdx = 26;   // Respaldo: Fila 27 del Excel
+                        let colNombreIdx = 1;  // Respaldo: Columna B (Índice 1)
+                        let colActividadesStart = 4; // Respaldo: Columna E (Índice 4)
+
+                        for (let i = 0; i < Math.min(40, jsonTareo.length); i++) {
+                            const row = jsonTareo[i] || [];
+                            const rowStr = row.map(c => String(c).toUpperCase().trim());
+                            
+                            // El escáner busca la fila que contiene las palabras clave de la tabla
+                            if (rowStr.includes('NOMBRE') && (rowStr.includes('CATEG') || rowStr.includes('COD'))) {
+                                dataRowIdx = i + 1; // Los datos de los obreros empiezan justo debajo
+                                headerRowIdx = i - 2; // Las cabeceras de actividades están 2 filas arriba
+                                
+                                colNombreIdx = rowStr.indexOf('NOMBRE');
+                                const catIdx = rowStr.indexOf('CATEG');
+                                
+                                // Las actividades empiezan inmediatamente después de la categoría
+                                if (catIdx !== -1) {
+                                    colActividadesStart = catIdx + 1; 
+                                } else {
+                                    colActividadesStart = colNombreIdx + 2; 
+                                }
+                                break;
+                            }
+                        }
+
+                        const rawHeader_Row1 = jsonTareo[headerRowIdx] || [];
+                        const rawHeader_Row2 = jsonTareo[headerRowIdx + 1] || [];
+                        
+                        const actividadesColumnas = {}; 
+                        const maxCols = Math.max(rawHeader_Row1.length, rawHeader_Row2.length);
+                        
+                        // 🔥 1. EXTRAER NOMBRES DE LAS ACTIVIDADES
+                        for(let j = colActividadesStart; j < maxCols; j++) {
+                            const part1 = rawHeader_Row1[j] ? String(rawHeader_Row1[j]).trim() : '';
+                            const part2 = rawHeader_Row2[j] ? String(rawHeader_Row2[j]).trim() : '';
+                            const fullActivityName = `${part1} ${part2}`.trim();
+                            const nameUpper = fullActivityName.toUpperCase();
+                            
+                            // Filtro de validez para ignorar columnas vacías, de "Totales" o "Descripción"
+                            if (fullActivityName.length > 2 
+                                && fullActivityName !== 'undefined'
+                                && !nameUpper.includes('TOTAL')
+                                && !nameUpper.includes('DESCRIP')) {
+                                
+                                actividadesColumnas[j] = fullActivityName;
+                                if (!window.traduccionPartidasTareo[fullActivityName] && !nuevasActividades.includes(fullActivityName)) {
+                                    nuevasActividades.push(fullActivityName);
+                                }
+                            }
+                        }
+
+                        // 🔥 2. EXTRAER DATOS Y HORAS DE LOS TRABAJADORES
+                        for (let i = dataRowIdx; i < jsonTareo.length; i++) {
+                            const row = jsonTareo[i];
+                            
+                            // Si la fila está vacía o no tiene nombre, la saltamos
+                            if (!row || !row[colNombreIdx] || String(row[colNombreIdx]).trim() === '') continue; 
+
+                            const nombreCampoVal = String(row[colNombreIdx]).trim().toUpperCase();
+                            const category = row[colActividadesStart - 1] ? String(row[colActividadesStart - 1]).trim().toUpperCase() : ''; 
+                            
+                            // Saltar filas que sean títulos de agrupadores (ej: "ALMACÉN / CONTROL...")
+                            // Identificamos que es un agrupador si tiene slashes "/" y no tiene horas reportadas.
+                            let tieneHoras = false;
+                            Object.keys(actividadesColumnas).forEach(colIdx => {
+                                if (parseFloat(row[colIdx]) > 0) tieneHoras = true;
+                            });
+                            if (nombreCampoVal.includes('/') && !tieneHoras) continue;
+
+                            // 🔥 PASO 5: Cruce inteligente de nombres con S10
+                            let dniTrabajador = null;
+                            const palabrasCampo = nombreCampoVal.replace(/,/g, ' ').split(/\s+/).filter(p => p.length > 2);
+
+                            const t_match = window.diccionarioPadronS10.find(t => {
+                                const palabrasS10 = t.nombreOficial.replace(/,/g, ' ').split(/\s+/).filter(p => p.length > 2);
+                                let coincidencias = 0;
+                                palabrasCampo.forEach(palabra => {
+                                    if (palabrasS10.includes(palabra)) coincidencias++;
+                                });
+                                // Match si hay 3 palabras idénticas, o 2 idénticas (si solo escribió 2), o si el string entero está contenido.
+                                return coincidencias >= 3 || (palabrasCampo.length === 2 && coincidencias === 2) || t.nombreOficial.includes(nombreCampoVal);
+                            });
+
+                            if (t_match) {
+                                dniTrabajador = t_match.dni;
+                                mapeosTrabajadores[nombreCampoVal] = dniTrabajador;
+                            } else {
+                                if(!trabajadoresDesconocidos.includes(nombreCampoVal)) trabajadoresDesconocidos.push(nombreCampoVal);
+                                continue; 
+                            }
+                            
+                            // Crear registro en memoria para el trabajador
+                            if (!window.datosCampoProcesados[dniTrabajador]) {
+                                window.datosCampoProcesados[dniTrabajador] = {
+                                    dni: dniTrabajador,
+                                    nombreOficial: t_match.nombreOficial,
+                                    lineaOriginal: t_match.lineaOriginal,
+                                    category: category,
+                                    tareasDiarias: {} 
+                                };
+                            }
+
+                            if (!window.datosCampoProcesados[dniTrabajador].tareasDiarias[fechaTareo]) {
+                                window.datosCampoProcesados[dniTrabajador].tareasDiarias[fechaTareo] = [];
+                            }
+                            
+                            // 🔥 LA INTERSECCIÓN: Guardar horas para cada actividad de este trabajador
+                            Object.entries(actividadesColumnas).forEach(([colIdx, activityName]) => {
+                                const horas = parseFloat(row[colIdx]) || 0;
+                                if (horas > 0) {
+                                    window.datosCampoProcesados[dniTrabajador].tareasDiarias[fechaTareo].push({
+                                        activityNameField: activityName,
+                                        hours: horas
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+
+                if(Object.keys(window.datosCampoProcesados).length === 0 && trabajadoresDesconocidos.length === 0) {
+                    throw new Error("No se pudo procesar ningún dato válido de los tareos de campo. Verifica el formato de tus archivos.");
+                }
+
+                // 🔥 PASO 6: Generar y mostrar el Panel de Resolución
+                zonaRes.innerHTML = ''; 
+
+                let htmlResolucion = '';
+                const totalWorkersKnown = Object.keys(datosCampoProcesados).length;
+                const totalWorkersUnknown = trabajadoresDesconocidos.length;
+                const totalNewActivities = nuevasActividades.length;
+
+                // 1. Cabecera y Tarjetas
+                htmlResolucion += `
+                    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mb-6 text-center w-full">
+                        <div class="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-100 shadow-inner">
+                            <i class="fa-solid fa-circle-check text-3xl"></i>
+                        </div>
+                        <h4 class="text-2xl font-black text-emerald-600 mb-1">¡DATOS CRUZADOS!</h4>
+                        <p class="text-sm text-slate-500">El cruce de información se realizó con éxito.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 w-full">
+                        <div class="bg-emerald-50 text-emerald-900 p-4 rounded-xl border border-emerald-100 flex flex-col items-center justify-center text-center">
+                            <i class="fa-solid fa-users text-2xl text-emerald-500 mb-2"></i>
+                            <h4 class="font-black text-2xl">${totalWorkersKnown}</h4>
+                            <p class="text-[10px] font-bold uppercase tracking-widest text-emerald-600">Reconocidos</p>
+                        </div>
+                        <div class="bg-amber-50 text-amber-900 p-4 rounded-xl border border-amber-100 flex flex-col items-center justify-center text-center">
+                            <i class="fa-solid fa-user-xmark text-2xl text-amber-500 mb-2"></i>
+                            <h4 class="font-black text-2xl">${totalWorkersUnknown}</h4>
+                            <p class="text-[10px] font-bold uppercase tracking-widest text-amber-600">Desconocidos</p>
+                        </div>
+                        <div class="bg-blue-50 text-blue-900 p-4 rounded-xl border border-blue-100 flex flex-col items-center justify-center text-center">
+                            <i class="fa-solid fa-clipboard-list text-2xl text-blue-500 mb-2"></i>
+                            <h4 class="font-black text-2xl">${totalNewActivities}</h4>
+                            <p class="text-[10px] font-bold uppercase tracking-widest text-blue-600">Nuevas Tareas</p>
+                        </div>
+                    </div>
+                `;
+
+                window.pendientesTrabajadores = trabajadoresDesconocidos;
+                window.pendientesActividades = nuevasActividades;
+
+                const btnTrabajadoresStatus = totalWorkersUnknown > 0 ? 'cursor-pointer hover:bg-teal-600' : 'cursor-not-allowed opacity-50';
+                const btnActividadesStatus = totalNewActivities > 0 ? 'cursor-pointer hover:bg-indigo-800' : 'cursor-not-allowed opacity-50';
+
+                // 2. Botones de Acción (Ahora son 3 botones integrados)
+                htmlResolucion += `
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 w-full">
+                        <button onclick="window.abrirModalProyecto()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-widest py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition cursor-pointer shadow-sm">
+                            <i class="fa-solid fa-building"></i> VINCULAR PROYECTO
+                        </button>
+                        <button onclick="if(${totalWorkersUnknown} > 0) window.abrirModalTrabajadores()" class="bg-teal-700 text-white font-bold text-xs uppercase tracking-widest py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition ${btnTrabajadoresStatus} shadow-sm">
+                            <i class="fa-solid fa-user-gear"></i> TRABAJADORES (${totalWorkersUnknown})
+                        </button>
+                        <button onclick="if(${totalNewActivities} > 0) window.abrirModalActividades()" class="bg-indigo-900 text-white font-bold text-xs uppercase tracking-widest py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition ${btnActividadesStatus} shadow-sm">
+                            <i class="fa-solid fa-list-check"></i> ACTIVIDADES (${totalNewActivities})
+                        </button>
+                    </div>
+                `;
+
+                zonaRes.innerHTML = htmlResolucion;
+                
+                colIzquierda.classList.add('hidden');
+                colDerecha.classList.remove('lg:col-span-2');
+                colDerecha.classList.add('lg:col-span-3');
+                if (btnExport) btnExport.classList.remove('hidden');
+
+            } catch (error) {
+                zonaRes.innerHTML = `<div class="text-red-500 font-bold flex flex-col items-center text-center gap-2 py-10"><i class="fa-solid fa-triangle-exclamation text-4xl"></i> Error procesando archivos:<br> ${error.message}</div>`;
+                console.error(error);
+            }
+        });
+
+        // ==========================================
+        // FUNCIONES DE EMPAREJAMIENTO (MODALES)
+        // ==========================================
+        
+        window.abrirModalTrabajadores = function() {
+            const contenedor = document.getElementById('listaTrabajadoresPendientes');
+            contenedor.innerHTML = '';
+            
+            // Crear el combo (select) maestro con todos los nombres del padrón S10
+            let opcionesS10 = '<option value="">-- Seleccionar Trabajador Oficial --</option>';
+            window.diccionarioPadronS10.forEach(t => {
+                opcionesS10 += `<option value="${t.dni}">${t.nombreOficial} (DNI: ${t.dni})</option>`;
+            });
+
+            // Por cada trabajador desconocido, pintar una cajita para emparejar
+            window.pendientesTrabajadores.forEach((nombreCapataz, idx) => {
+                contenedor.innerHTML += `
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-3">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Escrito por Capataz:</p>
+                        <p class="text-sm font-extrabold text-amber-600 mb-3"><i class="fa-solid fa-triangle-exclamation mr-1"></i> ${nombreCapataz}</p>
+                        <select id="mapeoTrabajador_${idx}" data-nombre-capataz="${nombreCapataz}" class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-xs rounded-lg focus:ring-teal-500 focus:border-teal-500 block p-2.5 font-bold cursor-pointer">
+                            ${opcionesS10}
+                        </select>
+                    </div>
+                `;
+            });
+
+            document.getElementById('modalTrabajadores').classList.remove('hidden');
+        };
+
+        window.abrirModalActividades = function() {
+            const contenedor = document.getElementById('listaActividadesPendientes');
+            contenedor.innerHTML = '';
+            
+            // Llenar el combo con las Partidas reales extraídas de la columna D
+            let opcionesS10 = '<option value="">-- Seleccionar Partida/Concepto Oficial S10 --</option>';
+            if (window.catalogoPartidasS10 && window.catalogoPartidasS10.length > 0) {
+                window.catalogoPartidasS10.forEach(partida => {
+                    opcionesS10 += `<option value="${partida}">${partida}</option>`;
+                });
+            } else {
+                opcionesS10 += `<option disabled>⚠️ No se encontró el catálogo en la hoja 'Actividad'</option>`;
+            }
+
+            window.pendientesActividades.forEach((actividad, idx) => {
+                contenedor.innerHTML += `
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-3">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Columna del Excel (Capataz):</p>
+                        <p class="text-sm font-extrabold text-blue-600 mb-3"><i class="fa-solid fa-clipboard-list mr-1"></i> ${actividad}</p>
+                        <select id="mapeoActividad_${idx}" data-actividad-capataz="${actividad}" class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-xs rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 font-bold cursor-pointer">
+                            ${opcionesS10}
+                        </select>
+                    </div>
+                `;
+            });
+
+            document.getElementById('modalActividades').classList.remove('hidden');
+        };
+
+        // 👉 FUNCIONES DEL MODAL DE PROYECTO
+        window.abrirModalProyecto = function() {
+            const select = document.getElementById('selectorModalProyecto');
+            if (!select) return;
+
+            select.innerHTML = '<option value="">-- Seleccione el Proyecto Oficial S10 --</option>';
+            
+            if (window.proyectosS10 && window.proyectosS10.length > 0) {
+                window.proyectosS10.forEach(p => {
+                    const selected = (window.proyectoSeleccionadoGlobal === p) ? 'selected' : '';
+                    select.innerHTML += `<option value="${p}" ${selected}>${p}</option>`;
+                });
+            } else {
+                select.innerHTML += `<option disabled selected>⚠️ No se encontraron proyectos en la hoja 'Proyecto'</option>`;
+            }
+            document.getElementById('modalProyecto').classList.remove('hidden');
+        };
+
+        // 🔥 GUARDAR PROYECTO EN FIREBASE
+        window.guardarProyecto = async function() {
+            const select = document.getElementById('selectorModalProyecto');
+            if (select.value) {
+                window.proyectoSeleccionadoGlobal = select.value;
+                
+                const btn = document.querySelector('#modalProyecto button');
+                const txtOriginal = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> GUARDANDO EN NUBE...';
+                btn.disabled = true;
+
+                try {
+                    const proyectoLobby = window.proyectoActualGlobal || "General";
+                    const semana = window.semanaActualTareo || "00";
+                    const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Semana_${semana}`);
+                    
+                    await window.fsSetDoc(docRef, { proyectoS10Vinculado: window.proyectoSeleccionadoGlobal }, { merge: true });
+
+                    alert(`✅ Proyecto vinculado y guardado en la nube:\n${window.proyectoSeleccionadoGlobal}`);
+                    document.getElementById('modalProyecto').classList.add('hidden');
+                } catch (e) {
+                    console.error("Error al guardar Proyecto:", e);
+                    alert("⚠️ Error al sincronizar con Firebase.");
+                } finally {
+                    btn.innerHTML = txtOriginal;
+                    btn.disabled = false;
+                }
+            } else {
+                alert("⚠️ Por favor selecciona un proyecto de la lista antes de guardar.");
+            }
+        };
+
+        // 🔥 GUARDAR ACTIVIDADES EN FIREBASE
+        window.guardarMapeoActividades = async function() {
+            const selects = document.querySelectorAll('[id^="mapeoActividad_"]');
+            let mapeosGuardados = 0;
+
+            if (!window.traduccionPartidasTareo) window.traduccionPartidasTareo = {};
+
+            selects.forEach(select => {
+                if (select.value) {
+                    const actividadCapataz = select.getAttribute('data-actividad-capataz');
+                    window.traduccionPartidasTareo[actividadCapataz] = select.value;
+                    mapeosGuardados++;
+                }
+            });
+
+            if (mapeosGuardados > 0) {
+                const btn = document.querySelector('#modalActividades button');
+                const txtOriginal = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> GUARDANDO EN NUBE...';
+                btn.disabled = true;
+
+                try {
+                    const proyectoLobby = window.proyectoActualGlobal || "General";
+                    const semana = window.semanaActualTareo || "00";
+                    const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Semana_${semana}`);
+                    
+                    await window.fsSetDoc(docRef, { diccionarioActividades: window.traduccionPartidasTareo }, { merge: true });
+
+                    alert(`✅ Se han guardado ${mapeosGuardados} actividades en la base de datos para la Semana ${semana}.`);
+                    document.getElementById('modalActividades').classList.add('hidden');
+                } catch (e) {
+                    console.error("Error al guardar Actividades:", e);
+                    alert("⚠️ Error al sincronizar con Firebase.");
+                } finally {
+                    btn.innerHTML = txtOriginal;
+                    btn.disabled = false;
+                }
+            } else {
+                alert("⚠️ No seleccionaste ninguna partida oficial del S10 para vincular.");
+            }
+        };
+
+        // 🔥 GUARDAR TRABAJADORES EN FIREBASE
+        window.guardarMapeoTrabajadores = async function() {
+            const selects = document.querySelectorAll('[id^="mapeoTrabajador_"]');
+            let mapeosGuardados = 0;
+
+            if (!window.traduccionTrabajadoresTareo) window.traduccionTrabajadoresTareo = {};
+
+            selects.forEach(select => {
+                if (select.value) {
+                    const nombreCapataz = select.getAttribute('data-nombre-capataz');
+                    window.traduccionTrabajadoresTareo[nombreCapataz] = select.value;
+                    mapeosGuardados++;
+                }
+            });
+
+            if (mapeosGuardados > 0) {
+                const btn = document.querySelector('#modalTrabajadores button');
+                const txtOriginal = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> GUARDANDO EN NUBE...';
+                btn.disabled = true;
+
+                try {
+                    const proyectoLobby = window.proyectoActualGlobal || "General";
+                    const semana = window.semanaActualTareo || "00";
+                    const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Semana_${semana}`);
+                    
+                    await window.fsSetDoc(docRef, { diccionarioTrabajadores: window.traduccionTrabajadoresTareo }, { merge: true });
+
+                    alert(`✅ Se han guardado ${mapeosGuardados} trabajadores en la base de datos para la Semana ${semana}.`);
+                    document.getElementById('modalTrabajadores').classList.add('hidden');
+                } catch (e) {
+                    console.error("Error al guardar Trabajadores:", e);
+                    alert("⚠️ Error al sincronizar con Firebase.");
+                } finally {
+                    btn.innerHTML = txtOriginal;
+                    btn.disabled = false;
+                }
+            } else {
+                alert("⚠️ No seleccionaste ningún trabajador oficial del S10 para vincular.");
+            }
+        };
+
+        // ==========================================
+        // VISTA PREVIA Y EXPORTACIÓN FINAL (ESTRUCTURA S10 COMPLETA)
+        // ==========================================
+        let datosListosParaExportar = [];
+
+        function obtenerIndiceDia(nombreHoja, indexFallback) {
+            const nombre = String(nombreHoja).toUpperCase();
+            if (nombre.includes('LUN')) return 0;
+            if (nombre.includes('MAR')) return 1;
+            if (nombre.includes('MIE') || nombre.includes('MIÉ')) return 2;
+            if (nombre.includes('JUE')) return 3;
+            if (nombre.includes('VIE')) return 4;
+            if (nombre.includes('SAB') || nombre.includes('SÁB')) return 5;
+            if (nombre.includes('DOM')) return 6;
+            return indexFallback < 7 ? indexFallback : -1; 
+        }
+
+        window.cerrarVistaPrevia = function() {
+            document.getElementById('vistaPreviaExportacion').classList.add('hidden');
+            const gridPrincipal = document.querySelector('#moduloProyectoTareos > .grid');
+            if(gridPrincipal) gridPrincipal.classList.remove('hidden');
+        };
+
+        // 1. ABRIR VISUALIZADOR
+        document.getElementById('btnExportarTareoS10')?.addEventListener('click', function() {
+            if (!window.diccionarioPadronS10 || window.diccionarioPadronS10.length === 0) {
+                alert("⚠️ No hay Padrón S10 en memoria. Sube el archivo primero."); return;
+            }
+
+            const gridPrincipal = document.querySelector('#moduloProyectoTareos > .grid');
+            if(gridPrincipal) gridPrincipal.classList.add('hidden');
+
+            datosListosParaExportar = [];
+            let totalHorasGlobal = 0;
+            let filasGeneradas = 0;
+
+            const tbody = document.getElementById('tablaVistaPreviaTareo');
+            const theadLetras = document.getElementById('headLetrasExcel');
+            const theadDias = document.getElementById('headDiasCombinados');
+            const theadNombres = document.getElementById('headNombresColumnas');
+            tbody.innerHTML = '';
+            
+            // DIBUJAR CABECERAS
+            let htmlLetras = '<tr><th class="py-1 px-2 text-center border-r border-slate-600 bg-slate-900 w-10">#</th>';
+            let htmlDias = '<tr><th class="py-1 px-2 border-r border-amber-200"></th>';
+            let htmlNombres = '<tr><th class="py-1 px-2 text-center border-r border-slate-300 bg-slate-200 w-10">Fila</th>';
+            
+            const columnasFijas = ["Línea", "DNI", "Nombre", "Proyecto", "%"];
+            columnasFijas.forEach((colName, index) => {
+                const letra = String.fromCharCode(65 + index);
+                htmlLetras += `<th class="py-1 px-2 text-center border-r border-slate-600 font-black text-amber-400 w-24">${letra}<div class="resizer"></div></th>`;
+                htmlDias += `<th class="py-1 px-2 border-r border-amber-200"></th>`;
+                htmlNombres += `<th class="py-1 px-2 text-center border-r border-slate-300 border-b border-slate-300 text-[10px] truncate">${colName}</th>`;
+            });
+
+            const diasSemana = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo"];
+            let charCode = 70; // 'F'
+
+            diasSemana.forEach(dia => {
+                htmlDias += `<th colspan="3" class="py-1 px-2 text-center border-r border-amber-300 font-bold text-[11px]">${dia}</th>`;
+                const subCols = ["Partida de Control", "Concepto", "Horas"];
+                subCols.forEach(subCol => {
+                    let letra = charCode > 90 ? 'A' + String.fromCharCode(charCode - 26) : String.fromCharCode(charCode);
+                    htmlLetras += `<th class="py-1 px-2 text-center border-r border-slate-600 font-black text-amber-400 w-32">${letra}<div class="resizer"></div></th>`;
+                    htmlNombres += `<th class="py-1 px-2 text-center border-r border-slate-300 border-b border-slate-300 text-[9px] truncate" title="${subCol}">${subCol}</th>`;
+                    charCode++;
+                });
+            });
+
+            htmlLetras += '</tr>'; htmlDias += '</tr>'; htmlNombres += '</tr>';
+            theadLetras.innerHTML = htmlLetras; theadDias.innerHTML = htmlDias; theadNombres.innerHTML = htmlNombres;
+
+            // PREPARAR DATOS
+            let opcionesConcepto = '<option value="">-</option>';
+            if (window.conceptosS10) {
+                window.conceptosS10.forEach(c => {
+                    const selected = c.toUpperCase().includes('NORMAL') ? 'selected' : '';
+                    opcionesConcepto += `<option value="${c}" ${selected}>${c}</option>`;
+                });
+            }
+            
+            const proyectoSeleccionado = window.proyectoSeleccionadoGlobal || "";
+            if (!proyectoSeleccionado) {
+                alert("⚠️ Por favor vincula un Proyecto usando el botón azul antes de abrir la vista previa.");
+                if(gridPrincipal) gridPrincipal.classList.remove('hidden');
+                return;
+            }
+            let nroFilaVisual = 1;
+
+            // 🔥 MAGIA AQUÍ: Iteramos usando el PADRÓN ORIGINAL (Orden exacto, incluye vacíos)
+            window.diccionarioPadronS10.forEach(trabajadorS10 => {
+                const dataCampo = window.datosCampoProcesados ? window.datosCampoProcesados[trabajadorS10.dni] : null;
+                
+                // Matriz de empacado (Permite juntar partidas distintas en días distintos en 1 sola fila)
+                let filasWorker = [ [null, null, null, null, null, null, null] ];
+
+                if (dataCampo) {
+                    Object.entries(dataCampo.tareasDiarias).forEach(([fechaHoja, tareas], indexHoja) => {
+                        const idxDia = obtenerIndiceDia(fechaHoja, indexHoja);
+                        if (idxDia === -1 || idxDia > 6) return;
+
+                        // Agrupar las horas si hizo la misma actividad en el mismo día
+                        const tareasDelDia = {};
+                        tareas.forEach(t => {
+                            const p = window.traduccionPartidasTareo[t.activityNameField] || t.activityNameField;
+                            if (!tareasDelDia[p]) tareasDelDia[p] = 0;
+                            tareasDelDia[p] += t.hours;
+                        });
+
+                        Object.entries(tareasDelDia).forEach(([partida, horas]) => {
+                            let placed = false;
+                            // Buscar un hueco libre en ese día para esta actividad
+                            for (let r = 0; r < filasWorker.length; r++) {
+                                if (filasWorker[r][idxDia] === null) {
+                                    filasWorker[r][idxDia] = { partida, horas };
+                                    placed = true; break;
+                                }
+                            }
+                            // Si el día ya está ocupado (hizo 2 actividades distintas EL MISMO DÍA), crear nueva fila
+                            if (!placed) {
+                                let nuevaFila = [null, null, null, null, null, null, null];
+                                nuevaFila[idxDia] = { partida, horas };
+                                filasWorker.push(nuevaFila);
+                            }
+                        });
+                    });
+                }
+
+                // Dibujar cada fila necesaria para este trabajador
+                filasWorker.forEach((filaSemana, indexFila) => {
+                    datosListosParaExportar.push({
+                        lineaOriginal: trabajadorS10.lineaOriginal,
+                        dni: trabajadorS10.dni,
+                        nombre: trabajadorS10.nombreOficial,
+                        dias: filaSemana 
+                    });
+
+                    // Si toda la fila está vacía (0 horas en la semana), atenuamos el texto
+                    const tieneHoras = filaSemana.some(d => d !== null && d.horas > 0);
+                    const colorTexto = tieneHoras ? "text-slate-800" : "text-slate-400 opacity-70";
+
+                    // 🔥 REGLA DE SOMBREADO PARA REPETIDOS:
+                    // Si indexFila > 0, significa que es la 2da, 3ra, etc. fila del mismo trabajador.
+                    const fondoFila = indexFila > 0 ? "bg-cyan-50/50" : ""; // Un fondo sutil para toda la fila
+                    const fondoNombre = indexFila > 0 ? "bg-cyan-100 text-cyan-900" : ""; // Celeste azulino fuerte para el nombre
+
+                    let htmlFila = `<tr class="hover:bg-amber-50 transition border-b border-slate-100 ${colorTexto} ${fondoFila}">`;
+                    htmlFila += `<td class="py-2 px-2 text-center font-bold bg-slate-100 text-slate-500 border-r border-slate-200">${nroFilaVisual}</td>`;
+                    
+                    htmlFila += `<td class="py-2 px-2 text-center border-r border-slate-100 font-bold">${trabajadorS10.lineaOriginal || ''}</td>`;
+                    htmlFila += `<td class="py-2 px-2 border-r border-slate-100">${trabajadorS10.dni}</td>`;
+                    
+                    // APLICAMOS EL COLOR AL NOMBRE AQUÍ:
+                    htmlFila += `<td class="py-2 px-2 border-r border-slate-100 font-bold truncate max-w-[150px] ${fondoNombre}">${trabajadorS10.nombreOficial}</td>`;
+                    
+                    htmlFila += `<td class="py-2 px-2 border-r border-slate-100 truncate max-w-[100px] text-blue-600">${proyectoSeleccionado}</td>`;
+                    htmlFila += `<td class="py-2 px-2 border-r border-slate-200"></td>`;
+
+                    filaSemana.forEach(diaData => {
+                        if (diaData !== null && diaData.horas > 0) {
+                            htmlFila += `<td class="py-2 px-2 border-r border-slate-100 truncate max-w-[100px]" title="${diaData.partida}">${diaData.partida}</td>`;
+                            htmlFila += `<td class="py-1 px-1 border-r border-slate-100"><select class="selector-concepto-fila w-full bg-transparent border-b border-slate-300 focus:outline-none text-[9px] cursor-pointer text-slate-800">${opcionesConcepto}</select></td>`;
+                            htmlFila += `<td class="py-2 px-2 text-center font-black text-emerald-600 border-r border-slate-300 bg-emerald-50/30">${diaData.horas}</td>`;
+                            totalHorasGlobal += diaData.horas;
+                        } else {
+                            htmlFila += `<td class="py-2 px-2 border-r border-slate-100"></td><td class="py-2 px-2 border-r border-slate-100"></td><td class="py-2 px-2 border-r border-slate-300"></td>`;
+                        }
+                    });
+
+                    htmlFila += `</tr>`;
+                    tbody.innerHTML += htmlFila;
+                    nroFilaVisual++;
+                    filasGeneradas++;
+                });
+            });
+
+            document.getElementById('resumenVistaPrevia').innerHTML = `<span class="text-indigo-600">${filasGeneradas}</span> filas alineadas al S10 | <span class="text-emerald-600">${totalHorasGlobal}</span> horas totales`;
+            document.getElementById('vistaPreviaExportacion').classList.remove('hidden');
+            setTimeout(initResizableColumns, 100);
+        });
+
+        // 2. EXPORTAR EXCEL S10
+        document.getElementById('btnConfirmarExportacion')?.addEventListener('click', function() {
+            if (datosListosParaExportar.length === 0) return;
+
+            const proyectoSeleccionado = window.proyectoSeleccionadoGlobal || "";
+            const datosMatrizS10 = [];
+            
+            datosMatrizS10.push(["", "", "", "", "", "Lunes", "", "", "Martes", "", "", "Miercoles", "", "", "Jueves", "", "", "Viernes", "", "", "Sabado", "", "", "Domingo", "", ""]);
+            datosMatrizS10.push(["Linea", "DNI", "Nombre", "Proyecto", "%", "Partida de Control", "Concepto", "Horas", "Partida de Control", "Concepto", "Horas", "Partida de Control", "Concepto", "Horas", "Partida de Control", "Concepto", "Horas", "Partida de Control", "Concepto", "Horas", "Partida de Control", "Concepto", "Horas", "Partida de Control", "Concepto", "Horas"]);
+
+            const tbody = document.getElementById('tablaVistaPreviaTareo');
+            const filasTr = tbody.querySelectorAll('tr');
+
+            datosListosParaExportar.forEach((row, index) => {
+                const tr = filasTr[index];
+                const selectsInRow = tr ? tr.querySelectorAll('.selector-concepto-fila') : [];
+                let selectIdx = 0;
+
+                const fila = [
+                    row.lineaOriginal || "", 
+                    row.dni, 
+                    row.nombre, 
+                    proyectoSeleccionado, 
+                    "" 
+                ];
+
+                row.dias.forEach(diaData => {
+                    if (diaData !== null && diaData.horas > 0) {
+                        const concepto = selectsInRow[selectIdx] ? selectsInRow[selectIdx].value : "";
+                        fila.push(diaData.partida, concepto, diaData.horas);
+                        selectIdx++;
+                    } else {
+                        fila.push("", "", ""); 
+                    }
+                });
+                datosMatrizS10.push(fila);
+            });
+
+            const hojaExcel = XLSX.utils.aoa_to_sheet(datosMatrizS10);
+            const libroExcel = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(libroExcel, hojaExcel, "Importación S10");
+            const numSem = window.semanaActualTareo || 'X';
+            XLSX.writeFile(libroExcel, `Tareo_Semana_${numSem}_FormatoS10.xlsx`);
+        });
+
+        // 3. FUNCIÓN PARA REDIMENSIONAR COLUMNAS
+        function initResizableColumns() {
+            const table = document.getElementById('tablaCoordenadasExportacion');
+            if (!table) return;
+            const cols = table.querySelectorAll('th');
+            [].forEach.call(cols, function(col) {
+                const resizer = col.querySelector('.resizer');
+                if (!resizer) return;
+                
+                let x = 0, w = 0;
+                const mouseDownHandler = function(e) {
+                    x = e.clientX;
+                    w = parseInt(window.getComputedStyle(col).width, 10);
+                    document.addEventListener('mousemove', mouseMoveHandler);
+                    document.addEventListener('mouseup', mouseUpHandler);
+                    resizer.classList.add('resizing');
+                };
+                const mouseMoveHandler = function(e) { col.style.width = `${w + (e.clientX - x)}px`; };
+                const mouseUpHandler = function() {
+                    document.removeEventListener('mousemove', mouseMoveHandler);
+                    document.removeEventListener('mouseup', mouseUpHandler);
+                    resizer.classList.remove('resizing');
+                };
+                resizer.addEventListener('mousedown', mouseDownHandler);
+            });
+        }
+        
+        // ==========================================
+        // LÓGICA DE HISTORIAL Y GUARDADO DE TAREOS
+        // ==========================================
+
+        // 1. Mostrar Historial al entrar al Módulo Tareos
+        // (Asegúrate de agregar estas 3 líneas dentro de tu función window.abrirModulo cuando modulo === 'TAREOS')
+        // document.getElementById('historialTareos').classList.remove('hidden');
+        // document.getElementById('zonaCargaTareo').classList.add('hidden');
+        // if(typeof window.cargarHistorialTareos === 'function') window.cargarHistorialTareos(window.proyectoActualGlobal);
+
+        // 2. Botón "Nuevo Tareo"
+        window.iniciarNuevoTareo = function(pushHistory = true) {
+            if (pushHistory) history.pushState({ vista: 'tareo_nuevo', proyecto: window.proyectoActualGlobal }, '', '#nuevo-tareo');
+            
+            document.getElementById('historialTareos').classList.add('hidden');
+            document.getElementById('zonaCargaTareo').classList.remove('hidden');
+            
+            // Limpiar datos
+            document.getElementById('fechaInicioTareo').value = '';
+            document.getElementById('fechaFinTareo').value = '';
+            document.getElementById('infoSemanaTareo').classList.add('hidden');
+            window.semanaActualTareo = null;
+            datosListosParaExportar = [];
+        };
+
+        // 3. Cargar Tarjetas Históricas desde Firebase
+        window.cargarHistorialTareos = function(proyecto) {
+            const contenedor = document.getElementById('listaTareosHistorico');
+            contenedor.innerHTML = '<div class="col-span-full text-slate-400 italic font-medium py-10 flex items-center justify-center gap-2"><i class="fa-solid fa-spinner fa-spin"></i> Buscando tareos guardados...</div>';
+
+            const tareosRef = window.fsCollection(window.firebaseDb, `proyectos/${proyecto}/tareosGuardados`);
+            
+            window.fsOnSnapshot(tareosRef, (snapshot) => {
+                if (snapshot.empty) {
+                    contenedor.innerHTML = `
+                        <div class="col-span-full w-full text-center py-16 bg-white rounded-[32px] border border-slate-200 shadow-sm mt-4">
+                            <div class="w-20 h-20 bg-emerald-50 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-100">
+                                <i class="fa-solid fa-users-gear text-3xl"></i>
+                            </div>
+                            <h3 class="text-2xl font-extrabold text-slate-800 mb-2">Aún no hay Tareos guardados</h3>
+                            <p class="text-slate-500">Haz clic en "NUEVO TAREO" para procesar tu primera semana.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                contenedor.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const semanaId = doc.id; // Ej: Semana_35
+                    
+                    contenedor.innerHTML += `
+                        <div class="bg-white rounded-[24px] shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-slate-200 flex flex-col group transform hover:-translate-y-1">
+                            <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center font-bold shadow-inner group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-300">
+                                        <i class="fa-solid fa-calendar-week text-2xl"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">PERIODO</p>
+                                        <h4 class="text-xl font-extrabold text-slate-800">${semanaId.replace('_', ' ')}</h4>
+                                    </div>
+                                </div>
+                                <button onclick="window.eliminarTareo('${proyecto}', '${semanaId}', event)" class="w-8 h-8 flex items-center justify-center rounded-full text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
+                            <div class="p-6 bg-slate-50 flex-1 flex flex-col justify-center gap-4 text-center">
+                                <div class="bg-white py-3 rounded-xl border border-slate-100 shadow-sm">
+                                    <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Líneas Generadas</span>
+                                    <span class="block font-black text-slate-700 text-2xl">${data.filasGeneradas || 0}</span>
+                                </div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2">Por: <span class="text-emerald-600">${data.creadoPor.split('@')[0]}</span></p>
+                            </div>
+                            <button onclick="alert('Funcionalidad de visualización en desarrollo')" class="w-full bg-slate-800 group-hover:bg-emerald-600 text-white text-[11px] font-bold uppercase tracking-widest py-4 transition-colors duration-300 flex items-center justify-center gap-2 cursor-pointer">
+                                <i class="fa-solid fa-eye"></i> VER TAREO
+                            </button>
+                        </div>
+                    `;
+                });
+            });
+        };
+
+        // 4. Guardar Tareo procesado a Firebase
+        window.guardarTareoEnNube = async function() {
+            if (!datosListosParaExportar || datosListosParaExportar.length === 0) {
+                return alert("⚠️ No hay datos procesados para guardar.");
+            }
+            if (!window.semanaActualTareo) {
+                return alert("⚠️ Falta el número de semana. Asegúrate de colocar las fechas.");
+            }
+
+            const btn = document.getElementById('btnGuardarTareoNube');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
+            btn.disabled = true;
+
+            try {
+                const proyecto = window.proyectoActualGlobal;
+                const semanaId = `Semana_${window.semanaActualTareo}`;
+                const tareoRef = window.fsDoc(window.firebaseDb, `proyectos/${proyecto}/tareosGuardados/${semanaId}`);
+                
+                const tareoData = {
+                    periodo: semanaId,
+                    filasGeneradas: datosListosParaExportar.length,
+                    fechaGuardado: new Date().toISOString(),
+                    creadoPor: window.firebaseAuth.currentUser.email,
+                    datos: datosListosParaExportar // Guarda el JSON procesado en la nube
+                };
+
+                await window.fsSetDoc(tareoRef, tareoData);
+                
+                alert(`✅ ¡Tareo de la ${semanaId.replace('_',' ')} guardado en la nube exitosamente!`);
+                window.cerrarVistaPrevia();
+                
+                // Volver al historial de tareos
+                document.getElementById('zonaCargaTareo').classList.add('hidden');
+                document.getElementById('historialTareos').classList.remove('hidden');
+
+            } catch (error) {
+                console.error("Error guardando Tareo:", error);
+                alert("❌ Ocurrió un error al guardar en la nube.");
+            } finally {
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            }
+        };
+
+        // 5. Eliminar Tareo
+        window.eliminarTareo = async function(proyecto, semanaId, event) {
+            if (event) event.stopPropagation();
+            if (!confirm(`⚠️ ¿Seguro que deseas eliminar el tareo de la ${semanaId}?`)) return;
+            try {
+                await window.fsDeleteDoc(window.fsDoc(window.firebaseDb, `proyectos/${proyecto}/tareosGuardados/${semanaId}`));
+            } catch (error) {
+                console.error(error);
+                alert("Error eliminando Tareo.");
+            }
+        };
+
     </script>
 </body>
 </html>
