@@ -190,6 +190,8 @@
                 <button id="btnTabProyectos" onclick="window.cambiarTabAjustes('proyectos')" class="text-center px-4 py-2.5 rounded-full font-bold text-[11px] uppercase tracking-widest border-2 border-slate-900 text-slate-900 transition cursor-pointer shadow-sm">GESTIÓN DE PROYECTOS</button>
                 <button id="btnTabUsuarios" onclick="window.cambiarTabAjustes('usuarios')" class="text-center px-4 py-2.5 rounded-full font-bold text-[11px] uppercase tracking-widest border-2 border-slate-300 text-slate-500 hover:border-slate-400 hover:text-slate-700 transition cursor-pointer">USUARIOS Y PERMISOS</button>
                 <button id="btnTabInicio" onclick="window.cambiarTabAjustes('inicio')" class="text-center px-4 py-2.5 rounded-full font-bold text-[11px] uppercase tracking-widest border-2 border-slate-300 text-slate-500 hover:border-slate-400 hover:text-slate-700 transition cursor-pointer">PANTALLA DE INICIO</button>
+                <!-- 🔥 AQUÍ ESTÁ EL NUEVO BOTÓN -->
+                <button id="btnTabAuditoria" onclick="window.cambiarTabAjustes('auditoria')" class="text-center px-4 py-2.5 rounded-full font-bold text-[11px] uppercase tracking-widest border-2 border-slate-300 text-slate-500 hover:border-slate-400 hover:text-slate-700 transition cursor-pointer">REGLAS IA</button>
             </div>
 
             <!-- Contenido Principal -->
@@ -236,6 +238,37 @@
                     </div>
                 </div>
 
+                <!-- 🔥 NUEVO TAB: REGLAS IA -->
+                <div id="tabAuditoria" class="hidden">
+                    <h3 class="text-base font-bold text-slate-800 mb-2 border-b border-slate-100 pb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-robot text-purple-600"></i> Entrenamiento de Auditoría IA
+                    </h3>
+                    <p class="text-sm text-slate-500 mb-6">Enseña al sistema cómo clasificar recursos automáticamente. Si la descripción de un recurso contiene alguna de las palabras clave, el sistema sugerirá moverlo a la Partida Destino.</p>
+                    
+                    <div class="flex flex-col lg:flex-row gap-4 mb-8 bg-purple-50 p-5 rounded-xl border border-purple-100 shadow-sm">
+                        <div class="flex-1">
+                            <label class="text-[10px] font-bold text-purple-800 uppercase tracking-widest mb-1 block">Palabras Clave (Separadas por comas)</label>
+                            <input type="text" id="nuevaReglaKeywords" placeholder="Ej: CEMENTO, HORMIGON, ARENA" class="w-full border border-purple-200 p-2.5 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none text-sm font-bold uppercase shadow-inner">
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-[10px] font-bold text-purple-800 uppercase tracking-widest mb-1 block">Partida Destino Oficial (S10)</label>
+                            <select id="nuevaReglaTarget" class="w-full border border-purple-200 p-2.5 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none text-sm font-bold shadow-inner cursor-pointer bg-white">
+                                <option value="">-- Procesa un Excel para ver la lista --</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="window.guardarNuevaReglaAuditoria()" class="w-full lg:w-auto bg-purple-600 hover:bg-purple-700 text-white font-bold px-6 py-2.5 rounded-lg shadow-md transition cursor-pointer flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-plus"></i> Añadir Regla
+                            </button>
+                        </div>
+                    </div>
+
+                    <h3 class="text-base font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">Reglas Activas</h3>
+                    <div id="listaReglasAdmin" class="flex flex-col gap-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+                        <!-- Llenado por JS -->
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -273,7 +306,7 @@
                         <i class="fa-solid fa-users-gear text-4xl"></i>
                     </div>
                     <h3 class="text-2xl font-extrabold text-slate-800 mb-2 tracking-tight">Tareo de Obra</h3>
-                    <p class="text-slate-500 text-sm">Procesamiento automático de planillas y cruce con el padrón S10.</p>
+                    <p class="text-slate-500 text-sm">Procesamiento automático para S10.</p>
                 </div>
 
             </div>
@@ -498,6 +531,71 @@
                     </div>
                 </div>
             </div>
+            <!-- Modal Conceptos -->
+            <div id="modalConceptos" class="hidden fixed inset-0 bg-slate-900/90 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-[24px] w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden shadow-2xl">
+                    <div class="bg-amber-600 p-5 flex justify-between items-center text-white">
+                        <h3 class="font-extrabold tracking-widest uppercase flex items-center gap-2">
+                            <i class="fa-solid fa-clock"></i> Vincular Conceptos (Tipos de Hora)
+                        </h3>
+                        <button onclick="document.getElementById('modalConceptos').classList.add('hidden')" class="hover:text-amber-200 transition text-xl"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div class="p-4 bg-slate-100 border-b border-slate-200">
+                        <p class="text-xs text-slate-600">Asigna el concepto S10 a cada trabajador. Esto rellenará automáticamente la columna "Concepto" en la vista previa y el Excel para todos sus días.</p>
+                    </div>
+                    <div class="p-6 overflow-y-auto bg-slate-50 flex-1" id="listaConceptosPendientes">
+                        <!-- Llenado por JS -->
+                    </div>
+                    <div class="p-5 border-t border-slate-200 bg-white flex justify-end">
+                        <button onclick="window.guardarMapeoConceptos()" class="bg-slate-800 hover:bg-amber-600 text-white font-bold text-xs uppercase tracking-widest py-3 px-6 rounded-xl shadow transition-colors">
+                            <i class="fa-solid fa-floppy-disk mr-2"></i> Guardar Conceptos
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Convenios -->
+            <div id="modalConvenios" class="hidden fixed inset-0 bg-slate-900/90 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-[24px] w-full max-w-4xl max-h-[80vh] flex flex-col overflow-hidden shadow-2xl">
+                    <div class="bg-fuchsia-700 p-5 flex justify-between items-center text-white">
+                        <h3 class="font-extrabold tracking-widest uppercase flex items-center gap-2">
+                            <i class="fa-solid fa-handshake"></i> Gestión de Convenios (Horas Extra)
+                        </h3>
+                        <button onclick="document.getElementById('modalConvenios').classList.add('hidden')" class="hover:text-fuchsia-200 transition text-xl"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div class="p-4 bg-slate-100 border-b border-slate-200 flex flex-col sm:flex-row gap-4 items-center justify-between">
+                        <p class="text-xs text-slate-600">Selecciona al personal y digita las horas de convenio. El sistema las sumará automáticamente a las actividades del día en múltiplos de 0.5.</p>
+                        <button onclick="window.agregarFilaConvenio()" class="bg-fuchsia-600 hover:bg-fuchsia-800 text-white font-bold text-[10px] uppercase tracking-widest py-2 px-4 rounded-lg shadow transition-colors flex items-center gap-2 whitespace-nowrap">
+                            <i class="fa-solid fa-plus"></i> Añadir Personal
+                        </button>
+                    </div>
+                    <div class="p-6 overflow-y-auto bg-slate-50 flex-1">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-200 text-slate-600">
+                                <tr>
+                                    <th class="p-2 font-bold w-1/3">Trabajador (DNI)</th>
+                                    <th class="p-2 text-center font-bold">Lunes</th>
+                                    <th class="p-2 text-center font-bold">Martes</th>
+                                    <th class="p-2 text-center font-bold">Miércoles</th>
+                                    <th class="p-2 text-center font-bold">Jueves</th>
+                                    <th class="p-2 text-center font-bold">Viernes</th>
+                                    <th class="p-2 text-center font-bold">Sábado</th>
+                                    <th class="p-2 text-center font-bold">Quitar</th>
+                                </tr>
+                            </thead>
+                            <tbody id="listaConvenios" class="divide-y divide-slate-200">
+                                <!-- Llenado por JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="p-5 border-t border-slate-200 bg-white flex justify-end">
+                        <button onclick="window.guardarMapeoConvenios()" class="bg-slate-800 hover:bg-fuchsia-600 text-white font-bold text-xs uppercase tracking-widest py-3 px-6 rounded-xl shadow transition-colors">
+                            <i class="fa-solid fa-floppy-disk mr-2"></i> Guardar Convenios
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- ========================================== -->
             <!-- VISTA PREVIA EXCEL (PANTALLA COMPLETA) -->
             <!-- ========================================== -->
@@ -514,7 +612,7 @@
                             <button id="btnGuardarTareoNube" onclick="window.guardarTareoEnNube()" class="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold uppercase tracking-widest py-2 px-4 rounded-full shadow transition-colors flex items-center gap-2">
                                 <i class="fa-solid fa-cloud-arrow-up"></i> Guardar en Nube
                             </button>
-                            <button id="btnConfirmarExportacion" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-widest py-2 px-4 rounded-full shadow transition-colors flex items-center gap-2">
+                            <button id="btnExportacionNube" onclick="window.ejecutarExportacionNube()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-widest py-2 px-4 rounded-full shadow transition-colors flex items-center gap-2">
                                 <i class="fa-solid fa-file-excel"></i> Exportar S10
                             </button>
                         </div>
@@ -559,11 +657,11 @@
             
             <!-- Saludo Principal (Textos oscuros) -->
             <h1 class="text-4xl sm:text-5xl font-extrabold text-slate-800 mb-2 tracking-tight">¡Hola, <span id="lobbyUserName">Equipo</span>!</h1>
-            <p class="text-slate-500 mb-10 text-lg">Bienvenido de vuelta, selecciona un proyecto para continuar.</p>
+            <p class="text-slate-500 mb-10 text-lg">Bienvenido, selecciona un proyecto para continuar.</p>
             
             <!-- Título de Sección (Se eliminó "Ver Todos") -->
             <div class="flex items-center justify-between mb-6">
-                <h2 class="text-2xl font-bold text-slate-800 tracking-wide">Mis Proyectos Asignados</h2>
+                <h2 class="text-2xl font-bold text-slate-800 tracking-wide">Mis Proyectos</h2>
             </div>
 
             <!-- Grilla de Tarjetas -->
@@ -791,7 +889,7 @@
             window.cargarHistorialReportes(nombreProyecto);
         };
 
-        // 🔥 NUEVO: Función que lee la Base de Datos y dibuja las tarjetas premium
+        // 🔥 NUEVO: Función que lee la Base de Datos y dibuja las tarjetas y la Curva S
         window.cargarHistorialReportes = function(nombreProyecto) {
             const contenedor = document.getElementById('listaReportesProyecto');
             contenedor.innerHTML = '<div class="text-slate-400 italic font-medium py-10 flex items-center gap-2"><i class="fa-solid fa-spinner fa-spin"></i> Buscando reportes en la nube...</div>';
@@ -815,37 +913,42 @@
                 contenedor.innerHTML = '<div class="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 content-start mt-4"></div>';
                 const grid = contenedor.querySelector('div');
 
-                // 🔥 VARIABLES PARA EL DASHBOARD
+                // 🔥 VARIABLES PARA EL DASHBOARD Y CURVA S
                 let periodos = [];
                 let margenes = [];
+                let vCostos = [];
+                let eacs = [];
                 let ultimoVCosto = 0, ultimoEAC = 0, ultimoMargen = 0;
                 let dashboardActivo = false;
 
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    const periodo = doc.id;
+                // 1. Ordenar documentos cronológicamente (YYYY-MM)
+                let docsOrdenados = [];
+                snapshot.forEach(doc => docsOrdenados.push({ id: doc.id, data: doc.data() }));
+                docsOrdenados.sort((a, b) => a.id.localeCompare(b.id));
+
+                // 2. Extraer datos y dibujar tarjetas
+                docsOrdenados.forEach(docObj => {
+                    const data = docObj.data;
+                    const periodo = docObj.id;
                     
-                    // 🔥 1. RECOLECTAR DATOS (A PRUEBA DE FALLOS)
-                    periodos.push(periodo); // Siempre agregamos el mes al eje X
+                    periodos.push(periodo); 
                     
                     if (data.estadisticas && data.estadisticas.resumen) {
-                        margenes.push(data.estadisticas.resumen.margen);
+                        margenes.push(data.estadisticas.resumen.margen || 0);
+                        vCostos.push(data.estadisticas.resumen.vCosto || 0);
+                        eacs.push(data.estadisticas.resumen.eac || 0);
                         
-                        // Como Firebase lee en orden, el último en procesarse actualizará las tarjetas
-                        ultimoVCosto = data.estadisticas.resumen.vCosto;
-                        ultimoEAC = data.estadisticas.resumen.eac;
-                        ultimoMargen = data.estadisticas.resumen.margen;
+                        ultimoVCosto = data.estadisticas.resumen.vCosto || 0;
+                        ultimoEAC = data.estadisticas.resumen.eac || 0;
+                        ultimoMargen = data.estadisticas.resumen.margen || 0;
                         dashboardActivo = true;
                     } else {
-                        // Si es un reporte viejo sin datos, lo graficamos en 0
-                        margenes.push(0);
+                        margenes.push(0); vCostos.push(0); eacs.push(0);
                     }
                     
-                    // 🔥 2. DIBUJAR LA TARJETA DEL REPORTE
+                    // DIBUJAR LA TARJETA DEL REPORTE
                     grid.innerHTML += `
                         <div class="bg-white rounded-[24px] shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-slate-200 flex flex-col group transform hover:-translate-y-1">
-                            
-                            <!-- Cabecera de la Tarjeta con Botón de Eliminar -->
                             <div class="p-6 border-b border-slate-100 flex items-center justify-between">
                                 <div class="flex items-center gap-4">
                                     <div class="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center font-bold shadow-inner group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-300">
@@ -856,14 +959,11 @@
                                         <h4 class="text-xl font-extrabold text-slate-800">${periodo}</h4>
                                     </div>
                                 </div>
-                                
-                                <!-- Botón Eliminar Reporte -->
                                 <button onclick="window.eliminarReporte('${nombreProyecto}', '${periodo}', event)" class="w-8 h-8 flex items-center justify-center rounded-full text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors" title="Eliminar Reporte">
                                     <i class="fa-solid fa-trash-can"></i>
                                 </button>
                             </div>
                             
-                            <!-- Cuerpo de la Tarjeta -->
                             <div class="p-6 bg-slate-50 flex-1 flex flex-col justify-center gap-4">
                                 <div class="flex justify-between items-center bg-white px-4 py-3 rounded-xl border border-slate-100 shadow-sm">
                                     <div class="text-left">
@@ -883,16 +983,15 @@
                                 </div>
                             </div>
 
-                            <!-- Botón Abrir -->
                             <button onclick="window.cargarReporteExistente('${nombreProyecto}', '${periodo}')" class="w-full bg-slate-800 group-hover:bg-indigo-600 text-white text-[11px] font-bold uppercase tracking-widest py-4 transition-colors duration-300 flex items-center justify-center gap-2 cursor-pointer">
                                 <i class="fa-solid fa-folder-open"></i> ABRIR REPORTE
                             </button>
                         </div>
                     `;
-                }); // <-- ¡AQUÍ TERMINA EL BUCLE PARA LEER TODOS LOS REPORTES!
+                }); 
 
-                // 🔥 3. RENDERIZAR DASHBOARD SI HAY DATOS (FUERA DEL BUCLE)
-                if (dashboardActivo && window.miGraficoRO) window.miGraficoRO.destroy(); // Limpiar gráfico anterior
+                // 🔥 3. RENDERIZAR DASHBOARD (CURVA S + BARRAS)
+                if (dashboardActivo && window.miGraficoRO) window.miGraficoRO.destroy(); 
                 
                 if (periodos.length > 0) {
                     document.getElementById('dashboardHistorico').classList.remove('hidden');
@@ -912,23 +1011,84 @@
                         bgMargen.className = "absolute inset-0 bg-red-50 opacity-50";
                     }
 
-                    // DIBUJAR GRÁFICO DE SEMÁFORO
+                    // DIBUJAR GRÁFICO COMBINADO
                     const ctx = document.getElementById('graficoRO').getContext('2d');
                     window.miGraficoRO = new Chart(ctx, {
-                        type: 'bar',
+                        type: 'line', // Base line
                         data: {
                             labels: periodos,
-                            datasets: [{
-                                label: 'Margen RO (S/)',
-                                data: margenes,
-                                backgroundColor: ctx => ctx.raw >= 0 ? '#10B981' : '#EF4444',
-                                borderRadius: 6
-                            }]
+                            datasets: [
+                                {
+                                    type: 'line',
+                                    label: 'Proyección Final (EAC)',
+                                    data: eacs,
+                                    borderColor: '#8B5CF6', // Morado
+                                    backgroundColor: '#8B5CF6',
+                                    borderWidth: 3,
+                                    tension: 0.4,
+                                    pointRadius: 5,
+                                    pointBackgroundColor: '#FFFFFF',
+                                    pointBorderWidth: 2,
+                                    yAxisID: 'y'
+                                },
+                                {
+                                    type: 'line',
+                                    label: 'Presupuesto Base (V Costo)',
+                                    data: vCostos,
+                                    borderColor: '#3B82F6', // Azul
+                                    backgroundColor: '#3B82F6',
+                                    borderDash: [6, 6], // Línea punteada
+                                    borderWidth: 2,
+                                    tension: 0.4,
+                                    pointRadius: 0,
+                                    yAxisID: 'y'
+                                },
+                                {
+                                    type: 'bar',
+                                    label: 'Margen RO',
+                                    data: margenes,
+                                    backgroundColor: ctx => ctx.raw >= 0 ? '#10B981' : '#EF4444',
+                                    borderRadius: 6,
+                                    yAxisID: 'y1' // Eje secundario para no aplastar los gráficos
+                                }
+                            ]
                         },
                         options: {
-                            responsive: true, maintainAspectRatio: false,
-                            plugins: { legend: { display: false } },
-                            scales: { y: { grid: { color: '#f1f5f9' } }, x: { grid: { display: false } } }
+                            responsive: true, 
+                            maintainAspectRatio: false,
+                            interaction: { mode: 'index', intersect: false },
+                            plugins: { 
+                                legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8, font: { weight: 'bold' } } },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            let label = context.dataset.label || '';
+                                            if (label) label += ': ';
+                                            if (context.parsed.y !== null) {
+                                                label += 'S/ ' + context.parsed.y.toLocaleString('es-PE', { minimumFractionDigits: 2 });
+                                            }
+                                            return label;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: { 
+                                y: { 
+                                    type: 'linear',
+                                    display: true,
+                                    position: 'left',
+                                    grid: { color: '#f1f5f9' },
+                                    title: { display: true, text: 'Curva S (Acumulado S/)' }
+                                },
+                                y1: {
+                                    type: 'linear',
+                                    display: true,
+                                    position: 'right',
+                                    grid: { drawOnChartArea: false }, // Evita que se crucen las líneas de fondo
+                                    title: { display: true, text: 'Margen (S/)' }
+                                },
+                                x: { grid: { display: false } } 
+                            }
                         }
                     });
                 }
@@ -1032,6 +1192,9 @@
                 stockRows = dataPesada.stock || []; window.stockRows = stockRows;
                 subcontratoRows = dataPesada.subcontratos || []; window.subcontratoRows = subcontratoRows;
 
+                // 🔥 PASO 3: Indicar que este SÍ es un reporte existente (Desactiva el Modo Aislado)
+                window.esNuevoReporte = false;
+
                 const proy = dataPesada.proyecciones || {};
                 localStorage.setItem('s10_ro_projections', JSON.stringify(proy));
                 roProjections = proy; window.roProjections = proy;
@@ -1066,6 +1229,9 @@
                 if (typeof window.escucharSemanasEnVivo === 'function') window.escucharSemanasEnVivo();
                 
                 if (typeof updateReassignmentCountUI === 'function') updateReassignmentCountUI();
+
+                // 🔥 AUTO-APRENDIZAJE: Sincronizar catálogo al abrir cualquier reporte
+                if (typeof window.sincronizarCatalogoPartidas === 'function') window.sincronizarCatalogoPartidas();
 
             } catch (error) {
                 console.error("Error detallado al cargar reporte:", error);
@@ -1163,6 +1329,8 @@ window.iniciarNuevoReporte = function() {
                 await window.fsSetDoc(reporteRef, reporteData);
                 
                 alert(`✅ ¡El reporte de ${mes} se guardó exitosamente en la nube con tus filtros de semanas!`);
+                // 🔥 Iniciar aprendizaje silencioso de partidas
+                if (typeof window.sincronizarCatalogoPartidas === 'function') window.sincronizarCatalogoPartidas();
             } catch (error) {
                 console.error("Error guardando el reporte:", error);
                 alert("❌ Ocurrió un error al guardar en la nube. Revisa la consola.");
@@ -1474,8 +1642,8 @@ window.iniciarNuevoReporte = function() {
         let uploadedFiles = [];
         let rawDataFiles = [];
         let consolidatedRows = [];  
-        let stockRows = []; // Memoria independiente para el STOCK
-        let subcontratoRows = []; // Memoria independiente para SUBCONTRATOS
+        let stockRows = []; 
+        let subcontratoRows = []; 
         let roFilteredMatrix2D = []; 
         let roHeaderRowCount = 1;   
         let partidasGrouped = {};
@@ -1485,7 +1653,53 @@ window.iniciarNuevoReporte = function() {
 
         let currentPage = 1;
         let pageSize = 100;
-        let roProjections = JSON.parse(localStorage.getItem('s10_ro_projections')) || {}; // Memoria para proyecciones
+        
+        // 🔥 Inicialización segura sin forzar lectura inmediata
+        let roProjections = {}; 
+
+        // ==========================================
+        // LIMPIEZA ABSOLUTA DE MEMORIA Y PANTALLA
+        // ==========================================
+        function resetApp() {
+            // 1. Limpieza de archivos y variables base
+            uploadedFiles = [];
+            rawDataFiles = [];
+            filesToProcess = []; 
+            consolidatedRows = [];
+            stockRows = [];
+            subcontratoRows = [];
+            roFilteredMatrix2D = [];
+            roHeaderRowCount = 1;
+            partidasGrouped = {};
+            partidaListKeys = [];
+            currentPartidaKey = "ALL";
+            currentPage = 1;
+            
+            // 2. EXTERMINIO ABSOLUTO DE PROYECCIONES LOCALES
+            roProjections = {};
+            window.roProjections = {};
+            window.proyeccionesNube = {};
+            localStorage.removeItem('s10_ro_projections');
+            
+            // 3. Resetear UI de archivos
+            if (typeof window.renderFileList === 'function') {
+                window.renderFileList();
+            } else {
+                updateFileListUI();
+            }
+            
+            const statusText = document.getElementById('statusText');
+            if (statusText) {
+                statusText.textContent = "Esperando Archivos";
+                statusText.className = "text-sm font-bold text-slate-500 uppercase tracking-widest";
+            }
+            
+            // 4. Restaurar Vistas
+            document.getElementById('uploadSection').classList.remove('hidden');
+            document.getElementById('metricsSection').classList.add('hidden');
+            document.getElementById('resultSection').classList.add('hidden');
+            document.getElementById('fileInput').value = "";
+        }
 
         function handleDragOver(e) {
             e.preventDefault();
@@ -1546,22 +1760,26 @@ window.iniciarNuevoReporte = function() {
         function updateFileListUI() {
             const listEl = document.getElementById('fileList');
             const countEl = document.getElementById('fileCount');
-            const processBtn = document.getElementById('processBtn');
+            // 🔥 CORRECCIÓN: El ID correcto en tu HTML es 'btnProcess'
+            const btnProcess = document.getElementById('btnProcess');
+
+            // Salvavidas de seguridad por si no encuentra los elementos
+            if (!listEl || !countEl || !btnProcess) return;
 
             countEl.textContent = uploadedFiles.length;
             listEl.innerHTML = '';
 
             if (uploadedFiles.length === 0) {
-                listEl.innerHTML = '<li class="text-slate-400 italic text-center py-4">No se han subido archivos aún</li>';
-                processBtn.disabled = true;
+                listEl.innerHTML = '<div class="text-center py-10 text-slate-400 italic text-sm font-medium">Ningún archivo seleccionado aún.</div>';
+                btnProcess.disabled = true; // Aquí estaba el error
                 return;
             }
 
-            processBtn.disabled = false;
+            btnProcess.disabled = false;
 
             uploadedFiles.forEach((f, idx) => {
-                const li = document.createElement('li');
-                li.className = 'flex items-center justify-between p-2 bg-white rounded-lg border border-slate-200 text-xs shadow-2xs';
+                const li = document.createElement('div');
+                li.className = 'flex flex-col md:flex-row md:items-center justify-between bg-white border border-slate-200 p-4 rounded-2xl gap-4 shadow-sm hover:border-indigo-300 hover:shadow-md transition';
 
                 let badgeColor = f.category === 'VERT' 
                     ? 'bg-blue-100 text-blue-800 border-blue-200' 
@@ -1570,14 +1788,18 @@ window.iniciarNuevoReporte = function() {
                 let badgeText = f.category === 'VERT' ? 'Consolidado (Vertical)' : 'Resumen RO (Horizontal)';
 
                 li.innerHTML = `
-                    <div class="flex items-center gap-2 overflow-hidden mr-2">
-                        <i class="fa-solid fa-file-excel text-emerald-600 text-sm flex-shrink-0"></i>
-                        <span class="truncate font-medium text-slate-700" title="${f.name}">${f.name}</span>
-                        <span class="text-[10px] px-2 py-0.5 rounded-full border ${badgeColor} flex-shrink-0 font-semibold">${badgeText}</span>
+                    <div class="flex items-center gap-4 overflow-hidden">
+                        <div class="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-file-excel text-emerald-500 text-xl"></i>
+                        </div>
+                        <span class="text-sm font-extrabold text-slate-700 break-all leading-tight" title="${f.name}">${f.name}</span>
                     </div>
-                    <button onclick="removeFile(${idx})" class="text-slate-400 hover:text-red-500 transition px-1 cursor-pointer">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
+                    <div class="flex items-center justify-between md:justify-end gap-4 shrink-0 w-full md:w-auto pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
+                        <span class="${badgeColor} text-[10px] uppercase tracking-widest font-bold px-4 py-1.5 rounded-full shrink-0 shadow-sm border">${badgeText}</span>
+                        <button onclick="removeFile(${idx})" class="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-white hover:bg-red-500 transition cursor-pointer">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
                 `;
                 listEl.appendChild(li);
             });
@@ -1715,48 +1937,40 @@ window.iniciarNuevoReporte = function() {
             const btnProcess = document.getElementById('btnProcess');
 
             if (!filesToProcess || filesToProcess.length === 0) {
-                alert("⚠️ Por favor, selecciona o arrastra al menos un archivo Excel de S10.");
-                return;
+                return alert("⚠️ Por favor, selecciona o arrastra al menos un archivo Excel de S10.");
             }
 
-            if (statusText) {
-                statusText.textContent = "Procesando...";
-                statusText.className = "text-amber-500 font-bold animate-pulse text-xs uppercase tracking-widest";
-            }
+            if (statusText) statusText.textContent = "Procesando...";
             if (btnProcess) btnProcess.disabled = true;
-
             rawDataFiles = [];
+            
+            // Limpiamos la memoria anterior por seguridad
+            window.hojaActividadesCruda = null; 
 
             try {
                 for (let item of filesToProcess) {
                     const data = await item.file.arrayBuffer();
                     const workbook = XLSX.read(data, { type: 'array' });
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
                     
-                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-                    const rawAOA = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+                    // 🔥 LECTURA ABSOLUTA: Extraer la hoja 'Actividad' mapeando por letras (A, B, C, D)
+                    const nombreHojaActividad = workbook.SheetNames.find(name => name.toUpperCase().includes('ACTIVIDAD'));
+                    if (nombreHojaActividad) {
+                        window.hojaActividadesCruda = XLSX.utils.sheet_to_json(workbook.Sheets[nombreHojaActividad], { header: "A", defval: "" });
+                    }
 
-                    rawDataFiles.push({
-                        name: item.file.name,
-                        category: item.category,
-                        data: jsonData,
-                        rawAOA: rawAOA
+                    // Lectura del Tareo (Hoja 1)
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    rawDataFiles.push({ 
+                        name: item.file.name, 
+                        category: item.category, 
+                        data: XLSX.utils.sheet_to_json(firstSheet, { defval: "" }), 
+                        rawAOA: XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" }) 
                     });
                 }
 
-                if (typeof consolidateData === 'function') {
-                    consolidateData();
-                } else {
-                    alert("❌ Error: No se encontró la función consolidateData.");
-                }
+                if (typeof consolidateData === 'function') consolidateData();
             } catch (err) {
-                console.error("Error al procesar archivos:", err);
-                if (statusText) {
-                    statusText.textContent = "Error en lectura de archivos";
-                    statusText.className = "text-red-500 font-bold text-xs uppercase tracking-widest";
-                }
-                alert("❌ Fallo al procesar los archivos Excel: " + (err.message || err));
+                console.error("Error leyendo Excel:", err);
             } finally {
                 if (btnProcess) btnProcess.disabled = false;
             }
@@ -2503,6 +2717,9 @@ window.iniciarNuevoReporte = function() {
 
             buildPartidaTabsAndSelect();
             switchMainView('RO'); // Empieza directo en la pestaña RO
+            
+            // 🔥 AUTO-APRENDIZAJE: Sincronizar catálogo al procesar un nuevo Excel
+            if (typeof window.sincronizarCatalogoPartidas === 'function') window.sincronizarCatalogoPartidas();
         }
 
         // Lógica de Pestañas Activas y Botón IA
@@ -4186,61 +4403,74 @@ window.iniciarNuevoReporte = function() {
                 btnExport.disabled = false;
             }
         }
-// ==========================================
-        // MOTOR EXPERTO DE AUDITORÍA IA (2 PASOS)
         // ==========================================
-        const auditRules = [
-            { keywords: ['ACERO CORRUGADO', 'FIERRO CORRUGADO', 'ALAMBRE NEGRO'], targetMatch: 'ACERO' },
-            { keywords: ['COLOCACIÓN DE ACERO'], targetMatch: 'ACERO MANO DE OBRA' },
-            { keywords: ['GUANTES DE LATEX'], targetMatch: 'LIMPIEZA PERMANENTE Y ELIMINACION DE EXCEDENTES' },
-            { keywords: ['CEMENTO', 'MEZCLA', 'AGREGADO', 'HORMIGON'], targetMatch: 'CONCRETO ARMADO' },
-            { keywords: ['TRIPLAY', 'MADERA TORNILLO', 'PUNTAL', 'DESENCOFRANTE', 'CLAVOS', 'FENOLICO'], targetMatch: 'ENCOFRADO' },
-            { keywords: ['LADRILLO', 'MORTERO', 'KING KONG', 'PANDERETA'], targetMatch: 'ALBAÑILERIA' },
-            { keywords: ['PINTURA', 'LATEX', 'IMPRIMANTE', 'RODILLO'], targetMatch: 'PINTURA' },
-            { keywords: ['CERAMICO', 'PORCELANATO', 'PEGAMENTO', 'FRAGUA'], targetMatch: 'PISO' },
-            { keywords: ['CASCO', 'GUANTES', 'BOTAS', 'LENTES', 'ARNES', 'EPP'], targetMatch: 'SEGURIDAD' }
-        ];
-
-        function detectInconsistencies() {
+        // MOTOR EXPERTO DE AUDITORÍA IA (CONECTADO A LA NUBE)
+        // ==========================================
+        window.detectInconsistencies = async function() {
             if (consolidatedRows.length === 0) return alert("No hay datos cargados.");
             
-            let suggestCount = 0;
+            const btnAudit = document.getElementById('btnAuditDetect');
+            const originalHTML = btnAudit.innerHTML;
+            btnAudit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Analizando en la nube...';
+            btnAudit.disabled = true;
 
-            consolidatedRows.forEach(row => {
-                row._SuggestedPartida = null; // Limpiar sugerencias previas
+            try {
+                // 1. Descargar las reglas maestras de Firebase
+                let auditRules = [];
+                const docRef = window.fsDoc(window.firebaseDb, "configuracion", "auditoria");
+                const snap = await window.fsGetDoc(docRef);
                 
-                let recursoText = String(getConsolidadoRowValue(row, 'Recurso')).toUpperCase();
-                let currentPartida = row._PartidaActual;
-                let suggestedPartida = null;
+                if (snap.exists() && snap.data().reglas) {
+                    auditRules = snap.data().reglas;
+                }
+                
+                if (auditRules.length === 0) {
+                    alert("⚠️ El cerebro de la IA está vacío. Ve a 'Ajustes > Reglas IA' para enseñarle a clasificar.");
+                    return;
+                }
 
-                for (let rule of auditRules) {
-                    if (rule.keywords.some(kw => recursoText.includes(kw))) {
-                        // Buscar una partida destino real que haga match
-                        suggestedPartida = partidaListKeys.find(p => p.toUpperCase().includes(rule.targetMatch));
-                        if (suggestedPartida) break;
+                let suggestCount = 0;
+
+                // 2. Aplicar las reglas descargadas
+                consolidatedRows.forEach(row => {
+                    row._SuggestedPartida = null; 
+                    
+                    let recursoText = String(getConsolidadoRowValue(row, 'Recurso')).toUpperCase();
+                    let currentPartida = row._PartidaActual;
+                    let suggestedPartida = null;
+
+                    for (let rule of auditRules) {
+                        if (rule.keywords.some(kw => recursoText.includes(kw))) {
+                            suggestedPartida = partidaListKeys.find(p => p.toUpperCase().includes(rule.targetMatch));
+                            if (suggestedPartida) break;
+                        }
                     }
+
+                    if (suggestedPartida && suggestedPartida !== currentPartida) {
+                        row._SuggestedPartida = suggestedPartida;
+                        suggestCount++;
+                    }
+                });
+
+                // 3. Mostrar resultados
+                if (suggestCount > 0) {
+                    btnAudit.classList.add('hidden');
+                    document.getElementById('auditActions').classList.remove('hidden');
+                    document.getElementById('auditCountBadge').textContent = suggestCount;
+                    buildPartidaTabsAndSelect();
+                    switchPartidaTab('ALL'); 
+                } else {
+                    alert("🤖 Todo en orden: La IA no encontró ítems mal cargados bajo las reglas actuales de la nube.");
                 }
 
-                if (suggestedPartida && suggestedPartida !== currentPartida) {
-                    row._SuggestedPartida = suggestedPartida;
-                    suggestCount++;
-                }
-            });
-
-            if (suggestCount > 0) {
-                document.getElementById('btnAuditDetect').classList.add('hidden');
-                document.getElementById('auditActions').classList.remove('hidden');
-                document.getElementById('auditCountBadge').textContent = suggestCount;
-                
-                // 🔄 RECONSTRUIR PESTAÑAS PARA QUE APAREZCAN LAS MORADAS
-                buildPartidaTabsAndSelect();
-
-                // Cambiar a la pestaña "ALL" para que el usuario vea todos los resaltados
-                switchPartidaTab('ALL'); 
-            } else {
-                alert("🤖 Todo en orden: La IA no encontró ítems mal cargados bajo las reglas actuales.");
+            } catch (error) {
+                console.error("Error conectando con la IA:", error);
+                alert("❌ Ocurrió un error de red al consultar la inteligencia artificial.");
+            } finally {
+                btnAudit.innerHTML = originalHTML;
+                btnAudit.disabled = false;
             }
-        }
+        };
 
         function applyAuditSuggestions() {
             if (typeof window.reasignacionesNube === 'undefined') window.reasignacionesNube = {};
@@ -4937,6 +5167,396 @@ window.iniciarNuevoReporte = function() {
                 btn.disabled = false;
             }
         };
+        // ==========================================
+        // LÓGICA DE PESTAÑAS Y ADMINISTRACIÓN EN AJUSTES
+        // ==========================================
+        window.cambiarTabAjustes = function(tab) {
+            const tabs = ['proyectos', 'usuarios', 'inicio', 'auditoria'];
+            
+            tabs.forEach(t => {
+                const nombreFormateado = t.charAt(0).toUpperCase() + t.slice(1);
+                const tabEl = document.getElementById('tab' + nombreFormateado);
+                const btnEl = document.getElementById('btnTab' + nombreFormateado);
+                
+                if (tabEl) tabEl.classList.add('hidden');
+                if (btnEl) btnEl.className = "text-center px-4 py-2.5 rounded-full font-bold text-[11px] uppercase tracking-widest border-2 border-slate-300 text-slate-500 hover:border-slate-400 hover:text-slate-700 transition cursor-pointer";
+            });
+
+            const activeTabName = tab.charAt(0).toUpperCase() + tab.slice(1);
+            const activeTab = document.getElementById('tab' + activeTabName);
+            const activeBtn = document.getElementById('btnTab' + activeTabName);
+
+            if (activeTab) activeTab.classList.remove('hidden');
+            if (activeBtn) activeBtn.className = "text-center px-4 py-2.5 rounded-full font-bold text-[11px] uppercase tracking-widest border-2 border-slate-900 text-slate-900 transition cursor-pointer shadow-sm";
+
+            if (tab === 'usuarios') window.cargarUsuariosAdmin();
+            if (tab === 'auditoria') {
+                window.cargarReglasAuditoriaAdmin();
+                // 🔥 FORZAR ACTUALIZACIÓN DEL DESPLEGABLE AL ABRIR LA PESTAÑA
+                if (typeof window.actualizarDropdownReglasIA === 'function') window.actualizarDropdownReglasIA();
+            }
+        };
+
+        // 🔥 NUEVA FUNCIÓN: Construye la lista desplegable en vivo
+        window.actualizarDropdownReglasIA = function() {
+            const selectTarget = document.getElementById('nuevaReglaTarget');
+            if (!selectTarget) return;
+            
+            let currentVal = selectTarget.value;
+            let opcionesUnicas = new Set();
+            
+            // 1. Agregar las reglas históricas (Para no romper ediciones)
+            if (window.memoriaReglasIA) {
+                window.memoriaReglasIA.forEach(r => opcionesUnicas.add(r.targetMatch));
+            }
+
+            // 2. Extraer de la RAM si hay un reporte abierto
+            let hayReporteAbierto = false;
+            if (typeof partidaListKeys !== 'undefined' && partidaListKeys.length > 0) {
+                partidaListKeys.forEach(p => {
+                    if (p !== "ALL" && p !== "OTRAS PARTIDAS") opcionesUnicas.add(p);
+                });
+                hayReporteAbierto = true;
+            }
+
+            // 3. Renderizar las opciones con alerta inteligente
+            selectTarget.innerHTML = '<option value="">-- Selecciona una Partida Destino --</option>';
+
+            if (!hayReporteAbierto) {
+                selectTarget.innerHTML += '<option disabled>⚠️ MEMORIA VACÍA: Abre o procesa un reporte RO primero para ver tu lista completa.</option>';
+                selectTarget.innerHTML += '<option disabled>────────────────────</option>';
+            }
+
+            Array.from(opcionesUnicas).sort().forEach(opt => {
+                let isSelected = (opt === currentVal) ? 'selected' : '';
+                selectTarget.innerHTML += `<option value="${opt}" ${isSelected}>${opt}</option>`;
+            });
+        };
+        // 1. CARGAR LISTA DE USUARIOS Y SUS PROYECTOS PERMITIDOS
+        window.cargarUsuariosAdmin = async function() {
+            const listaDiv = document.getElementById('listaUsuariosAdmin');
+            if (!listaDiv) return;
+
+            listaDiv.innerHTML = '<div class="text-sm text-slate-400 italic py-4"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Cargando usuarios desde la nube...</div>';
+
+            try {
+                // Obtener proyectos creados para armar los checkboxes
+                const proySnap = await window.fsGetDocs ? await window.fsGetDocs(window.fsCollection(window.firebaseDb, "proyectos")) : null;
+                let proyectosDisponibles = [];
+                
+                const proyRef = window.fsCollection(window.firebaseDb, "proyectos");
+                window.fsOnSnapshot(proyRef, async (snapshotProy) => {
+                    proyectosDisponibles = [];
+                    snapshotProy.forEach(doc => proyectosDisponibles.push(doc.data().nombre));
+
+                    // Escuchar colección de usuarios
+                    const userRef = window.fsCollection(window.firebaseDb, "usuarios");
+                    window.fsOnSnapshot(userRef, (snapshotUser) => {
+                        listaDiv.innerHTML = '';
+                        
+                        snapshotUser.forEach(docUser => {
+                            const u = docUser.data();
+                            const isRoot = u.email === 'kalderete@marcan.com.pe' || u.rol === 'root';
+                            const asignados = u.proyectosAsignados || [];
+
+                            let htmlChecks = '';
+                            proyectosDisponibles.forEach(pNombre => {
+                                const checked = (isRoot || asignados.includes('TODOS') || asignados.includes(pNombre)) ? 'checked' : '';
+                                const disabled = isRoot ? 'disabled' : '';
+                                htmlChecks += `
+                                    <label class="inline-flex items-center gap-1.5 bg-slate-100 px-3 py-1 rounded-full text-xs font-bold text-slate-700 cursor-pointer hover:bg-slate-200 transition">
+                                        <input type="checkbox" value="${pNombre}" ${checked} ${disabled} onchange="window.guardarPermisosUsuario('${u.email}', this)" class="rounded text-indigo-600 focus:ring-indigo-500">
+                                        ${pNombre}
+                                    </label>
+                                `;
+                            });
+
+                            listaDiv.innerHTML += `
+                                <div class="p-4 border border-slate-200 rounded-2xl bg-slate-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                    <div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="font-extrabold text-slate-800 text-sm">${u.nombre || u.email}</span>
+                                            ${isRoot ? '<span class="bg-indigo-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full">ADMIN ROOT</span>' : ''}
+                                        </div>
+                                        <p class="text-xs text-slate-400 font-mono">${u.email}</p>
+                                    </div>
+                                    <div class="flex flex-wrap gap-2">
+                                        ${isRoot ? '<span class="text-xs font-bold text-indigo-600 italic">Acceso Total a todos los proyectos</span>' : htmlChecks}
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    });
+                });
+            } catch (e) {
+                console.error("Error al cargar usuarios:", e);
+                listaDiv.innerHTML = '<div class="text-sm text-red-500 font-bold py-2">Error al cargar lista de usuarios.</div>';
+            }
+        };
+        // 🔥 NUEVAS FUNCIONES PARA REGLAS IA
+        window.cargarReglasAuditoriaAdmin = function() {
+            const listaDiv = document.getElementById('listaReglasAdmin');
+            if (listaDiv) listaDiv.innerHTML = '<div class="text-sm text-slate-400 italic py-4"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Descargando inteligencia desde la nube...</div>';
+
+            const docRef = window.fsDoc(window.firebaseDb, "configuracion", "auditoria");
+            if (window.auditoriaUnsubscribe) window.auditoriaUnsubscribe();
+            
+            window.auditoriaUnsubscribe = window.fsOnSnapshot(docRef, (docSnap) => {
+                let reglas = [];
+                let catalogoNube = []; // 🔥 NUEVA: Memoria Virtual Permanente
+                
+                if (docSnap.exists()) {
+                    if (docSnap.data().reglas) reglas = docSnap.data().reglas;
+                    // Descargamos el catálogo histórico de partidas
+                    if (docSnap.data().catalogoPartidas) catalogoNube = docSnap.data().catalogoPartidas;
+                }
+                
+                window.memoriaReglasIA = reglas;
+                window.memoriaCatalogoPartidas = catalogoNube;
+
+                if (listaDiv) {
+                    listaDiv.innerHTML = '';
+                    if (reglas.length === 0) {
+                        listaDiv.innerHTML = '<div class="text-slate-400 italic p-4 text-center border border-dashed border-slate-300 rounded-xl">No hay reglas configuradas. Comienza a entrenar el sistema.</div>';
+                    } else {
+                        reglas.forEach((regla, index) => {
+                            const tags = regla.keywords.map(kw => `<span class="bg-white border border-purple-200 text-purple-700 px-2 py-1 rounded text-[10px] font-bold shadow-sm">${kw}</span>`).join('');
+                            listaDiv.innerHTML += `
+                                <div class="flex items-center justify-between bg-white border border-slate-200 p-4 rounded-xl shadow-sm hover:border-purple-300 transition group">
+                                    <div class="flex flex-col gap-2 w-full">
+                                        <div class="flex items-center gap-2">
+                                            <i class="fa-solid fa-arrow-turn-down-right text-slate-300"></i>
+                                            <span class="text-xs font-black text-slate-700 tracking-wide uppercase">${regla.targetMatch}</span>
+                                        </div>
+                                        <div class="flex flex-wrap gap-1.5 pl-6">
+                                            ${tags}
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        <button onclick="window.editarReglaAuditoria(${index})" class="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition cursor-pointer" title="Editar regla">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </button>
+                                        <button onclick="window.eliminarReglaAuditoria(${index})" class="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-white hover:bg-red-500 transition cursor-pointer" title="Eliminar regla">
+                                            <i class="fa-solid fa-trash-can"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+                }
+
+                if (typeof window.actualizarDropdownReglasIA === 'function') window.actualizarDropdownReglasIA();
+            });
+        };
+
+        window.actualizarDropdownReglasIA = function() {
+            const selectTarget = document.getElementById('nuevaReglaTarget');
+            if (!selectTarget) return;
+            
+            let currentVal = selectTarget.value;
+            let opcionesUnicas = new Set();
+            
+            // 1. Agregar las reglas históricas
+            if (window.memoriaReglasIA) {
+                window.memoriaReglasIA.forEach(r => opcionesUnicas.add(r.targetMatch));
+            }
+
+            // 2. 🔥 Agregar el Catálogo Virtual Permanente (Siempre disponible)
+            if (window.memoriaCatalogoPartidas) {
+                window.memoriaCatalogoPartidas.forEach(p => opcionesUnicas.add(p));
+            }
+
+            // 3. Agregar lo que haya en la RAM (Si acabas de procesar un Excel con partidas nuevas)
+            if (typeof partidaListKeys !== 'undefined' && partidaListKeys.length > 0) {
+                partidaListKeys.forEach(p => {
+                    if (p !== "ALL" && p !== "OTRAS PARTIDAS") opcionesUnicas.add(p);
+                });
+            }
+
+            selectTarget.innerHTML = '<option value="">-- Selecciona una Partida Destino --</option>';
+
+            if (opcionesUnicas.size === 0) {
+                selectTarget.innerHTML += '<option disabled>⚠️ MEMORIA VACÍA: Guarda tu primer reporte para llenar el sistema.</option>';
+                selectTarget.innerHTML += '<option disabled>────────────────────</option>';
+            }
+
+            Array.from(opcionesUnicas).sort().forEach(opt => {
+                let isSelected = (opt === currentVal) ? 'selected' : '';
+                selectTarget.innerHTML += `<option value="${opt}" ${isSelected}>${opt}</option>`;
+            });
+        };
+
+        // 🔥 NUEVA FUNCIÓN: Entrena a la nube silenciosamente
+        window.sincronizarCatalogoPartidas = async function() {
+            if (typeof partidaListKeys === 'undefined' || partidaListKeys.length === 0) return;
+            try {
+                const docRef = window.fsDoc(window.firebaseDb, "configuracion", "auditoria");
+                const snap = await window.fsGetDoc(docRef);
+                
+                let catalogoActual = snap.exists() && snap.data().catalogoPartidas ? snap.data().catalogoPartidas : [];
+                let nuevoCatalogo = new Set(catalogoActual);
+                
+                partidaListKeys.forEach(p => {
+                    if (p !== "ALL" && p !== "OTRAS PARTIDAS") nuevoCatalogo.add(p);
+                });
+
+                let catalogoFinal = Array.from(nuevoCatalogo);
+                
+                // Solo sube datos a Firebase si descubrió partidas nuevas que no conocía
+                if (catalogoFinal.length > catalogoActual.length) {
+                    await window.fsSetDoc(docRef, { catalogoPartidas: catalogoFinal }, { merge: true });
+                }
+            } catch (e) {
+                console.error("Error al sincronizar catálogo virtual:", e);
+            }
+        };
+
+        window.editarReglaAuditoria = function(index) {
+            const regla = window.memoriaReglasIA[index];
+            if (!regla) return;
+            
+            // Subir los datos al formulario
+            document.getElementById('nuevaReglaKeywords').value = regla.keywords.join(', ');
+            document.getElementById('nuevaReglaTarget').value = regla.targetMatch;
+            
+            // Guardar el índice que estamos editando en memoria
+            window.reglaIndexEdicion = index;
+            
+            // Cambiar aspecto del botón
+            const btn = document.querySelector('#tabAuditoria button[onclick="window.guardarNuevaReglaAuditoria()"]');
+            if (btn) {
+                btn.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Actualizar Regla';
+                btn.className = "w-full lg:w-auto bg-amber-500 hover:bg-amber-600 text-white font-bold px-6 py-2.5 rounded-lg shadow-md transition cursor-pointer flex items-center justify-center gap-2";
+            }
+            
+            // Hacer scroll hacia arriba suavemente
+            document.getElementById('tabAuditoria').scrollIntoView({behavior: 'smooth'});
+        };
+
+        window.guardarNuevaReglaAuditoria = async function() {
+            const inputKw = document.getElementById('nuevaReglaKeywords');
+            const inputTarget = document.getElementById('nuevaReglaTarget');
+            const btn = document.querySelector('#tabAuditoria button[onclick="window.guardarNuevaReglaAuditoria()"]');
+            
+            const kwCrudos = inputKw.value;
+            const target = inputTarget.value.trim().toUpperCase();
+
+            if (!kwCrudos || !target) return alert("⚠️ Llena ambos campos (Palabras Clave y Partida Destino).");
+
+            const arrayKeywords = kwCrudos.split(',').map(k => k.trim().toUpperCase()).filter(k => k.length > 2);
+            if (arrayKeywords.length === 0) return alert("⚠️ Escribe palabras clave válidas.");
+
+            try {
+                let reglasActuales = window.memoriaReglasIA ? [...window.memoriaReglasIA] : [];
+                
+                // Si estamos editando, reemplazamos. Si no, agregamos una nueva.
+                if (typeof window.reglaIndexEdicion === 'number' && window.reglaIndexEdicion >= 0) {
+                    reglasActuales[window.reglaIndexEdicion] = { keywords: arrayKeywords, targetMatch: target };
+                } else {
+                    reglasActuales.push({ keywords: arrayKeywords, targetMatch: target });
+                }
+
+                const docRef = window.fsDoc(window.firebaseDb, "configuracion", "auditoria");
+                await window.fsSetDoc(docRef, { reglas: reglasActuales }, { merge: true });
+
+                // Resetear el formulario y el botón a su estado original
+                inputKw.value = '';
+                inputTarget.value = '';
+                window.reglaIndexEdicion = null;
+                
+                if (btn) {
+                    btn.innerHTML = '<i class="fa-solid fa-plus"></i> Añadir Regla';
+                    btn.className = "w-full lg:w-auto bg-purple-600 hover:bg-purple-700 text-white font-bold px-6 py-2.5 rounded-lg shadow-md transition cursor-pointer flex items-center justify-center gap-2";
+                }
+            } catch (e) {
+                console.error(e);
+                alert("❌ Error al guardar la regla.");
+            }
+        };
+
+        window.eliminarReglaAuditoria = async function(index) {
+            if (!confirm("⚠️ ¿Eliminar esta regla de IA?")) return;
+            try {
+                let reglasActuales = [...window.memoriaReglasIA];
+                reglasActuales.splice(index, 1);
+                
+                const docRef = window.fsDoc(window.firebaseDb, "configuracion", "auditoria");
+                await window.fsSetDoc(docRef, { reglas: reglasActuales }, { merge: true });
+                
+                // Si eliminó la regla que estaba editando, resetear el formulario
+                if (window.reglaIndexEdicion === index) {
+                    document.getElementById('nuevaReglaKeywords').value = '';
+                    document.getElementById('nuevaReglaTarget').value = '';
+                    window.reglaIndexEdicion = null;
+                    const btn = document.querySelector('#tabAuditoria button[onclick="window.guardarNuevaReglaAuditoria()"]');
+                    if (btn) {
+                        btn.innerHTML = '<i class="fa-solid fa-plus"></i> Añadir Regla';
+                        btn.className = "w-full lg:w-auto bg-purple-600 hover:bg-purple-700 text-white font-bold px-6 py-2.5 rounded-lg shadow-md transition cursor-pointer flex items-center justify-center gap-2";
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+                alert("❌ Error al eliminar la regla.");
+            }
+        };
+
+        // 2. GUARDAR PERMISOS DE USUARIO EN TIEMPO REAL
+        window.guardarPermisosUsuario = async function(emailUser, checkbox) {
+            try {
+                const uRef = window.fsDoc(window.firebaseDb, "usuarios", emailUser);
+                const uSnap = await window.fsGetDoc(uRef);
+                let asignados = uSnap.exists() && uSnap.data().proyectosAsignados ? [...uSnap.data().proyectosAsignados] : [];
+
+                // Quitar 'TODOS' si existe para manejar lista explícita
+                asignados = asignados.filter(a => a !== 'TODOS');
+
+                if (checkbox.checked) {
+                    if (!asignados.includes(checkbox.value)) asignados.push(checkbox.value);
+                } else {
+                    asignados = asignados.filter(p => p !== checkbox.value);
+                }
+
+                await window.fsSetDoc(uRef, { proyectosAsignados: asignados }, { merge: true });
+            } catch (e) {
+                console.error("Error al guardar permisos:", e);
+                alert("❌ No se pudieron actualizar los permisos del usuario.");
+            }
+        };
+
+        // 3. ACTUALIZAR FONDO DE LA PANTALLA DE INICIO
+        window.guardarFondoInicio = async function() {
+            const input = document.getElementById('inputFondoInicio');
+            const btn = document.getElementById('btnSubirFondo');
+
+            if (!input || input.files.length === 0) {
+                return alert("⚠️ Por favor selecciona una imagen primero.");
+            }
+
+            const archivo = input.files[0];
+            const txtOriginal = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Subiendo imagen...';
+            btn.disabled = true;
+
+            try {
+                const storageRef = window.fsRef(window.firebaseStorage, `configuracion/fondo_inicio.${archivo.name.split('.').pop()}`);
+                await window.fsUploadBytes(storageRef, archivo);
+                const imgUrl = await window.fsGetDownloadURL(storageRef);
+
+                // Guardar en la memoria local y base de datos
+                localStorage.setItem('s10_landing_bg', imgUrl);
+                const configRef = window.fsDoc(window.firebaseDb, "configuracion", "general");
+                await window.fsSetDoc(configRef, { fondoInicioUrl: imgUrl }, { merge: true });
+
+                alert("✅ ¡El fondo de la pantalla de inicio se actualizó con éxito!");
+            } catch (e) {
+                console.error("Error al subir fondo:", e);
+                alert("❌ Ocurrió un error al intentar subir la imagen.");
+            } finally {
+                btn.innerHTML = txtOriginal;
+                btn.disabled = false;
+            }
+        };
         // ---------------------------------------------------------
         // LÓGICA DE NAVEGACIÓN GLOBAL (BLINDADA)
         // ---------------------------------------------------------
@@ -4950,6 +5570,10 @@ window.iniciarNuevoReporte = function() {
             
             const mesSel = document.getElementById('mesSelectContainer');
             if (mesSel) mesSel.classList.add('hidden');
+            
+            // 🔥 CIERRE FORZOSO DE LA VISTA PREVIA
+            const vistaPrevia = document.getElementById('vistaPreviaExportacion');
+            if (vistaPrevia) vistaPrevia.classList.add('hidden');
             
             document.getElementById('vistaAjustes').classList.remove('hidden');
             if(typeof window.cambiarTabAjustes === 'function') window.cambiarTabAjustes('proyectos');
@@ -4966,16 +5590,18 @@ window.iniciarNuevoReporte = function() {
             const mesSel = document.getElementById('mesSelectContainer');
             if (mesSel) mesSel.classList.add('hidden');
             
+            // 🔥 CIERRE FORZOSO DE LA VISTA PREVIA
+            const vistaPrevia = document.getElementById('vistaPreviaExportacion');
+            if (vistaPrevia) vistaPrevia.classList.add('hidden');
+            
             document.getElementById('lobbyProyectos').classList.remove('hidden');
         };
 
-        // 🔥 NUEVA FUNCIÓN: Botón de Retroceso Inteligente
+        // 🔥 Botón de Retroceso Inteligente
         window.navegarAtras = function(pushHistory = true) {
             const lobbyModulos = document.getElementById('lobbyModulosProyecto');
             
-            // Si las 2 tarjetas están ocultas, significa que estamos DENTRO de un módulo (RO o Tareo)
             if (lobbyModulos && lobbyModulos.classList.contains('hidden')) {
-                // Apagamos los módulos
                 const modRO = document.getElementById('moduloProyectoRO');
                 if (modRO) modRO.classList.add('hidden');
                 const modTareo = document.getElementById('moduloProyectoTareos');
@@ -4983,11 +5609,9 @@ window.iniciarNuevoReporte = function() {
                 const btnNuevoRO = document.getElementById('btnNuevoReporteRO');
                 if (btnNuevoRO) btnNuevoRO.classList.add('hidden');
                 
-                // Prendemos las 2 tarjetas
                 lobbyModulos.classList.remove('hidden');
                 if (pushHistory) history.pushState({ vista: 'historial', proyecto: window.proyectoActualGlobal }, '', '#historial');
             } else {
-                // Si ya estamos viendo las 2 tarjetas, retroceder nos lleva al Lobby Principal
                 window.volverAlLobby(pushHistory);
             }
         };
@@ -4997,7 +5621,6 @@ window.iniciarNuevoReporte = function() {
             window.proyectoActualGlobal = nombreProyecto;
             if (pushHistory) history.pushState({ vista: 'historial', proyecto: nombreProyecto }, '', '#historial');
             
-            // Colocar el nombre en la barra superior y bloquearlo para que sea una etiqueta
             const selectProyecto = document.getElementById('proyectoSelect');
             if(selectProyecto) {
                 selectProyecto.value = nombreProyecto;
@@ -5007,14 +5630,15 @@ window.iniciarNuevoReporte = function() {
             document.getElementById('lobbyProyectos').classList.add('hidden');
             document.getElementById('vistaAjustes').classList.add('hidden');
             document.getElementById('zonaCargaArchivos').classList.add('hidden');
-            
-            // 🔥 LA MAGIA: Hacer visible el nombre en la barra negra superior
             document.getElementById('selectorHeaderContainer').classList.remove('hidden');
             
             const mesSel = document.getElementById('mesSelectContainer');
             if (mesSel) mesSel.classList.add('hidden');
             
-            // Apagado forzoso de módulos
+            // 🔥 CIERRE FORZOSO DE LA VISTA PREVIA
+            const vistaPrevia = document.getElementById('vistaPreviaExportacion');
+            if (vistaPrevia) vistaPrevia.classList.add('hidden');
+            
             const modRO = document.getElementById('moduloProyectoRO');
             if (modRO) modRO.classList.add('hidden');
             const modTareo = document.getElementById('moduloProyectoTareos');
@@ -5022,7 +5646,6 @@ window.iniciarNuevoReporte = function() {
             const btnNuevoRO = document.getElementById('btnNuevoReporteRO');
             if (btnNuevoRO) btnNuevoRO.classList.add('hidden');
             
-            // Mostrar solo las 2 Tarjetas
             document.getElementById('vistaHistorial').classList.remove('hidden');
             const lobbyModulos = document.getElementById('lobbyModulosProyecto');
             if (lobbyModulos) lobbyModulos.classList.remove('hidden');
@@ -5038,6 +5661,10 @@ window.iniciarNuevoReporte = function() {
             const modRO = document.getElementById('moduloProyectoRO');
             const modTareo = document.getElementById('moduloProyectoTareos');
             const btnNuevoRO = document.getElementById('btnNuevoReporteRO');
+            
+            // 🔥 CIERRE FORZOSO DE LA VISTA PREVIA (Por si cambia de pestaña directo)
+            const vistaPrevia = document.getElementById('vistaPreviaExportacion');
+            if (vistaPrevia) vistaPrevia.classList.add('hidden');
 
             if (modulo === 'RO') {
                 if (pushHistory) history.pushState({ vista: 'modulo_ro', proyecto: window.proyectoActualGlobal }, '', '#modulo-ro');
@@ -5049,19 +5676,43 @@ window.iniciarNuevoReporte = function() {
                 if (modTareo) modTareo.classList.remove('hidden');
                 if (modRO) modRO.classList.add('hidden');
                 if (btnNuevoRO) btnNuevoRO.classList.add('hidden');
+
+                // Disparar la carga del Historial automáticamente al entrar
+                document.getElementById('historialTareos').classList.remove('hidden');
+                document.getElementById('zonaCargaTareo').classList.add('hidden');
+                if(typeof window.cargarHistorialTareos === 'function') window.cargarHistorialTareos(window.proyectoActualGlobal);
             }
         };
 
         window.iniciarNuevoReporte = function(pushHistory = true) {
-            window.roProjections = {}; window.proyeccionesNube = {}; localStorage.removeItem('s10_ro_projections');
-            if (window.semanasUnsubscribe) { window.semanasUnsubscribe(); window.semanasUnsubscribe = null; }
+            // 🔥 MARCADOR CLAVE: Aísla las proyecciones para que nazcan en cero
+            window.esNuevoReporte = true; 
+            
+            // Desconectar escuchadores en vivo anteriores
+            if (window.semanasUnsubscribe) { 
+                window.semanasUnsubscribe(); 
+                window.semanasUnsubscribe = null; 
+            }
+
+            // Exterminio total de variables en memoria
+            window.currentPeriodo = null;
+            window.roProjections = {}; 
+            window.proyeccionesNube = {}; 
+            localStorage.removeItem('s10_ro_projections');
+
+            if (typeof resetApp === 'function') resetApp();
+
             if (pushHistory) history.pushState({ vista: 'reporte_nuevo' }, '', '#nuevo-reporte');
             
             document.getElementById('vistaHistorial').classList.add('hidden');
             document.getElementById('zonaCargaArchivos').classList.remove('hidden');
-            const uploadSec = document.getElementById('uploadSection'); if (uploadSec) uploadSec.classList.remove('hidden');
-            const metricsSec = document.getElementById('metricsSection'); if (metricsSec) metricsSec.classList.add('hidden');
-            const resultSec = document.getElementById('resultSection'); if (resultSec) resultSec.classList.add('hidden');
+            
+            const uploadSec = document.getElementById('uploadSection'); 
+            if (uploadSec) uploadSec.classList.remove('hidden');
+            const metricsSec = document.getElementById('metricsSection'); 
+            if (metricsSec) metricsSec.classList.add('hidden');
+            const resultSec = document.getElementById('resultSection'); 
+            if (resultSec) resultSec.classList.add('hidden');
             
             document.getElementById('btnGuardarNube').classList.remove('hidden');
             document.getElementById('selectorHeaderContainer').classList.remove('hidden');
@@ -5073,7 +5724,10 @@ window.iniciarNuevoReporte = function() {
                 inputMes.disabled = false; inputMes.value = ''; 
                 inputMes.className = "bg-transparent text-slate-400 text-sm font-bold hover:text-white transition focus:outline-none cursor-pointer [color-scheme:dark] text-center";
             }
-            const proySel = document.getElementById('proyectoSelect'); if (proySel) proySel.disabled = false;
+            const proySel = document.getElementById('proyectoSelect'); 
+            if (proySel) proySel.disabled = false;
+
+            if (typeof switchMainView === 'function') switchMainView('RO');
         };
 
         window.volverAlHistorialDesdeApp = function(pushHistory = true) {
@@ -5157,21 +5811,35 @@ window.iniciarNuevoReporte = function() {
         };
 
         window.subirCTCaFirebase = async function() {
+            // 🔥 Si estamos en "Nuevo Reporte", NO sincronizar con históricos de Firebase
+            // Todo se guardará de forma limpia y única al presionar "GUARDAR RO"
+            if (window.esNuevoReporte) return;
+
             let pSel = document.getElementById('proyectoSelect');
             let proj = (pSel && pSel.value) ? pSel.value : window.proyectoActualGlobal;
             
-            let per = null;
-            let statusStr = document.getElementById('statusText') ? document.getElementById('statusText').textContent : '';
-            let match = statusStr.match(/\((.*?)\)/); 
-            if (match) per = match[1];
-            if (!per) per = document.getElementById('mesSelect') ? document.getElementById('mesSelect').value : window.currentPeriodo;
+            let mesInput = document.getElementById('mesSelect');
+            let per = mesInput && mesInput.value ? mesInput.value : window.currentPeriodo;
 
             if (!proj || !per) return;
 
             try {
+                const nuevosTotales = window.calcularTotalesGlobalesRO();
+                let elPartidas = document.getElementById('metricPartidas');
+                let elFilas = document.getElementById('metricRegistros');
+
                 const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proj}/reportes/${per}`);
-                await window.fsSetDoc(docRef, { proyecciones: roProjections }, { merge: true });
-            } catch (e) { console.error("Error al sincronizar:", e); }
+                
+                await window.fsSetDoc(docRef, { 
+                    proyecciones: window.proyeccionesNube || window.roProjections || {},
+                    estadisticas: {
+                        resumen: nuevosTotales,
+                        partidas: elPartidas ? elPartidas.textContent : 0,
+                        filas: elFilas ? elFilas.textContent : 0
+                    }
+                }, { merge: true });
+                
+            } catch (e) { console.error("Error al sincronizar en vivo:", e); }
         };
 
         // Escuchador blindado
@@ -5237,6 +5905,64 @@ window.iniciarNuevoReporte = function() {
         let archivoPadronS10 = null;
         let archivosTareoCampo = [];
         let numeroSemanaTareo = null;
+
+        // ==========================================
+        // NAVEGACIÓN: ABRIR NUEVO TAREO
+        // ==========================================
+        window.iniciarNuevoTareo = function() {
+            // 1. Ocultar historial y mostrar zona de carga
+            document.getElementById('historialTareos').classList.add('hidden');
+            document.getElementById('zonaCargaTareo').classList.remove('hidden');
+
+            // 2. Limpiar memoria global
+            archivoPadronS10 = null;
+            archivosTareoCampo = [];
+            numeroSemanaTareo = null;
+            window.semanaActualTareo = null;
+
+            // 3. Resetear fechas y badges
+            document.getElementById('fechaInicioTareo').value = '';
+            document.getElementById('fechaFinTareo').value = '';
+            document.getElementById('infoSemanaTareo').classList.add('hidden');
+
+            // 4. Resetear inputs de archivos y ocultar checks verdes
+            document.getElementById('fileS10Padron').value = '';
+            document.getElementById('fileTareosCampo').value = '';
+            document.getElementById('statusPadron').classList.add('hidden');
+            document.getElementById('statusTareos').classList.add('hidden');
+
+            // 5. Bloquear botón de procesamiento hasta que se suba todo
+            const btnProcesar = document.getElementById('btnProcesarTareo');
+            if (btnProcesar) {
+                btnProcesar.classList.add('opacity-50', 'cursor-not-allowed');
+                btnProcesar.classList.remove('cursor-pointer', 'hover:bg-emerald-600');
+            }
+
+            // 6. Restaurar el panel derecho de resolución al estado "Esperando"
+            const zonaRes = document.getElementById('zonaResolucionTareo');
+            if (zonaRes) {
+                zonaRes.innerHTML = `
+                    <div class="w-16 h-16 bg-white text-slate-300 rounded-full flex items-center justify-center mb-4 shadow-sm">
+                        <i class="fa-solid fa-network-wired text-2xl"></i>
+                    </div>
+                    <h4 class="text-lg font-extrabold text-slate-700 mb-1">Esperando Archivos</h4>
+                    <p class="text-xs text-slate-500 max-w-md">Sube el Padrón Oficial y los reportes de campo. El sistema cruzará los nombres y partidas de forma automática, y te mostrará aquí los que necesiten emparejamiento manual.</p>
+                `;
+            }
+
+            // 7. Restaurar estructura de columnas
+            const colIzquierda = btnProcesar ? btnProcesar.closest('.lg\\:col-span-1') : null;
+            const colDerecha = zonaRes ? zonaRes.closest('.lg\\:col-span-3, .lg\\:col-span-2') : null;
+            if (colIzquierda) colIzquierda.classList.remove('hidden');
+            if (colDerecha) {
+                colDerecha.classList.remove('lg:col-span-3');
+                colDerecha.classList.add('lg:col-span-2');
+            }
+            
+            // Ocultar vista previa si estuviera abierta
+            const vistaPrevia = document.getElementById('vistaPreviaExportacion');
+            if(vistaPrevia) vistaPrevia.classList.add('hidden');
+        };
 
         // Escuchadores de Fechas
         document.getElementById('fechaInicioTareo')?.addEventListener('change', actualizarSemana);
@@ -5371,6 +6097,8 @@ window.iniciarNuevoReporte = function() {
                     const jsonData = XLSX.utils.sheet_to_json(hoja, { header: 1 });
 
                     if (nombreUpper === 'ACTIVIDAD') {
+                        window.hojaActividadesCruda = XLSX.utils.sheet_to_json(hoja, { header: "A", defval: "" });
+
                         jsonData.forEach(row => {
                             if (row && row[3] && String(row[3]).trim() !== '') {
                                 const val = String(row[3]).trim();
@@ -5380,27 +6108,24 @@ window.iniciarNuevoReporte = function() {
                         window.catalogoPartidasS10.sort();
                     }
                     else if (nombreUpper === 'PROYECTO') {
-                        // 🔥 TRUCO: header: "A" fuerza a leer usando las letras reales del Excel
                         const rawDataProyecto = XLSX.utils.sheet_to_json(hoja, { header: "A", defval: "" });
                         
                         rawDataProyecto.forEach(row => {
-                            // Vamos directamente por la columna "D"
                             let val = String(row["D"] || "").trim();
-                            
-                            // Plan B de respaldo: Si D está vacía, atrapamos la "C"
                             if (val === "") val = String(row["C"] || "").trim();
 
-                            // Si tiene texto válido, lo guardamos
                             if (val !== "" && val.length > 3 && !window.proyectosS10.includes(val)) {
                                 window.proyectosS10.push(val);
                             }
                         });
                     }
                     else if (nombreUpper === 'TIPOHORA') {
-                        jsonData.forEach(row => {
-                            if (row && row[3] && String(row[3]).trim() !== '') {
-                                const val = String(row[3]).trim();
-                                if (!window.conceptosS10.includes(val)) window.conceptosS10.push(val);
+                        const rawDataConcepto = XLSX.utils.sheet_to_json(hoja, { header: "A", defval: "" });
+                        rawDataConcepto.forEach(row => {
+                            let val = String(row["D"] || "").trim();
+                            if (val === "") val = String(row["C"] || "").trim(); // Respaldo
+                            if (val !== "" && val.length > 2 && !window.conceptosS10.includes(val)) {
+                                window.conceptosS10.push(val);
                             }
                         });
                     }
@@ -5462,15 +6187,22 @@ window.iniciarNuevoReporte = function() {
                         
                         // 🔥 1. EXTRAER NOMBRES DE LAS ACTIVIDADES
                         for(let j = colActividadesStart; j < maxCols; j++) {
-                            const part1 = rawHeader_Row1[j] ? String(rawHeader_Row1[j]).trim() : '';
-                            const part2 = rawHeader_Row2[j] ? String(rawHeader_Row2[j]).trim() : '';
+                            let part1 = rawHeader_Row1[j] ? String(rawHeader_Row1[j]).trim() : '';
+                            let part2 = rawHeader_Row2[j] ? String(rawHeader_Row2[j]).trim() : '';
+                            
+                            // 🧠 FILTRO ANTI-NÚMEROS
+                            const isPuroNumero = (str) => /^[\d\s\.\,]+$/.test(str);
+                            
+                            if (isPuroNumero(part1)) part1 = '';
+                            if (isPuroNumero(part2)) part2 = '';
+
                             const fullActivityName = `${part1} ${part2}`.trim();
                             const nameUpper = fullActivityName.toUpperCase();
                             
-                            // Filtro de validez para ignorar columnas vacías, de "Totales" o "Descripción"
+                            // 🧠 FILTRO ANTI-DUPLICADOS Y COLUMNAS DE SUMATORIA
                             if (fullActivityName.length > 2 
-                                && fullActivityName !== 'undefined'
                                 && !nameUpper.includes('TOTAL')
+                                && !nameUpper.includes('SUMA')
                                 && !nameUpper.includes('DESCRIP')) {
                                 
                                 actividadesColumnas[j] = fullActivityName;
@@ -5490,8 +6222,7 @@ window.iniciarNuevoReporte = function() {
                             const nombreCampoVal = String(row[colNombreIdx]).trim().toUpperCase();
                             const category = row[colActividadesStart - 1] ? String(row[colActividadesStart - 1]).trim().toUpperCase() : ''; 
                             
-                            // Saltar filas que sean títulos de agrupadores (ej: "ALMACÉN / CONTROL...")
-                            // Identificamos que es un agrupador si tiene slashes "/" y no tiene horas reportadas.
+                            // Saltar filas que sean títulos de agrupadores
                             let tieneHoras = false;
                             Object.keys(actividadesColumnas).forEach(colIdx => {
                                 if (parseFloat(row[colIdx]) > 0) tieneHoras = true;
@@ -5508,7 +6239,6 @@ window.iniciarNuevoReporte = function() {
                                 palabrasCampo.forEach(palabra => {
                                     if (palabrasS10.includes(palabra)) coincidencias++;
                                 });
-                                // Match si hay 3 palabras idénticas, o 2 idénticas (si solo escribió 2), o si el string entero está contenido.
                                 return coincidencias >= 3 || (palabrasCampo.length === 2 && coincidencias === 2) || t.nombreOficial.includes(nombreCampoVal);
                             });
 
@@ -5553,13 +6283,46 @@ window.iniciarNuevoReporte = function() {
                     throw new Error("No se pudo procesar ningún dato válido de los tareos de campo. Verifica el formato de tus archivos.");
                 }
 
+                // 🔥 NUEVO: ESCÁNER AUTOMÁTICO DE FALTAS
+                window.reporteFaltas = [];
+                const diasLaborables = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+                
+                Object.values(window.datosCampoProcesados).forEach(trabajador => {
+                    let horasPorDia = {0:0, 1:0, 2:0, 3:0, 4:0, 5:0, 6:0};
+                    let totalHorasSemana = 0;
+
+                    // Acumulamos las horas que el trabajador hizo en cada día
+                    Object.entries(trabajador.tareasDiarias).forEach(([fechaHoja, tareas], indexHoja) => {
+                        const idxDia = obtenerIndiceDia(fechaHoja, indexHoja);
+                        if(idxDia !== -1 && idxDia <= 6) {
+                            let sum = tareas.reduce((acc, t) => acc + t.hours, 0);
+                            horasPorDia[idxDia] += sum;
+                            totalHorasSemana += sum;
+                        }
+                    });
+
+                    // Si el trabajador NO es un retirado definitivo (tiene horas en la semana)
+                    if (totalHorasSemana > 0) {
+                        for (let i = 0; i < 6; i++) { // Revisamos los huecos de Lunes a Sábado
+                            if (horasPorDia[i] === 0) {
+                                window.reporteFaltas.push({
+                                    dni: trabajador.dni,
+                                    nombre: trabajador.nombreOficial,
+                                    diaStr: diasLaborables[i]
+                                });
+                            }
+                        }
+                    }
+                });
+
                 // 🔥 PASO 6: Generar y mostrar el Panel de Resolución
                 zonaRes.innerHTML = ''; 
 
                 let htmlResolucion = '';
-                const totalWorkersKnown = Object.keys(datosCampoProcesados).length;
+                const totalWorkersKnown = Object.keys(window.datosCampoProcesados).length;
                 const totalWorkersUnknown = trabajadoresDesconocidos.length;
                 const totalNewActivities = nuevasActividades.length;
+                const totalFaltas = window.reporteFaltas.length;
 
                 // 1. Cabecera y Tarjetas
                 htmlResolucion += `
@@ -5571,21 +6334,26 @@ window.iniciarNuevoReporte = function() {
                         <p class="text-sm text-slate-500">El cruce de información se realizó con éxito.</p>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 w-full">
-                        <div class="bg-emerald-50 text-emerald-900 p-4 rounded-xl border border-emerald-100 flex flex-col items-center justify-center text-center">
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6 w-full">
+                        <div class="bg-emerald-50 text-emerald-900 p-4 rounded-xl border border-emerald-100 flex flex-col items-center justify-center text-center shadow-sm">
                             <i class="fa-solid fa-users text-2xl text-emerald-500 mb-2"></i>
                             <h4 class="font-black text-2xl">${totalWorkersKnown}</h4>
                             <p class="text-[10px] font-bold uppercase tracking-widest text-emerald-600">Reconocidos</p>
                         </div>
-                        <div class="bg-amber-50 text-amber-900 p-4 rounded-xl border border-amber-100 flex flex-col items-center justify-center text-center">
+                        <div class="bg-amber-50 text-amber-900 p-4 rounded-xl border border-amber-100 flex flex-col items-center justify-center text-center shadow-sm">
                             <i class="fa-solid fa-user-xmark text-2xl text-amber-500 mb-2"></i>
                             <h4 class="font-black text-2xl">${totalWorkersUnknown}</h4>
                             <p class="text-[10px] font-bold uppercase tracking-widest text-amber-600">Desconocidos</p>
                         </div>
-                        <div class="bg-blue-50 text-blue-900 p-4 rounded-xl border border-blue-100 flex flex-col items-center justify-center text-center">
+                        <div class="bg-blue-50 text-blue-900 p-4 rounded-xl border border-blue-100 flex flex-col items-center justify-center text-center shadow-sm">
                             <i class="fa-solid fa-clipboard-list text-2xl text-blue-500 mb-2"></i>
                             <h4 class="font-black text-2xl">${totalNewActivities}</h4>
                             <p class="text-[10px] font-bold uppercase tracking-widest text-blue-600">Nuevas Tareas</p>
+                        </div>
+                        <div class="bg-red-50 text-red-900 p-4 rounded-xl border border-red-100 flex flex-col items-center justify-center text-center shadow-sm">
+                            <i class="fa-solid fa-user-clock text-2xl text-red-500 mb-2"></i>
+                            <h4 class="font-black text-2xl">${totalFaltas}</h4>
+                            <p class="text-[10px] font-bold uppercase tracking-widest text-red-600">Faltas (L-S)</p>
                         </div>
                     </div>
                 `;
@@ -5595,18 +6363,28 @@ window.iniciarNuevoReporte = function() {
 
                 const btnTrabajadoresStatus = totalWorkersUnknown > 0 ? 'cursor-pointer hover:bg-teal-600' : 'cursor-not-allowed opacity-50';
                 const btnActividadesStatus = totalNewActivities > 0 ? 'cursor-pointer hover:bg-indigo-800' : 'cursor-not-allowed opacity-50';
+                const btnFaltasStatus = totalFaltas > 0 ? 'cursor-pointer hover:bg-red-700' : 'cursor-not-allowed opacity-50';
 
-                // 2. Botones de Acción (Ahora son 3 botones integrados)
+                // 2. Botones de Acción
                 htmlResolucion += `
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 w-full">
-                        <button onclick="window.abrirModalProyecto()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-widest py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition cursor-pointer shadow-sm">
-                            <i class="fa-solid fa-building"></i> VINCULAR PROYECTO
+                    <div class="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-4 w-full">
+                        <button onclick="window.abrirModalProyecto()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 transition cursor-pointer shadow-sm">
+                            <i class="fa-solid fa-building"></i> PROYECTO
                         </button>
-                        <button onclick="if(${totalWorkersUnknown} > 0) window.abrirModalTrabajadores()" class="bg-teal-700 text-white font-bold text-xs uppercase tracking-widest py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition ${btnTrabajadoresStatus} shadow-sm">
-                            <i class="fa-solid fa-user-gear"></i> TRABAJADORES (${totalWorkersUnknown})
+                        <button onclick="window.abrirModalConceptos()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 transition cursor-pointer shadow-sm">
+                            <i class="fa-solid fa-clock"></i> CONCEPTOS
                         </button>
-                        <button onclick="if(${totalNewActivities} > 0) window.abrirModalActividades()" class="bg-indigo-900 text-white font-bold text-xs uppercase tracking-widest py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition ${btnActividadesStatus} shadow-sm">
-                            <i class="fa-solid fa-list-check"></i> ACTIVIDADES (${totalNewActivities})
+                        <button onclick="window.abrirModalConvenios()" class="bg-fuchsia-600 hover:bg-fuchsia-700 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 transition cursor-pointer shadow-sm">
+                            <i class="fa-solid fa-handshake"></i> CONVENIOS
+                        </button>
+                        <button onclick="if(${totalWorkersUnknown} > 0) window.abrirModalTrabajadores()" class="bg-teal-700 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 transition ${btnTrabajadoresStatus} shadow-sm">
+                            <i class="fa-solid fa-user-gear"></i> PERSONAL (${totalWorkersUnknown})
+                        </button>
+                        <button onclick="if(${totalNewActivities} > 0) window.abrirModalActividades()" class="bg-indigo-900 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 transition ${btnActividadesStatus} shadow-sm">
+                            <i class="fa-solid fa-list-check"></i> TAREAS (${totalNewActivities})
+                        </button>
+                        <button onclick="if(${totalFaltas} > 0) window.abrirModalFaltas()" class="bg-red-600 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 transition ${btnFaltasStatus} shadow-sm">
+                            <i class="fa-solid fa-user-clock"></i> FALTAS (${totalFaltas})
                         </button>
                     </div>
                 `;
@@ -5658,16 +6436,45 @@ window.iniciarNuevoReporte = function() {
             const contenedor = document.getElementById('listaActividadesPendientes');
             contenedor.innerHTML = '';
             
-            // Llenar el combo con las Partidas reales extraídas de la columna D
             let opcionesS10 = '<option value="">-- Seleccionar Partida/Concepto Oficial S10 --</option>';
-            if (window.catalogoPartidasS10 && window.catalogoPartidasS10.length > 0) {
-                window.catalogoPartidasS10.forEach(partida => {
-                    opcionesS10 += `<option value="${partida}">${partida}</option>`;
+            
+            // 1. Obtener el proyecto (Ej: "03027")
+            let pCrudo = window.proyectoSeleccionado || window.proyectoActual || "";
+            if (!pCrudo) {
+                document.querySelectorAll('select').forEach(s => {
+                    if (s.value && /^\d{4,6}\s/.test(s.value)) pCrudo = s.value;
                 });
-            } else {
-                opcionesS10 += `<option disabled>⚠️ No se encontró el catálogo en la hoja 'Actividad'</option>`;
+            }
+            const codigoProyecto = pCrudo ? String(pCrudo).split(' ')[0].trim() : "";
+            let encontradas = 0;
+
+            // 2. Filtrar leyendo las letras exactas de Excel
+            if (codigoProyecto && window.hojaActividadesCruda) {
+                window.hojaActividadesCruda.forEach(fila => {
+                    // Mapeamos directamente a las letras de las columnas
+                    let colA = String(fila.A || '').trim(); // Columna A del Excel
+                    let colD = String(fila.D || '').trim(); // Columna D del Excel
+                    
+                    // Si la Columna A empieza con "03027" (Atrapa "03027001")
+                    if (colA.startsWith(codigoProyecto) && colD.length > 5) {
+                        if (!opcionesS10.includes(`value="${colD}"`)) {
+                            opcionesS10 += `<option value="${colD}">${colD}</option>`;
+                            encontradas++;
+                        }
+                    }
+                });
             }
 
+            // 3. Alertas si algo falta
+            if (encontradas === 0) {
+                if (!window.hojaActividadesCruda) {
+                    opcionesS10 += `<option disabled>❌ ERROR: La hoja 'Actividad' no se cargó al subir el Excel.</option>`;
+                } else {
+                    opcionesS10 += `<option disabled>⚠️ Cero partidas encontradas para el proyecto ${codigoProyecto}</option>`;
+                }
+            }
+
+            // 4. Dibujar la ventana
             window.pendientesActividades.forEach((actividad, idx) => {
                 contenedor.innerHTML += `
                     <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-3">
@@ -5816,6 +6623,173 @@ window.iniciarNuevoReporte = function() {
                 alert("⚠️ No seleccionaste ningún trabajador oficial del S10 para vincular.");
             }
         };
+        // 🔥 FUNCIONES DE CONCEPTOS (TIPOS DE HORA)
+        window.abrirModalConceptos = function() {
+            const contenedor = document.getElementById('listaConceptosPendientes');
+            contenedor.innerHTML = '';
+            
+            if (!window.mapeoConceptosTareo) window.mapeoConceptosTareo = {};
+
+            // Renderizar la lista de trabajadores con su selector
+            Object.values(window.datosCampoProcesados).forEach(trabajador => {
+                const conceptoGuardado = window.mapeoConceptosTareo[trabajador.dni] || "";
+                
+                let opcionesConSeleccion = `<option value="">-- Por defecto (Vacío) --</option>`;
+                if (window.conceptosS10) {
+                    window.conceptosS10.forEach(c => {
+                        const sel = (conceptoGuardado === c) ? 'selected' : '';
+                        opcionesConSeleccion += `<option value="${c}" ${sel}>${c}</option>`;
+                    });
+                }
+
+                contenedor.innerHTML += `
+                    <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm mb-2 flex items-center justify-between gap-4 hover:border-amber-300 transition">
+                        <div class="overflow-hidden">
+                            <p class="text-xs font-extrabold text-slate-800 truncate">${trabajador.nombreOficial}</p>
+                            <p class="text-[10px] text-slate-500">DNI: ${trabajador.dni}</p>
+                        </div>
+                        <select data-dni="${trabajador.dni}" class="select-concepto-worker w-1/2 bg-slate-50 border border-slate-300 text-slate-700 text-[11px] rounded-lg focus:ring-amber-500 focus:border-amber-500 p-2 font-bold cursor-pointer">
+                            ${opcionesConSeleccion}
+                        </select>
+                    </div>
+                `;
+            });
+            document.getElementById('modalConceptos').classList.remove('hidden');
+        };
+
+        window.guardarMapeoConceptos = async function() {
+            const selects = document.querySelectorAll('.select-concepto-worker');
+            let mapeosGuardados = 0;
+            if (!window.mapeoConceptosTareo) window.mapeoConceptosTareo = {};
+
+            selects.forEach(select => {
+                const dni = select.getAttribute('data-dni');
+                if (select.value) {
+                    window.mapeoConceptosTareo[dni] = select.value;
+                    mapeosGuardados++;
+                } else {
+                    delete window.mapeoConceptosTareo[dni];
+                }
+            });
+
+            const btn = document.querySelector('#modalConceptos button');
+            const txtOriginal = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> GUARDANDO EN NUBE...';
+            btn.disabled = true;
+
+            try {
+                const proyectoLobby = window.proyectoActualGlobal || "General";
+                const semana = window.semanaActualTareo || "00";
+                const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Semana_${semana}`);
+                
+                await window.fsSetDoc(docRef, { diccionarioConceptos: window.mapeoConceptosTareo }, { merge: true });
+
+                alert(`✅ Se han guardado ${mapeosGuardados} conceptos asignados a trabajadores.`);
+                document.getElementById('modalConceptos').classList.add('hidden');
+            } catch (e) {
+                console.error(e);
+                alert("⚠️ Error al sincronizar con Firebase.");
+            } finally {
+                btn.innerHTML = txtOriginal;
+                btn.disabled = false;
+            }
+        };
+
+        // ==========================================
+        // REPORTE DE FALTAS (TABLA Y DESCARGA ORDENADA)
+        // ==========================================
+        window.abrirModalFaltas = function() {
+            let modal = document.getElementById('modalFaltasTareo');
+            if(!modal) {
+                modal = document.createElement('div');
+                modal.id = 'modalFaltasTareo';
+                modal.className = 'fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4';
+                document.body.appendChild(modal);
+            }
+
+            let filasHtml = '';
+            if (window.reporteFaltas && window.reporteFaltas.length > 0) {
+                
+                // 🔥 MOTOR DE ORDENAMIENTO: Primero por Día (Lunes a Sábado), luego alfabéticamente
+                const ordenDias = { "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5, "Sábado": 6 };
+                const faltasOrdenadas = [...window.reporteFaltas].sort((a, b) => {
+                    if (ordenDias[a.diaStr] !== ordenDias[b.diaStr]) {
+                        return ordenDias[a.diaStr] - ordenDias[b.diaStr];
+                    }
+                    return a.nombre.localeCompare(b.nombre);
+                });
+
+                faltasOrdenadas.forEach(f => {
+                    filasHtml += `
+                        <tr class="border-b border-slate-100 hover:bg-red-50 transition text-xs">
+                            <td class="p-3 font-bold text-slate-800">${f.nombre}</td>
+                            <td class="p-3 text-slate-500 font-mono">${f.dni}</td>
+                            <td class="p-3 font-black text-red-600 text-center uppercase tracking-wider">${f.diaStr}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            modal.innerHTML = `
+                <div class="bg-white rounded-[24px] w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden shadow-2xl">
+                    <div class="bg-red-600 p-5 flex justify-between items-center text-white">
+                        <h3 class="font-extrabold tracking-widest uppercase flex items-center gap-2">
+                            <i class="fa-solid fa-user-clock"></i> Reporte de Faltas Detectadas
+                        </h3>
+                        <button onclick="document.getElementById('modalFaltasTareo').classList.add('hidden')" class="hover:text-red-200 transition text-xl cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div class="p-4 bg-slate-50 border-b border-red-100">
+                        <p class="text-xs text-slate-600">Personal que asistió en la semana, pero registra <strong class="text-red-600">0 horas</strong> en los siguientes días. No se incluyen domingos, ni personas que no asistieron en toda la semana.</p>
+                    </div>
+                    <div class="overflow-y-auto bg-white flex-1 p-0 custom-scrollbar">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-100 text-slate-600 text-[10px] uppercase tracking-widest sticky top-0 shadow-sm">
+                                <tr>
+                                    <th class="p-3 border-r border-white">Trabajador Oficial S10</th>
+                                    <th class="p-3 border-r border-white">DNI</th>
+                                    <th class="p-3 text-center">Día de Falta</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${filasHtml}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="p-5 border-t border-slate-200 bg-slate-50 flex justify-end">
+                        <button onclick="window.descargarFaltasCSV()" class="bg-slate-800 hover:bg-red-600 text-white font-bold text-[11px] uppercase tracking-widest py-3 px-6 rounded-xl shadow transition-colors cursor-pointer flex items-center gap-2">
+                            <i class="fa-solid fa-file-csv text-base"></i> Descargar Reporte (Excel)
+                        </button>
+                    </div>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+        };
+
+        window.descargarFaltasCSV = function() {
+            let csvContent = "data:text/csv;charset=utf-8,%EF%BB%BF"; // Soporte UTF-8 para Excel
+            csvContent += "Trabajador Oficial,DNI,Dia de Falta\n";
+            
+            // 🔥 Asegurar que el Excel descargado también respete el mismo orden
+            const ordenDias = { "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5, "Sábado": 6 };
+            const faltasOrdenadas = [...window.reporteFaltas].sort((a, b) => {
+                if (ordenDias[a.diaStr] !== ordenDias[b.diaStr]) {
+                    return ordenDias[a.diaStr] - ordenDias[b.diaStr];
+                }
+                return a.nombre.localeCompare(b.nombre);
+            });
+
+            faltasOrdenadas.forEach(f => {
+                csvContent += `"${f.nombre}","${f.dni}","${f.diaStr}"\n`;
+            });
+            
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Faltas_Semana_${window.semanaActualTareo || '00'}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
 
         // ==========================================
         // VISTA PREVIA Y EXPORTACIÓN FINAL (ESTRUCTURA S10 COMPLETA)
@@ -5835,15 +6809,141 @@ window.iniciarNuevoReporte = function() {
         }
 
         window.cerrarVistaPrevia = function() {
+            // 1. Ocultamos la tabla de Vista Previa
             document.getElementById('vistaPreviaExportacion').classList.add('hidden');
-            const gridPrincipal = document.querySelector('#moduloProyectoTareos > .grid');
-            if(gridPrincipal) gridPrincipal.classList.remove('hidden');
+            
+            // 2. Inteligencia de ruteo: ¿A dónde regresamos?
+            if (!archivoPadronS10) {
+                // Si no hay archivo Padrón subido, significa que abrimos un Tareo Histórico
+                document.getElementById('historialTareos').classList.remove('hidden');
+                document.getElementById('zonaCargaTareo').classList.add('hidden');
+            } else {
+                // Si sí hay archivo, estamos en medio de crear un Nuevo Tareo
+                document.getElementById('zonaCargaTareo').classList.remove('hidden');
+                document.getElementById('historialTareos').classList.add('hidden');
+                
+                const gridPrincipal = document.querySelector('#zonaCargaTareo .grid');
+                if (gridPrincipal) gridPrincipal.classList.remove('hidden');
+            }
         };
 
-        // 1. ABRIR VISUALIZADOR
+        // ==========================================
+        // GUARDAR TAREO EN LA NUBE (FIREBASE) - AHORA GUARDA EL PADRÓN
+        // ==========================================
+        window.guardarTareoEnNube = async function() {
+            if (typeof datosListosParaExportar === 'undefined' || datosListosParaExportar.length === 0) {
+                return alert("⚠️ No hay datos procesados para guardar.");
+            }
+
+            const proyecto = window.proyectoActualGlobal; 
+            const semana = window.semanaActualTareo;
+
+            if (!proyecto) return alert("⚠️ Error: No hay un proyecto vinculado.");
+            if (!semana) return alert("⚠️ Error: No se ha detectado el número de la semana.");
+
+            const btn = document.getElementById('btnGuardarTareoNube');
+            const txtOriginal = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Subiendo a la nube...';
+            btn.disabled = true;
+
+            try {
+                const tbody = document.getElementById('tablaVistaPreviaTareo');
+                const filasTr = Array.from(tbody.querySelectorAll('tr')).filter(tr => !tr.classList.contains('sticky'));
+                
+                datosListosParaExportar.forEach((worker, index) => {
+                    const tr = filasTr[index];
+                    if (!tr) return;
+                    
+                    const selectsPartida = tr.querySelectorAll('.selector-partida-fila');
+                    const selectsConcepto = tr.querySelectorAll('.selector-concepto-fila');
+                    const inputsHoras = tr.querySelectorAll('.input-horas-fila');
+                    
+                    let inputIdx = 0;
+                    worker.dias.forEach((diaData, dIdx) => {
+                        if (diaData !== null && diaData.horas > 0) {
+                            if (selectsPartida[inputIdx]) diaData.partida = selectsPartida[inputIdx].value;
+                            if (selectsConcepto[inputIdx]) diaData.concepto = selectsConcepto[inputIdx].value;
+                            if (inputsHoras[inputIdx]) diaData.horas = parseFloat(inputsHoras[inputIdx].value) || 0;
+                            inputIdx++;
+                        }
+                    });
+                });
+
+                // 🔥 PASO 1: SUBIR EL PADRÓN A FIREBASE STORAGE Y GUARDAR SU NOMBRE EXACTO
+                let padronUrl = null;
+                let padronName = null;
+                if (archivoPadronS10) {
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando Padrón en la nube...';
+                    const extension = archivoPadronS10.name.split('.').pop();
+                    const storageRef = window.fsRef(window.firebaseStorage, `proyectos/${proyecto}/tareosGuardados/Semana_${semana}_padron.${extension}`);
+                    await window.fsUploadBytes(storageRef, archivoPadronS10);
+                    padronUrl = await window.fsGetDownloadURL(storageRef);
+                    padronName = archivoPadronS10.name; // Guardamos el nombre original de la PC
+                } else if (window.currentPadronUrl) {
+                    padronUrl = window.currentPadronUrl;
+                    padronName = window.currentPadronName; // Mantenemos el nombre histórico
+                }
+
+                const tareoData = {
+                    fechaGuardado: new Date().toISOString(),
+                    creadoPor: window.firebaseAuth.currentUser.email,
+                    filasGeneradas: datosListosParaExportar.length,
+                    datos: datosListosParaExportar,
+                    archivoPadronUrl: padronUrl, 
+                    nombreOriginalPadron: padronName // 🔥 NUEVO: Se guarda el nombre en la Base de Datos
+                };
+
+                const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyecto}/tareosGuardados/Semana_${semana}`);
+                await window.fsSetDoc(docRef, tareoData);
+
+                alert(`✅ El Tareo y la Plantilla de la Semana ${semana} se guardaron en la nube.`);
+                
+                window.cerrarVistaPrevia();
+                document.getElementById('zonaCargaTareo').classList.add('hidden');
+                document.getElementById('historialTareos').classList.remove('hidden');
+                
+                if (typeof window.cargarHistorialTareos === 'function') {
+                    window.cargarHistorialTareos(proyecto);
+                }
+
+            } catch (error) {
+                console.error("Error al guardar tareo en nube:", error);
+                alert("❌ Ocurrió un error al intentar guardar en Firebase: " + error.message);
+            } finally {
+                btn.innerHTML = txtOriginal;
+                btn.disabled = false;
+            }
+        };
+
+        // ==========================================
+        // ELIMINAR TAREO DEL HISTORIAL (Faltaba en tu código)
+        // ==========================================
+        window.eliminarTareo = async function(proyecto, semanaId, event) {
+            if (event) event.stopPropagation(); // Evita que se abra la tarjeta al darle al tacho
+            const confirmacion = confirm(`⚠️ ¿Estás seguro de ELIMINAR el Tareo de la ${semanaId.replace('_', ' ')}?\nEsta acción no se puede deshacer.`);
+            if (!confirmacion) return;
+
+            try {
+                const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyecto}/tareosGuardados/${semanaId}`);
+                await window.fsDeleteDoc(docRef);
+                alert(`🗑️ ${semanaId.replace('_', ' ')} eliminado correctamente.`);
+            } catch (error) {
+                console.error("Error al eliminar tareo:", error);
+                alert("❌ Ocurrió un error al intentar eliminar el tareo.");
+            }
+        };
+
+        // 1. ABRIR VISUALIZADOR (NUEVO TAREO)
         document.getElementById('btnExportarTareoS10')?.addEventListener('click', function() {
             if (!window.diccionarioPadronS10 || window.diccionarioPadronS10.length === 0) {
                 alert("⚠️ No hay Padrón S10 en memoria. Sube el archivo primero."); return;
+            }
+
+            // 🔥 Ocultamos el fondo correctamente
+            const zonaCarga = document.getElementById('zonaCargaTareo');
+            if(zonaCarga) {
+                const gridPrincipal = zonaCarga.querySelector('.grid');
+                if(gridPrincipal) gridPrincipal.classList.add('hidden');
             }
 
             const gridPrincipal = document.querySelector('#moduloProyectoTareos > .grid');
@@ -5852,6 +6952,7 @@ window.iniciarNuevoReporte = function() {
             datosListosParaExportar = [];
             let totalHorasGlobal = 0;
             let filasGeneradas = 0;
+            let totalesPorDia = [0, 0, 0, 0, 0, 0, 0]; // 🔥 NUEVO: Array para sumar cada día
 
             const tbody = document.getElementById('tablaVistaPreviaTareo');
             const theadLetras = document.getElementById('headLetrasExcel');
@@ -5906,6 +7007,33 @@ window.iniciarNuevoReporte = function() {
             }
             let nroFilaVisual = 1;
 
+            // 🔥 NUEVO: Clonar el Catálogo de Partidas S10 (FILTRADO POR PROYECTO)
+            let opcionesGlobalesPartida = '';
+
+            // 1. Extraer el código del proyecto actual de la memoria GLOBAL
+            let pCrudo = window.proyectoSeleccionadoGlobal || window.proyectoActualGlobal || "";
+            const codigoProyectoActual = pCrudo ? String(pCrudo).split(' ')[0].trim() : "";
+
+            // 2. Extraer y FILTRAR las opciones de la memoria cruda
+            if (codigoProyectoActual && window.hojaActividadesCruda) {
+                window.hojaActividadesCruda.forEach(fila => {
+                    let colA = String(fila.A || '').trim(); // Columna A (Código)
+                    let colD = String(fila.D || '').trim(); // Columna D (Partida)
+                    
+                    if (colA.startsWith(codigoProyectoActual) && colD.length > 5) {
+                        if (!opcionesGlobalesPartida.includes(`value="${colD}"`)) {
+                            opcionesGlobalesPartida += `<option value="${colD}">${colD}</option>`;
+                        }
+                    }
+                });
+            }
+
+            // 3. Salvavidas: Si algo falla, cargamos el catálogo global para no dejarte la lista vacía
+            if (opcionesGlobalesPartida === '' && window.catalogoPartidasS10) {
+                window.catalogoPartidasS10.forEach(p => {
+                    opcionesGlobalesPartida += `<option value="${p}">${p}</option>`;
+                });
+            }
             // 🔥 MAGIA AQUÍ: Iteramos usando el PADRÓN ORIGINAL (Orden exacto, incluye vacíos)
             window.diccionarioPadronS10.forEach(trabajadorS10 => {
                 const dataCampo = window.datosCampoProcesados ? window.datosCampoProcesados[trabajadorS10.dni] : null;
@@ -5928,14 +7056,12 @@ window.iniciarNuevoReporte = function() {
 
                         Object.entries(tareasDelDia).forEach(([partida, horas]) => {
                             let placed = false;
-                            // Buscar un hueco libre en ese día para esta actividad
                             for (let r = 0; r < filasWorker.length; r++) {
                                 if (filasWorker[r][idxDia] === null) {
                                     filasWorker[r][idxDia] = { partida, horas };
                                     placed = true; break;
                                 }
                             }
-                            // Si el día ya está ocupado (hizo 2 actividades distintas EL MISMO DÍA), crear nueva fila
                             if (!placed) {
                                 let nuevaFila = [null, null, null, null, null, null, null];
                                 nuevaFila[idxDia] = { partida, horas };
@@ -5945,7 +7071,18 @@ window.iniciarNuevoReporte = function() {
                     });
                 }
 
-                // Dibujar cada fila necesaria para este trabajador
+                // 🔥 OBTENER CONCEPTO ASIGNADO AL TRABAJADOR
+                const conceptoAsignado = window.mapeoConceptosTareo && window.mapeoConceptosTareo[trabajadorS10.dni] ? window.mapeoConceptosTareo[trabajadorS10.dni] : "";
+                
+                let opcionesConceptoWorker = '<option value="">-</option>';
+                if (window.conceptosS10) {
+                    window.conceptosS10.forEach(c => {
+                        const selected = (c === conceptoAsignado) ? 'selected' : '';
+                        opcionesConceptoWorker += `<option value="${c}" ${selected}>${c}</option>`;
+                    });
+                }
+
+                // 🔥 DIBUJAR LAS FILAS DEL TRABAJADOR
                 filasWorker.forEach((filaSemana, indexFila) => {
                     datosListosParaExportar.push({
                         lineaOriginal: trabajadorS10.lineaOriginal,
@@ -5954,33 +7091,46 @@ window.iniciarNuevoReporte = function() {
                         dias: filaSemana 
                     });
 
-                    // Si toda la fila está vacía (0 horas en la semana), atenuamos el texto
                     const tieneHoras = filaSemana.some(d => d !== null && d.horas > 0);
                     const colorTexto = tieneHoras ? "text-slate-800" : "text-slate-400 opacity-70";
-
-                    // 🔥 REGLA DE SOMBREADO PARA REPETIDOS:
-                    // Si indexFila > 0, significa que es la 2da, 3ra, etc. fila del mismo trabajador.
-                    const fondoFila = indexFila > 0 ? "bg-cyan-50/50" : ""; // Un fondo sutil para toda la fila
-                    const fondoNombre = indexFila > 0 ? "bg-cyan-100 text-cyan-900" : ""; // Celeste azulino fuerte para el nombre
+                    const fondoFila = indexFila > 0 ? "bg-cyan-50/50" : ""; 
+                    const fondoNombre = indexFila > 0 ? "bg-cyan-100 text-cyan-900" : ""; 
 
                     let htmlFila = `<tr class="hover:bg-amber-50 transition border-b border-slate-100 ${colorTexto} ${fondoFila}">`;
                     htmlFila += `<td class="py-2 px-2 text-center font-bold bg-slate-100 text-slate-500 border-r border-slate-200">${nroFilaVisual}</td>`;
-                    
                     htmlFila += `<td class="py-2 px-2 text-center border-r border-slate-100 font-bold">${trabajadorS10.lineaOriginal || ''}</td>`;
                     htmlFila += `<td class="py-2 px-2 border-r border-slate-100">${trabajadorS10.dni}</td>`;
-                    
-                    // APLICAMOS EL COLOR AL NOMBRE AQUÍ:
                     htmlFila += `<td class="py-2 px-2 border-r border-slate-100 font-bold truncate max-w-[150px] ${fondoNombre}">${trabajadorS10.nombreOficial}</td>`;
-                    
                     htmlFila += `<td class="py-2 px-2 border-r border-slate-100 truncate max-w-[100px] text-blue-600">${proyectoSeleccionado}</td>`;
                     htmlFila += `<td class="py-2 px-2 border-r border-slate-200"></td>`;
 
-                    filaSemana.forEach(diaData => {
+                    // Sumatoria e inserción de selectores con el catálogo completo
+                    filaSemana.forEach((diaData, idxDia) => {
                         if (diaData !== null && diaData.horas > 0) {
-                            htmlFila += `<td class="py-2 px-2 border-r border-slate-100 truncate max-w-[100px]" title="${diaData.partida}">${diaData.partida}</td>`;
-                            htmlFila += `<td class="py-1 px-1 border-r border-slate-100"><select class="selector-concepto-fila w-full bg-transparent border-b border-slate-300 focus:outline-none text-[9px] cursor-pointer text-slate-800">${opcionesConcepto}</select></td>`;
-                            htmlFila += `<td class="py-2 px-2 text-center font-black text-emerald-600 border-r border-slate-300 bg-emerald-50/30">${diaData.horas}</td>`;
+                            
+                            // Columna A: Partida de Control (Editable con el catálogo S10 completo)
+                            htmlFila += `<td class="py-1 px-1 border-r border-slate-100">
+                                <select class="selector-partida-fila w-full bg-transparent border-b border-slate-300 focus:outline-none text-[9px] cursor-pointer text-slate-800 font-bold truncate max-w-[100px]" title="${diaData.partida}">
+                                    <option value="${diaData.partida}" selected>${diaData.partida}</option>
+                                    <option disabled>────────────────────</option>
+                                    ${opcionesGlobalesPartida}
+                                </select>
+                            </td>`;
+                            
+                            // Columna B: Concepto (Editable)
+                            htmlFila += `<td class="py-1 px-1 border-r border-slate-100">
+                                <select class="selector-concepto-fila w-full bg-transparent border-b border-slate-300 focus:outline-none text-[9px] cursor-pointer text-slate-800 font-bold">
+                                    ${opcionesConceptoWorker}
+                                </select>
+                            </td>`;
+                            
+                            // Columna C: Horas (Editable numérico interactivo)
+                            htmlFila += `<td class="py-1 px-1 text-center border-r border-slate-300 bg-emerald-50/30">
+                                <input type="number" step="0.5" min="0" max="24" data-dia="${idxDia}" value="${diaData.horas}" class="input-horas-fila w-full bg-transparent text-center font-black text-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-500 rounded hover:bg-white transition-colors" onchange="window.recalcularTotalesTareo()" />
+                            </td>`;
+                            
                             totalHorasGlobal += diaData.horas;
+                            totalesPorDia[idxDia] += diaData.horas; 
                         } else {
                             htmlFila += `<td class="py-2 px-2 border-r border-slate-100"></td><td class="py-2 px-2 border-r border-slate-100"></td><td class="py-2 px-2 border-r border-slate-300"></td>`;
                         }
@@ -5993,62 +7143,236 @@ window.iniciarNuevoReporte = function() {
                 });
             });
 
+            // 🔥 CREAR LA FILA DE TOTALES POR DÍA AL FINAL DE LA TABLA
+            let htmlTotales = `<tr class="bg-slate-800 text-white font-bold sticky bottom-0 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">`;
+            htmlTotales += `<td colspan="6" class="py-3 px-4 text-right border-r border-slate-600 uppercase tracking-widest text-[11px] shadow-inner">TOTAL DE HORAS DIARIAS:</td>`;
+            
+            totalesPorDia.forEach((total, idx) => {
+                htmlTotales += `<td class="py-3 px-2 border-r border-slate-600 bg-slate-700/50"></td>`;
+                htmlTotales += `<td class="py-3 px-2 border-r border-slate-600 bg-slate-700/50"></td>`;
+                // 🔥 NUEVO: Se agregó un ID dinámico para poder actualizarlo en tiempo real
+                htmlTotales += `<td id="total-dia-visual-${idx}" class="py-3 px-2 text-center font-black text-emerald-400 border-r border-slate-600 text-sm bg-slate-900 shadow-inner">${total > 0 ? total : '-'}</td>`;
+            });
+            htmlTotales += `</tr>`;
+            tbody.innerHTML += htmlTotales;
+
             document.getElementById('resumenVistaPrevia').innerHTML = `<span class="text-indigo-600">${filasGeneradas}</span> filas alineadas al S10 | <span class="text-emerald-600">${totalHorasGlobal}</span> horas totales`;
             document.getElementById('vistaPreviaExportacion').classList.remove('hidden');
+            
+            // 🔥 Asegurar que el botón Guardar esté visible para Tareos Nuevos
+            const btnGuardar = document.getElementById('btnGuardarTareoNube');
+            if (btnGuardar) btnGuardar.classList.remove('hidden');
+
             setTimeout(initResizableColumns, 100);
         });
 
-        // 2. EXPORTAR EXCEL S10
-        document.getElementById('btnConfirmarExportacion')?.addEventListener('click', function() {
-            if (datosListosParaExportar.length === 0) return;
+        // ==========================================
+        // EXPORTAR EXCEL S10 (AUTOMATIZADO CON NUBE)
+        // ==========================================
+        document.getElementById('btnConfirmarExportacion')?.addEventListener('click', async function() {
+            if (typeof datosListosParaExportar === 'undefined' || datosListosParaExportar.length === 0) return;
 
-            const proyectoSeleccionado = window.proyectoSeleccionadoGlobal || "";
-            const datosMatrizS10 = [];
-            
-            datosMatrizS10.push(["", "", "", "", "", "Lunes", "", "", "Martes", "", "", "Miercoles", "", "", "Jueves", "", "", "Viernes", "", "", "Sabado", "", "", "Domingo", "", ""]);
-            datosMatrizS10.push(["Linea", "DNI", "Nombre", "Proyecto", "%", "Partida de Control", "Concepto", "Horas", "Partida de Control", "Concepto", "Horas", "Partida de Control", "Concepto", "Horas", "Partida de Control", "Concepto", "Horas", "Partida de Control", "Concepto", "Horas", "Partida de Control", "Concepto", "Horas", "Partida de Control", "Concepto", "Horas"]);
+            const btn = this;
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Procesando...';
+            btn.disabled = true;
 
-            const tbody = document.getElementById('tablaVistaPreviaTareo');
-            const filasTr = tbody.querySelectorAll('tr');
+            try {
+                let arrayBuffer;
+                let nombreFinalExcel = "Tareo_Exportado.xlsx";
 
-            datosListosParaExportar.forEach((row, index) => {
-                const tr = filasTr[index];
-                const selectsInRow = tr ? tr.querySelectorAll('.selector-concepto-fila') : [];
-                let selectIdx = 0;
+                // 🔥 LA LÓGICA INTELIGENTE DE ARCHIVOS
+                if (archivoPadronS10) {
+                    // 1. TAREO NUEVO: Usa el archivo que acabas de subir en la pantalla
+                    arrayBuffer = await archivoPadronS10.arrayBuffer();
+                    nombreFinalExcel = archivoPadronS10.name;
+                } else if (window.currentPadronUrl) {
+                    // 2. TAREO HISTÓRICO: Descarga el Padrón invisiblemente desde Firebase
+                    btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-down mr-2"></i> Descargando Padrón...';
+                    const response = await fetch(window.currentPadronUrl);
+                    if (!response.ok) throw new Error("No se pudo descargar el archivo de la nube.");
+                    arrayBuffer = await response.arrayBuffer();
+                    nombreFinalExcel = `Semana_${window.semanaActualTareo}_Exportado.xlsx`;
+                } else {
+                    // 3. FALLBACK: Tareo viejísimo sin URL guardada
+                    alert("📂 Este tareo es antiguo y no tiene Padrón en la nube. Selecciona el archivo manualmente.");
+                    const inputTemp = document.createElement('input');
+                    inputTemp.type = 'file';
+                    inputTemp.accept = '.xls,.xlsx';
+                    const file = await new Promise((resolve) => {
+                        inputTemp.onchange = (e) => resolve(e.target.files[0]);
+                        inputTemp.click();
+                    });
+                    if (!file) throw new Error("Cancelado por el usuario.");
+                    arrayBuffer = await file.arrayBuffer();
+                    nombreFinalExcel = file.name;
+                }
 
-                const fila = [
-                    row.lineaOriginal || "", 
-                    row.dni, 
-                    row.nombre, 
-                    proyectoSeleccionado, 
-                    "" 
-                ];
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Inyectando datos...';
 
-                row.dias.forEach(diaData => {
-                    if (diaData !== null && diaData.horas > 0) {
-                        const concepto = selectsInRow[selectIdx] ? selectsInRow[selectIdx].value : "";
-                        fila.push(diaData.partida, concepto, diaData.horas);
-                        selectIdx++;
-                    } else {
-                        fila.push("", "", ""); 
+                // --- INICIO EXCELJS ---
+                const wb = new ExcelJS.Workbook();
+                await wb.xlsx.load(arrayBuffer);
+
+                wb.worksheets.forEach(sheet => {
+                    if (sheet._rows) {
+                        sheet._rows[0] = undefined; 
+                        for (let i = 1; i < sheet._rows.length; i++) {
+                            if (sheet._rows[i]) sheet._rows[i].number = i;
+                        }
                     }
                 });
-                datosMatrizS10.push(fila);
-            });
 
-            const hojaExcel = XLSX.utils.aoa_to_sheet(datosMatrizS10);
-            const libroExcel = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(libroExcel, hojaExcel, "Importación S10");
-            const numSem = window.semanaActualTareo || 'X';
-            XLSX.writeFile(libroExcel, `Tareo_Semana_${numSem}_FormatoS10.xlsx`);
+                const ws = wb.worksheets[0]; 
+                let proyectoLobby = window.proyectoSeleccionadoGlobal || document.getElementById('proyectoSelect').value || "";
+
+                let masterRow = ws.getRow(8);
+                let dvProyecto = masterRow.getCell(5).dataValidation; 
+                let dvPartida = masterRow.getCell(7).dataValidation;  
+                let dvConcepto = masterRow.getCell(8).dataValidation; 
+
+                const tbody = document.getElementById('tablaVistaPreviaTareo');
+                const filasTr = Array.from(tbody.querySelectorAll('tr')).filter(tr => !tr.classList.contains('sticky')); 
+                
+                let dataPorObrero = [];
+                datosListosParaExportar.forEach((rowObj, index) => {
+                    const tr = filasTr[index];
+                    if(!tr) return;
+                    
+                    let lineaVisual = tr.querySelectorAll('td')[1].innerText.trim();
+                    const selectsConcepto = tr.querySelectorAll('.selector-concepto-fila');
+                    const selectsPartida = tr.querySelectorAll('.selector-partida-fila');
+                    const inputsHoras = tr.querySelectorAll('.input-horas-fila');
+                    
+                    let selectIdx = 0;
+                    let rowData = { dni: String(rowObj.dni).trim(), linea: lineaVisual, nombre: rowObj.nombre, dias: [] };
+
+                    rowObj.dias.forEach((diaData, dIdx) => {
+                        if (diaData !== null && diaData.horas > 0) {
+                            const concepto = selectsConcepto[selectIdx] ? selectsConcepto[selectIdx].value : "";
+                            const partida = selectsPartida[selectIdx] ? selectsPartida[selectIdx].value : diaData.partida;
+                            const horas = inputsHoras[selectIdx] ? parseFloat(inputsHoras[selectIdx].value) || 0 : diaData.horas;
+                            rowData.dias[dIdx] = { partida, concepto, horas };
+                            selectIdx++;
+                        } else {
+                            rowData.dias[dIdx] = null;
+                        }
+                    });
+                    dataPorObrero.push(rowData);
+                });
+
+                let mapaFilasExcel = {};
+                ws.eachRow({ includeEmpty: false }, function(row, rowNumber) {
+                    if (rowNumber >= 8) {
+                        let cellDNI = row.getCell(3).value; 
+                        if (cellDNI && String(cellDNI).trim().length >= 4) {
+                            mapaFilasExcel[String(cellDNI).trim()] = rowNumber;
+                        }
+                    }
+                });
+
+                let trabajadoresAgrupados = {};
+                dataPorObrero.forEach(wd => {
+                    if (!trabajadoresAgrupados[wd.dni]) trabajadoresAgrupados[wd.dni] = [];
+                    trabajadoresAgrupados[wd.dni].push(wd);
+                });
+
+                let dnisOrdenados = Object.keys(trabajadoresAgrupados).sort((a, b) => {
+                    return (mapaFilasExcel[b] || 0) - (mapaFilasExcel[a] || 0);
+                });
+
+                const columnasInicioDia = [7, 10, 13, 16, 19, 22, 25]; 
+
+                dnisOrdenados.forEach(dni => {
+                    let excelRowIdx = mapaFilasExcel[dni];
+                    if (!excelRowIdx) return;
+
+                    let filasDelTrabajador = trabajadoresAgrupados[dni];
+                    let sourceRow = ws.getRow(excelRowIdx);
+                    
+                    filasDelTrabajador.forEach((wd, i) => {
+                        let targetRow;
+                        let currentRowIdx = excelRowIdx + i;
+                        let lineaFija = wd.linea;
+                        let valorLineaFinal = (lineaFija && !isNaN(lineaFija)) ? Number(lineaFija) : lineaFija;
+
+                        if (i === 0) {
+                            targetRow = sourceRow;
+                            targetRow.getCell(1).value = valorLineaFinal;
+                            if (proyectoLobby) targetRow.getCell(5).value = proyectoLobby;
+                            for (let c = 7; c <= 27; c++) { targetRow.getCell(c).value = null; }
+                        } else {
+                            targetRow = ws.insertRow(currentRowIdx, []);
+                            targetRow.height = sourceRow.height;
+                            for (let c = 1; c <= 27; c++) {
+                                let oldStyle = sourceRow.getCell(c).style;
+                                if (oldStyle) targetRow.getCell(c).style = JSON.parse(JSON.stringify(oldStyle));
+                                targetRow.getCell(c).value = null; 
+                            }
+                            try { ws.unmergeCells(currentRowIdx, 1, currentRowIdx, 2); } catch(e) {}
+                            
+                            targetRow.getCell(1).value = valorLineaFinal;            
+                            targetRow.getCell(2).value = null;                       
+                            targetRow.getCell(3).value = sourceRow.getCell(3).value; 
+                            targetRow.getCell(4).value = sourceRow.getCell(4).value; 
+                            targetRow.getCell(5).value = proyectoLobby;              
+                            targetRow.getCell(6).value = sourceRow.getCell(6).value; 
+                            targetRow.getCell(4).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDDEBF7' } };
+                        }
+
+                        if (dvProyecto) targetRow.getCell(5).dataValidation = JSON.parse(JSON.stringify(dvProyecto));
+
+                        columnasInicioDia.forEach((startCol, diaIndex) => {
+                            let diaInfo = wd.dias[diaIndex];
+                            if (diaInfo) {
+                                targetRow.getCell(startCol).value = diaInfo.partida;     
+                                targetRow.getCell(startCol + 1).value = diaInfo.concepto; 
+                                targetRow.getCell(startCol + 2).value = diaInfo.horas;    
+                            }
+                            if (dvPartida) targetRow.getCell(startCol).dataValidation = JSON.parse(JSON.stringify(dvPartida));
+                            if (dvConcepto) targetRow.getCell(startCol + 1).dataValidation = JSON.parse(JSON.stringify(dvConcepto));
+                        });
+                    });
+                });
+
+                const buffer = await wb.xlsx.writeBuffer();
+                
+                if (nombreFinalExcel.toLowerCase().endsWith('.xlsm')) {
+                    nombreFinalExcel = nombreFinalExcel.substring(0, nombreFinalExcel.length - 5) + '_Exportado.xlsx';
+                } else if (!nombreFinalExcel.toLowerCase().includes('exportado')) {
+                    nombreFinalExcel = nombreFinalExcel.replace('.xlsx', '_Exportado.xlsx').replace('.xls', '_Exportado.xls');
+                }
+
+                saveAs(new Blob([buffer]), nombreFinalExcel);
+
+                alert("✅ ¡Exportación S10 completada con éxito!\nEl formato, colores y listas están listos.");
+
+            } catch (err) {
+                if (err.message !== "Cancelado por el usuario.") {
+                    console.error("Error en la inyección:", err);
+                    alert("❌ Hubo un error al procesar los datos: " + err.message);
+                }
+            } finally {
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            }
         });
-
-        // 3. FUNCIÓN PARA REDIMENSIONAR COLUMNAS
+        
+        // 3. FUNCIÓN PARA REDIMENSIONAR COLUMNAS (CON MEMORIA LOCAL)
         function initResizableColumns() {
             const table = document.getElementById('tablaCoordenadasExportacion');
             if (!table) return;
             const cols = table.querySelectorAll('th');
-            [].forEach.call(cols, function(col) {
+
+            // 🔥 PASO 1: Leer la memoria guardada en el navegador
+            const savedWidths = JSON.parse(localStorage.getItem('anchosColumnasTareo')) || {};
+
+            [].forEach.call(cols, function(col, index) {
+                // Si hay un ancho guardado para esta columna (index), se lo aplicamos
+                if (savedWidths[index]) {
+                    col.style.width = savedWidths[index] + 'px';
+                }
+
                 const resizer = col.querySelector('.resizer');
                 if (!resizer) return;
                 
@@ -6060,12 +7384,22 @@ window.iniciarNuevoReporte = function() {
                     document.addEventListener('mouseup', mouseUpHandler);
                     resizer.classList.add('resizing');
                 };
-                const mouseMoveHandler = function(e) { col.style.width = `${w + (e.clientX - x)}px`; };
+                
+                const mouseMoveHandler = function(e) { 
+                    col.style.width = `${w + (e.clientX - x)}px`; 
+                };
+                
                 const mouseUpHandler = function() {
                     document.removeEventListener('mousemove', mouseMoveHandler);
                     document.removeEventListener('mouseup', mouseUpHandler);
                     resizer.classList.remove('resizing');
+
+                    // 🔥 PASO 2: Guardar el nuevo ancho en la memoria del navegador
+                    const currentWidths = JSON.parse(localStorage.getItem('anchosColumnasTareo')) || {};
+                    currentWidths[index] = parseInt(col.style.width, 10);
+                    localStorage.setItem('anchosColumnasTareo', JSON.stringify(currentWidths));
                 };
+                
                 resizer.addEventListener('mousedown', mouseDownHandler);
             });
         }
@@ -6074,28 +7408,6 @@ window.iniciarNuevoReporte = function() {
         // LÓGICA DE HISTORIAL Y GUARDADO DE TAREOS
         // ==========================================
 
-        // 1. Mostrar Historial al entrar al Módulo Tareos
-        // (Asegúrate de agregar estas 3 líneas dentro de tu función window.abrirModulo cuando modulo === 'TAREOS')
-        // document.getElementById('historialTareos').classList.remove('hidden');
-        // document.getElementById('zonaCargaTareo').classList.add('hidden');
-        // if(typeof window.cargarHistorialTareos === 'function') window.cargarHistorialTareos(window.proyectoActualGlobal);
-
-        // 2. Botón "Nuevo Tareo"
-        window.iniciarNuevoTareo = function(pushHistory = true) {
-            if (pushHistory) history.pushState({ vista: 'tareo_nuevo', proyecto: window.proyectoActualGlobal }, '', '#nuevo-tareo');
-            
-            document.getElementById('historialTareos').classList.add('hidden');
-            document.getElementById('zonaCargaTareo').classList.remove('hidden');
-            
-            // Limpiar datos
-            document.getElementById('fechaInicioTareo').value = '';
-            document.getElementById('fechaFinTareo').value = '';
-            document.getElementById('infoSemanaTareo').classList.add('hidden');
-            window.semanaActualTareo = null;
-            datosListosParaExportar = [];
-        };
-
-        // 3. Cargar Tarjetas Históricas desde Firebase
         window.cargarHistorialTareos = function(proyecto) {
             const contenedor = document.getElementById('listaTareosHistorico');
             contenedor.innerHTML = '<div class="col-span-full text-slate-400 italic font-medium py-10 flex items-center justify-center gap-2"><i class="fa-solid fa-spinner fa-spin"></i> Buscando tareos guardados...</div>';
@@ -6144,7 +7456,7 @@ window.iniciarNuevoReporte = function() {
                                 </div>
                                 <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2">Por: <span class="text-emerald-600">${data.creadoPor.split('@')[0]}</span></p>
                             </div>
-                            <button onclick="alert('Funcionalidad de visualización en desarrollo')" class="w-full bg-slate-800 group-hover:bg-emerald-600 text-white text-[11px] font-bold uppercase tracking-widest py-4 transition-colors duration-300 flex items-center justify-center gap-2 cursor-pointer">
+                            <button onclick="window.abrirTareoExistente('${proyecto}', '${semanaId}')" class="w-full bg-slate-800 group-hover:bg-emerald-600 text-white text-[11px] font-bold uppercase tracking-widest py-4 transition-colors duration-300 flex items-center justify-center gap-2 cursor-pointer">
                                 <i class="fa-solid fa-eye"></i> VER TAREO
                             </button>
                         </div>
@@ -6153,52 +7465,138 @@ window.iniciarNuevoReporte = function() {
             });
         };
 
-        // 4. Guardar Tareo procesado a Firebase
-        window.guardarTareoEnNube = async function() {
-            if (!datosListosParaExportar || datosListosParaExportar.length === 0) {
-                return alert("⚠️ No hay datos procesados para guardar.");
-            }
-            if (!window.semanaActualTareo) {
-                return alert("⚠️ Falta el número de semana. Asegúrate de colocar las fechas.");
-            }
-
-            const btn = document.getElementById('btnGuardarTareoNube');
-            const originalHTML = btn.innerHTML;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
-            btn.disabled = true;
-
+        window.abrirTareoExistente = async function(proyecto, semanaId) {
             try {
-                const proyecto = window.proyectoActualGlobal;
-                const semanaId = `Semana_${window.semanaActualTareo}`;
+                document.getElementById('historialTareos').classList.add('hidden');
+                const gridPrincipal = document.querySelector('#moduloProyectoTareos > .grid');
+                if(gridPrincipal) gridPrincipal.classList.add('hidden');
+                
                 const tareoRef = window.fsDoc(window.firebaseDb, `proyectos/${proyecto}/tareosGuardados/${semanaId}`);
-                
-                const tareoData = {
-                    periodo: semanaId,
-                    filasGeneradas: datosListosParaExportar.length,
-                    fechaGuardado: new Date().toISOString(),
-                    creadoPor: window.firebaseAuth.currentUser.email,
-                    datos: datosListosParaExportar // Guarda el JSON procesado en la nube
-                };
+                const snap = await window.fsGetDoc(tareoRef);
 
-                await window.fsSetDoc(tareoRef, tareoData);
-                
-                alert(`✅ ¡Tareo de la ${semanaId.replace('_',' ')} guardado en la nube exitosamente!`);
-                window.cerrarVistaPrevia();
-                
-                // Volver al historial de tareos
-                document.getElementById('zonaCargaTareo').classList.add('hidden');
-                document.getElementById('historialTareos').classList.remove('hidden');
+                if (!snap.exists()) {
+                    window.cargarHistorialTareos(proyecto);
+                    return alert("❌ El tareo no se encontró en la base de datos.");
+                }
 
-            } catch (error) {
-                console.error("Error guardando Tareo:", error);
-                alert("❌ Ocurrió un error al guardar en la nube.");
-            } finally {
-                btn.innerHTML = originalHTML;
-                btn.disabled = false;
-            }
-        };
+                datosListosParaExportar = snap.data().datos;
+                window.semanaActualTareo = semanaId.replace('Semana_', ''); 
+                // 🔥 PASO 2: GUARDAR LA URL DEL PADRÓN EN MEMORIA AL ABRIR UN HISTÓRICO
+                window.currentPadronUrl = snap.data().archivoPadronUrl || null;
+                window.currentPadronName = snap.data().nombreOriginalPadron || `Plantilla_S10.xlsx`; // 🔥 Recupera el nombre exacto
 
-        // 5. Eliminar Tareo
+                const tbody = document.getElementById('tablaVistaPreviaTareo');
+                const theadLetras = document.getElementById('headLetrasExcel');
+                const theadDias = document.getElementById('headDiasCombinados');
+                const theadNombres = document.getElementById('headNombresColumnas');
+                tbody.innerHTML = '';
+
+                let htmlLetras = '<tr><th class="py-1 px-2 text-center border-r border-slate-600 bg-slate-900 w-10">#</th>';
+                let htmlDias = '<tr><th class="py-1 px-2 border-r border-amber-200"></th>';
+                let htmlNombres = '<tr><th class="py-1 px-2 text-center border-r border-slate-300 bg-slate-200 w-10">Fila</th>';
+
+                const columnasFijas = ["Línea", "DNI", "Nombre", "Proyecto", "%"];
+                columnasFijas.forEach((colName, index) => {
+                    const letra = String.fromCharCode(65 + index);
+                    htmlLetras += `<th class="py-1 px-2 text-center border-r border-slate-600 font-black text-amber-400 w-24">${letra}<div class="resizer"></div></th>`;
+                    htmlDias += `<th class="py-1 px-2 border-r border-amber-200"></th>`;
+                    htmlNombres += `<th class="py-1 px-2 text-center border-r border-slate-300 border-b border-slate-300 text-[10px] truncate">${colName}</th>`;
+                });
+
+                const diasSemana = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo"];
+                let charCode = 70; // 'F'
+
+                diasSemana.forEach(dia => {
+                    htmlDias += `<th colspan="3" class="py-1 px-2 text-center border-r border-amber-300 font-bold text-[11px]">${dia}</th>`;
+                    const subCols = ["Partida de Control", "Concepto", "Horas"];
+                    subCols.forEach(subCol => {
+                        let letra = charCode > 90 ? 'A' + String.fromCharCode(charCode - 26) : String.fromCharCode(charCode);
+                        htmlLetras += `<th class="py-1 px-2 text-center border-r border-slate-600 font-black text-amber-400 w-32">${letra}<div class="resizer"></div></th>`;
+                        htmlNombres += `<th class="py-1 px-2 text-center border-r border-slate-300 border-b border-slate-300 text-[9px] truncate" title="${subCol}">${subCol}</th>`;
+                        charCode++;
+                    });
+                });
+
+                htmlLetras += '</tr>'; htmlDias += '</tr>'; htmlNombres += '</tr>';
+                theadLetras.innerHTML = htmlLetras; theadDias.innerHTML = htmlDias; theadNombres.innerHTML = htmlNombres;
+
+                let nroFilaVisual = 1;
+                let totalHorasGlobal = 0;
+                let totalesPorDia = [0, 0, 0, 0, 0, 0, 0];
+
+                datosListosParaExportar.forEach((worker, indexFila) => {
+                    const tieneHoras = worker.dias.some(d => d !== null && d.horas > 0);
+                    const colorTexto = tieneHoras ? "text-slate-800" : "text-slate-400 opacity-70";
+                    const esClon = indexFila > 0 && worker.dni === datosListosParaExportar[indexFila-1].dni;
+                    const fondoFila = esClon ? "bg-cyan-50/50" : "";
+                    const fondoNombre = esClon ? "bg-cyan-100 text-cyan-900" : "";
+
+                    let htmlFila = `<tr class="hover:bg-amber-50 transition border-b border-slate-100 ${colorTexto} ${fondoFila}">`;
+                    htmlFila += `<td class="py-2 px-2 text-center font-bold bg-slate-100 text-slate-500 border-r border-slate-200">${nroFilaVisual}</td>`;
+                    htmlFila += `<td class="py-2 px-2 text-center border-r border-slate-100 font-bold">${worker.lineaOriginal || worker.linea || ''}</td>`;
+                    htmlFila += `<td class="py-2 px-2 border-r border-slate-100">${worker.dni}</td>`;
+                    htmlFila += `<td class="py-2 px-2 border-r border-slate-100 font-bold truncate max-w-[150px] ${fondoNombre}">${worker.nombre}</td>`;
+                    htmlFila += `<td class="py-2 px-2 border-r border-slate-100 truncate max-w-[100px] text-blue-600">${proyecto}</td>`;
+                    htmlFila += `<td class="py-2 px-2 border-r border-slate-200"></td>`;
+
+                    worker.dias.forEach((diaData, idxDia) => {
+                        if (diaData !== null && diaData.horas > 0) {
+                            htmlFila += `<td class="py-1 px-1 border-r border-slate-100"><input type="text" class="selector-partida-fila w-full bg-transparent border-b border-slate-300 focus:outline-none text-[9px] cursor-pointer text-slate-800 font-bold truncate max-w-[100px]" value="${diaData.partida}" title="${diaData.partida}"></td>`;
+                            htmlFila += `<td class="py-1 px-1 border-r border-slate-100"><input type="text" class="selector-concepto-fila w-full bg-transparent border-b border-slate-300 focus:outline-none text-[9px] cursor-pointer text-slate-800 font-bold" value="${diaData.concepto}"></td>`;
+                            htmlFila += `<td class="py-1 px-1 text-center border-r border-slate-300 bg-emerald-50/30"><input type="number" step="0.5" min="0" max="24" data-dia="${idxDia}" value="${diaData.horas}" class="input-horas-fila w-full bg-transparent text-center font-black text-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-500 rounded hover:bg-white transition-colors" onchange="window.recalcularTotalesTareo()" /></td>`;
+                            totalHorasGlobal += parseFloat(diaData.horas) || 0;
+                            totalesPorDia[idxDia] += parseFloat(diaData.horas) || 0;
+                        } else {
+                            htmlFila += `<td class="py-2 px-2 border-r border-slate-100"></td><td class="py-2 px-2 border-r border-slate-100"></td><td class="py-2 px-2 border-r border-slate-300"></td>`;
+                        }
+                    });
+
+                    htmlFila += `</tr>`;
+                    tbody.innerHTML += htmlFila;
+                    nroFilaVisual++;
+                });
+
+                // Fila de Totales
+                let htmlTotales = `<tr class="bg-slate-800 text-white font-bold sticky bottom-0 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">`;
+                htmlTotales += `<td colspan="6" class="py-3 px-4 text-right border-r border-slate-600 uppercase tracking-widest text-[11px] shadow-inner">TOTAL DE HORAS DIARIAS:</td>`;
+                totalesPorDia.forEach((total, idx) => {
+                    htmlTotales += `<td class="py-3 px-2 border-r border-slate-600 bg-slate-700/50"></td>`;
+                    htmlTotales += `<td class="py-3 px-2 border-r border-slate-600 bg-slate-700/50"></td>`;
+                    htmlTotales += `<td id="total-dia-visual-${idx}" class="py-3 px-2 text-center font-black text-emerald-400 border-r border-slate-600 text-sm bg-slate-900 shadow-inner">${total > 0 ? total : '-'}</td>`;
+                });
+                htmlTotales += `</tr>`;
+                tbody.innerHTML += htmlTotales;
+
+                document.getElementById('resumenVistaPrevia').innerHTML = `<span class="text-indigo-600">${datosListosParaExportar.length}</span> filas alineadas al S10 | <span class="text-emerald-600">${totalHorasGlobal}</span> horas totales`;
+                document.getElementById('vistaPreviaExportacion').classList.remove('hidden');
+
+            // 🔥 MODO LECTURA: Ocultar botón guardar y bloquear inputs
+            const btnGuardar = document.getElementById('btnGuardarTareoNube');
+            if (btnGuardar) btnGuardar.classList.add('hidden');
+
+            setTimeout(() => {
+                const tabla = document.getElementById('tablaVistaPreviaTareo');
+                if (tabla) {
+                    const inputs = tabla.querySelectorAll('input, select');
+                    inputs.forEach(input => {
+                        input.disabled = true;
+                        input.classList.add('cursor-not-allowed', 'opacity-60');
+                    });
+                }
+                
+                // 🔥 SOLUCIÓN: Reactivar el redimensionamiento de columnas para históricos
+                if (typeof initResizableColumns === 'function') {
+                    initResizableColumns();
+                }
+                
+            }, 100);
+
+        } catch (error) {
+            console.error("Error al abrir tareo:", error);
+            alert("❌ Error al abrir el tareo: " + error.message);
+        }
+    };
+
         window.eliminarTareo = async function(proyecto, semanaId, event) {
             if (event) event.stopPropagation();
             if (!confirm(`⚠️ ¿Seguro que deseas eliminar el tareo de la ${semanaId}?`)) return;
@@ -6210,6 +7608,641 @@ window.iniciarNuevoReporte = function() {
             }
         };
 
+        // ==========================================
+        // AUDITORÍA: RECALCULAR TOTALES AL EDITAR
+        // ==========================================
+        window.recalcularTotalesTareo = function() {
+            let sumasDiarias = [0, 0, 0, 0, 0, 0, 0];
+            let totalGlobal = 0;
+            
+            // 1. Leer todos los inputs de horas en la tabla y sumar
+            document.querySelectorAll('.input-horas-fila').forEach(input => {
+                const dia = parseInt(input.getAttribute('data-dia'));
+                const valor = parseFloat(input.value) || 0; // Si borran el número, asume 0
+                sumasDiarias[dia] += valor;
+                totalGlobal += valor;
+            });
+            
+            // 2. Actualizar la barra oscura inferior
+            for(let i = 0; i < 7; i++) {
+                const celdaTotal = document.getElementById(`total-dia-visual-${i}`);
+                if (celdaTotal) {
+                    celdaTotal.textContent = sumasDiarias[i] > 0 ? sumasDiarias[i] : '-';
+                }
+            }
+            
+            // 3. Actualizar el texto del resumen global superior
+            const resumenSpan = document.querySelector('#resumenVistaPrevia .text-emerald-600');
+            if (resumenSpan) {
+                resumenSpan.textContent = totalGlobal;
+            }
+        };
+
+    </script>
+    <!-- ========================================== -->
+    <!-- MOTOR DEFINITIVO DE TAREOS Y PARTIDAS S10 -->
+    <!-- ========================================== -->
+    <script>
+        // 1. LECTOR DE EXCEL (Fuerza la extracción con Letras A, B, C, D)
+        window.processFiles = async function() {
+            const statusText = document.getElementById('statusText');
+            const btnProcess = document.getElementById('btnProcess');
+
+            if (!filesToProcess || filesToProcess.length === 0) {
+                return alert("⚠️ Por favor, selecciona o arrastra al menos un archivo Excel de S10.");
+            }
+
+            if (statusText) statusText.textContent = "Procesando...";
+            if (btnProcess) btnProcess.disabled = true;
+            
+            rawDataFiles = [];
+            window.hojaActividadesCruda = null; // Limpiar memoria vieja
+
+            try {
+                for (let item of filesToProcess) {
+                    const data = await item.file.arrayBuffer();
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    // Extraer hojas ocultas mapeadas exactamente a letras (header: "A")
+                    workbook.SheetNames.forEach(sheetName => {
+                        const nombreLimpio = sheetName.trim().toUpperCase();
+                        if (nombreLimpio.includes('ACTIVIDAD')) {
+                            window.hojaActividadesCruda = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: "A", defval: "" });
+                        }
+                    });
+
+                    // Extraer hoja principal
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    rawDataFiles.push({ 
+                        name: item.file.name, 
+                        category: item.category, 
+                        data: XLSX.utils.sheet_to_json(firstSheet, { defval: "" }), 
+                        rawAOA: XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" }) 
+                    });
+                }
+
+                if (typeof consolidateData === 'function') consolidateData();
+            } catch (err) {
+                console.error("Error leyendo Excel:", err);
+            } finally {
+                if (btnProcess) btnProcess.disabled = false;
+            }
+        };
+
+        // 2. MODAL DE ACTIVIDADES (Filtra leyendo Columna A y mostrando Columna D)
+        window.abrirModalActividades = function() {
+            const contenedor = document.getElementById('listaActividadesPendientes');
+            contenedor.innerHTML = '';
+            
+            let opcionesS10 = '<option value="">-- Seleccionar Partida/Concepto Oficial S10 --</option>';
+            
+            // Atrapar código del proyecto seleccionado (Ej: "03027")
+            let pCrudo = window.proyectoSeleccionadoGlobal || window.proyectoSeleccionado || window.proyectoActualGlobal || "";
+            if (!pCrudo) {
+                document.querySelectorAll('select').forEach(s => {
+                    if (s.value && /^\d{4,6}\s/.test(s.value)) pCrudo = s.value;
+                });
+            }
+            const codigoProyecto = pCrudo ? String(pCrudo).split(' ')[0].trim() : "";
+            let encontradas = 0;
+
+            // Filtro estricto por coordenadas
+            if (codigoProyecto && window.hojaActividadesCruda) {
+                window.hojaActividadesCruda.forEach(fila => {
+                    let colA = String(fila.A || '').trim();
+                    let colD = String(fila.D || '').trim();
+                    
+                    if (colA.startsWith(codigoProyecto) && colD.length > 5) {
+                        if (!opcionesS10.includes(`value="${colD}"`)) {
+                            opcionesS10 += `<option value="${colD}">${colD}</option>`;
+                            encontradas++;
+                        }
+                    }
+                });
+            }
+
+            // Diagnósticos visuales
+            if (encontradas === 0) {
+                if (!window.hojaActividadesCruda) {
+                    opcionesS10 += `<option disabled>❌ ERROR: La hoja 'Actividad' no se guardó en memoria.</option>`;
+                } else {
+                    opcionesS10 += `<option disabled>⚠️ Cero partidas encontradas para el proyecto ${codigoProyecto}</option>`;
+                }
+            }
+
+            // Dibujar interfaz
+            window.pendientesActividades.forEach((actividad, idx) => {
+                contenedor.innerHTML += `
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-3">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Columna del Excel (Capataz):</p>
+                        <p class="text-sm font-extrabold text-blue-600 mb-3"><i class="fa-solid fa-clipboard-list mr-1"></i> ${actividad}</p>
+                        <select id="mapeoActividad_${idx}" data-actividad-capataz="${actividad}" class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-xs rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 font-bold cursor-pointer">
+                            ${opcionesS10}
+                        </select>
+                    </div>
+                `;
+            });
+
+            document.getElementById('modalActividades').classList.remove('hidden');
+        };
+    </script>
+    <!-- ========================================== -->
+    <!-- MOTOR DE CONVENIOS Y DISTRIBUCIÓN 0.5 -->
+    <!-- ========================================== -->
+    <script>
+        window.conveniosTareo = {};
+
+        // 1. Abrir Modal y cargar selectores
+        window.abrirModalConvenios = function() {
+            const tbody = document.getElementById('listaConvenios');
+            tbody.innerHTML = '';
+            
+            window.opcionesTrabajadoresConvenio = '<option value="">-- Seleccione Trabajador --</option>';
+            Object.values(window.datosCampoProcesados || {}).forEach(t => {
+                window.opcionesTrabajadoresConvenio += `<option value="${t.dni}">${t.nombreOficial} (${t.dni})</option>`;
+            });
+
+            Object.keys(window.conveniosTareo).forEach(dni => {
+                window.agregarFilaConvenio(dni, window.conveniosTareo[dni]);
+            });
+
+            if (Object.keys(window.conveniosTareo).length === 0) window.agregarFilaConvenio(); 
+            document.getElementById('modalConvenios').classList.remove('hidden');
+        };
+
+        // 2. Agregar fila a la cuadrícula
+        window.agregarFilaConvenio = function(dni = "", horas = [0,0,0,0,0,0]) {
+            const tbody = document.getElementById('listaConvenios');
+            const tr = document.createElement('tr');
+            tr.className = 'fila-convenio hover:bg-white transition bg-slate-50';
+            
+            let comboHtml = `<select class="sel-trabajador-convenio w-full bg-white border border-slate-300 text-slate-700 text-[10px] rounded p-1 font-bold">`;
+            comboHtml += window.opcionesTrabajadoresConvenio;
+            comboHtml += `</select>`;
+
+            let tdHtml = `<td class="p-2">${comboHtml}</td>`;
+            for(let i=0; i<6; i++) {
+                tdHtml += `<td class="p-2 text-center"><input type="number" step="0.5" min="0" max="24" value="${horas[i]}" class="val-horas-convenio w-12 text-center bg-white border border-slate-300 rounded p-1 text-fuchsia-700 font-bold focus:ring-1 focus:ring-fuchsia-500 outline-none"></td>`;
+            }
+            tdHtml += `<td class="p-2 text-center"><button onclick="this.closest('tr').remove()" class="text-slate-400 hover:text-red-500 cursor-pointer"><i class="fa-solid fa-trash"></i></button></td>`;
+            
+            tr.innerHTML = tdHtml;
+            tbody.appendChild(tr);
+
+            if (dni) tr.querySelector('.sel-trabajador-convenio').value = dni;
+        };
+
+        // 3. Guardar en memoria y en la nube
+        window.guardarMapeoConvenios = async function() {
+            window.conveniosTareo = {};
+            document.querySelectorAll('.fila-convenio').forEach(tr => {
+                const dni = tr.querySelector('.sel-trabajador-convenio').value;
+                if (dni) {
+                    const inputs = tr.querySelectorAll('.val-horas-convenio');
+                    window.conveniosTareo[dni] = Array.from(inputs).map(inp => parseFloat(inp.value) || 0);
+                }
+            });
+
+            const btn = document.querySelector('#modalConvenios button[onclick="window.guardarMapeoConvenios()"]');
+            const txt = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> GUARDANDO...';
+            btn.disabled = true;
+
+            try {
+                const proyectoLobby = window.proyectoActualGlobal || "General";
+                const semana = window.semanaActualTareo || "00";
+                const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Semana_${semana}`);
+                await window.fsSetDoc(docRef, { convenios: window.conveniosTareo }, { merge: true });
+
+                alert("✅ Convenios guardados exitosamente.");
+                document.getElementById('modalConvenios').classList.add('hidden');
+            } catch (e) {
+                console.error(e); alert("⚠️ Error al guardar en Firebase.");
+            } finally {
+                btn.innerHTML = txt; btn.disabled = false;
+            }
+        };
+
+        // 4. MOTOR MATEMÁTICO: Conectado al rastreador de días oficial
+        window.aplicarConveniosATareas = function() {
+            if (!window.datosCampoProcesados) return;
+            
+            // 4.1 Resetear a horas originales (Previene que se sumen solas si haces click varias veces)
+            Object.values(window.datosCampoProcesados).forEach(trabajador => {
+                Object.values(trabajador.tareasDiarias).forEach(tareas => {
+                    tareas.forEach(t => {
+                        if (t.originalHours === undefined) t.originalHours = t.hours;
+                        t.hours = t.originalHours; 
+                    });
+                });
+            });
+
+            // 4.2 Aplicar matemática de distribución de convenios
+            if (!window.conveniosTareo || Object.keys(window.conveniosTareo).length === 0) return;
+            
+            Object.keys(window.conveniosTareo).forEach(dni => {
+                const trabajador = window.datosCampoProcesados[dni];
+                const horasExtraArr = window.conveniosTareo[dni]; 
+
+                if (trabajador && trabajador.tareasDiarias) {
+                    Object.entries(trabajador.tareasDiarias).forEach(([fechaHoja, tareas], indexHoja) => {
+                        
+                        // 🔥 LA MAGIA: Usamos tu propia función inteligente para adivinar el día
+                        let idxDia = obtenerIndiceDia(fechaHoja, indexHoja);
+                        if (idxDia === -1 || idxDia > 6) return;
+
+                        const horasExtraDelDia = horasExtraArr[idxDia];
+                        
+                        // Algoritmo de inyección en múltiplos de 0.5
+                        if (horasExtraDelDia > 0 && tareas.length > 0) {
+                            let numActividades = tareas.length;
+                            let base = Math.floor((horasExtraDelDia / numActividades) / 0.5) * 0.5;
+                            let resto = horasExtraDelDia - (base * numActividades);
+
+                            tareas.forEach((tarea) => {
+                                let asig = base;
+                                if (resto > 0) { asig += 0.5; resto -= 0.5; }
+                                tarea.hours += asig; 
+                            });
+                        }
+                    });
+                }
+            });
+        };
+
+        // 5. INTERCEPTOR MAESTRO: Se activa al hacer 'Mousedown' (antes de soltar el click)
+        document.addEventListener('mousedown', function(e) {
+            let btnExportar = e.target.closest('#btnExportarTareoS10');
+            if (btnExportar) {
+                window.aplicarConveniosATareas();
+            }
+        }, true);
+    </script>
+    <!-- ========================================== -->
+    <!-- MOTOR DE EXPORTACIÓN EXCELJS (FORMATO S10 PERFECTO) -->
+    <!-- ========================================== -->
+    <script>
+        setTimeout(() => {
+            let btnExportOld = document.getElementById('btnConfirmarExportacion');
+            if (!btnExportOld) return;
+            
+            let btnExportNew = btnExportOld.cloneNode(true);
+            btnExportOld.parentNode.replaceChild(btnExportNew, btnExportOld);
+
+            btnExportNew.addEventListener('click', async function() {
+                if (typeof datosListosParaExportar === 'undefined' || datosListosParaExportar.length === 0) return;
+                if (!archivoPadronS10) return alert("No se encuentra el archivo Padrón S10 original.");
+
+                const btn = this;
+                const originalHTML = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Procesando Formato S10...';
+                btn.disabled = true;
+
+                try {
+                    const arrayBuffer = await archivoPadronS10.arrayBuffer();
+                    const wb = new ExcelJS.Workbook();
+                    await wb.xlsx.load(arrayBuffer);
+
+                    // SANADOR DE FILAS S10
+                    wb.worksheets.forEach(sheet => {
+                        if (sheet._rows) {
+                            sheet._rows[0] = undefined; 
+                            for (let i = 1; i < sheet._rows.length; i++) {
+                                if (sheet._rows[i]) sheet._rows[i].number = i;
+                            }
+                        }
+                    });
+
+                    const ws = wb.worksheets[0]; 
+                    let proyectoLobby = window.proyectoSeleccionadoGlobal || document.getElementById('proyectoSelect').value || "";
+
+                    // 🔥 CAPTURA DE LISTAS DESPLEGABLES MAESTRAS (Desde la Fila 8 del S10)
+                    let masterRow = ws.getRow(8);
+                    let dvProyecto = masterRow.getCell(5).dataValidation; // Columna E
+                    let dvPartida = masterRow.getCell(7).dataValidation;  // Columna G
+                    let dvConcepto = masterRow.getCell(8).dataValidation; // Columna H
+
+                    const tbody = document.getElementById('tablaVistaPreviaTareo');
+                    const filasTr = Array.from(tbody.querySelectorAll('tr')).filter(tr => !tr.classList.contains('sticky')); 
+                    
+                    let dataPorObrero = [];
+                    datosListosParaExportar.forEach((rowObj, index) => {
+                        const tr = filasTr[index];
+                        if(!tr) return;
+                        
+                        let lineaVisual = tr.querySelectorAll('td')[1].innerText.trim();
+                        
+                        const selectsConcepto = tr.querySelectorAll('.selector-concepto-fila');
+                        const selectsPartida = tr.querySelectorAll('.selector-partida-fila');
+                        const inputsHoras = tr.querySelectorAll('.input-horas-fila');
+                        
+                        let selectIdx = 0;
+                        let rowData = {
+                            dni: String(rowObj.dni).trim(),
+                            linea: lineaVisual, 
+                            nombre: rowObj.nombre,
+                            dias: []
+                        };
+
+                        rowObj.dias.forEach((diaData, dIdx) => {
+                            if (diaData !== null && diaData.horas > 0) {
+                                const concepto = selectsConcepto[selectIdx] ? selectsConcepto[selectIdx].value : "";
+                                const partida = selectsPartida[selectIdx] ? selectsPartida[selectIdx].value : diaData.partida;
+                                const horas = inputsHoras[selectIdx] ? parseFloat(inputsHoras[selectIdx].value) || 0 : diaData.horas;
+                                
+                                rowData.dias[dIdx] = { partida, concepto, horas };
+                                selectIdx++;
+                            } else {
+                                rowData.dias[dIdx] = null;
+                            }
+                        });
+                        dataPorObrero.push(rowData);
+                    });
+
+                    let mapaFilasExcel = {};
+                    ws.eachRow({ includeEmpty: false }, function(row, rowNumber) {
+                        if (rowNumber >= 8) {
+                            let cellDNI = row.getCell(3).value; 
+                            if (cellDNI && String(cellDNI).trim().length >= 4) {
+                                mapaFilasExcel[String(cellDNI).trim()] = rowNumber;
+                            }
+                        }
+                    });
+
+                    let trabajadoresAgrupados = {};
+                    dataPorObrero.forEach(wd => {
+                        if (!trabajadoresAgrupados[wd.dni]) trabajadoresAgrupados[wd.dni] = [];
+                        trabajadoresAgrupados[wd.dni].push(wd);
+                    });
+
+                    // ORDEN DE ABAJO HACIA ARRIBA
+                    let dnisOrdenados = Object.keys(trabajadoresAgrupados).sort((a, b) => {
+                        return (mapaFilasExcel[b] || 0) - (mapaFilasExcel[a] || 0);
+                    });
+
+                    const columnasInicioDia = [7, 10, 13, 16, 19, 22, 25]; 
+
+                    dnisOrdenados.forEach(dni => {
+                        let excelRowIdx = mapaFilasExcel[dni];
+                        if (!excelRowIdx) return;
+
+                        let filasDelTrabajador = trabajadoresAgrupados[dni];
+                        let sourceRow = ws.getRow(excelRowIdx);
+                        
+                        filasDelTrabajador.forEach((wd, i) => {
+                            let targetRow;
+                            let currentRowIdx = excelRowIdx + i;
+                            
+                            let lineaFija = wd.linea;
+                            let valorLineaFinal = (lineaFija && !isNaN(lineaFija)) ? Number(lineaFija) : lineaFija;
+
+                            if (i === 0) {
+                                // 1. FILA ORIGINAL
+                                targetRow = sourceRow;
+                                
+                                targetRow.getCell(1).value = valorLineaFinal;
+                                if (proyectoLobby) targetRow.getCell(5).value = proyectoLobby;
+                                
+                                // Vaciamos los días
+                                for (let c = 7; c <= 27; c++) { targetRow.getCell(c).value = null; }
+                            } else {
+                                // 2. FILAS CLONADAS
+                                targetRow = ws.insertRow(currentRowIdx, []);
+                                targetRow.height = sourceRow.height;
+                                
+                                // Clonado profundo de estilos
+                                for (let c = 1; c <= 27; c++) {
+                                    let oldStyle = sourceRow.getCell(c).style;
+                                    if (oldStyle) targetRow.getCell(c).style = JSON.parse(JSON.stringify(oldStyle));
+                                    targetRow.getCell(c).value = null; 
+                                }
+                                
+                                try { ws.unmergeCells(currentRowIdx, 1, currentRowIdx, 2); } catch(e) {}
+                                
+                                targetRow.getCell(1).value = valorLineaFinal;            
+                                targetRow.getCell(2).value = null;                       
+                                targetRow.getCell(3).value = sourceRow.getCell(3).value; 
+                                targetRow.getCell(4).value = sourceRow.getCell(4).value; 
+                                targetRow.getCell(5).value = proyectoLobby;              
+                                targetRow.getCell(6).value = sourceRow.getCell(6).value; 
+
+                                targetRow.getCell(4).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDDEBF7' } };
+                            }
+
+                            // 🔥 RE-INYECTAR LISTA DESPLEGABLE DE PROYECTO (Columna E)
+                            if (dvProyecto) targetRow.getCell(5).dataValidation = JSON.parse(JSON.stringify(dvProyecto));
+
+                            // Inyectar datos de los días y 🔥 RE-INYECTAR LISTAS DESPLEGABLES DE PARTIDAS/CONCEPTOS
+                            columnasInicioDia.forEach((startCol, diaIndex) => {
+                                let diaInfo = wd.dias[diaIndex];
+                                
+                                if (diaInfo) {
+                                    targetRow.getCell(startCol).value = diaInfo.partida;     
+                                    targetRow.getCell(startCol + 1).value = diaInfo.concepto; 
+                                    targetRow.getCell(startCol + 2).value = diaInfo.horas;    
+                                }
+                                
+                                // Aplicar las listas desplegables inquebrantables
+                                if (dvPartida) targetRow.getCell(startCol).dataValidation = JSON.parse(JSON.stringify(dvPartida));
+                                if (dvConcepto) targetRow.getCell(startCol + 1).dataValidation = JSON.parse(JSON.stringify(dvConcepto));
+                            });
+                        });
+                    });
+
+                    const buffer = await wb.xlsx.writeBuffer();
+                    let nombreOriginal = archivoPadronS10.name;
+                    if (nombreOriginal.toLowerCase().endsWith('.xlsm')) {
+                        nombreOriginal = nombreOriginal.substring(0, nombreOriginal.length - 5) + '.xlsx';
+                    }
+
+                    saveAs(new Blob([buffer]), nombreOriginal);
+
+                    alert("✅ ¡Exportación S10 completada con éxito!\nEl formato, colores, celdas y listas desplegables están listos.");
+                    if (typeof window.cerrarVistaPrevia === 'function') window.cerrarVistaPrevia();
+
+                } catch (err) {
+                    console.error("Error en la inyección:", err);
+                    alert("❌ Hubo un error al procesar los datos: " + err.message);
+                } finally {
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                }
+            });
+        }, 1500); 
+
+        // ==========================================
+        // EXPORTADOR FINAL (100% CONECTADO A LA NUBE Y ANTI-ERRORES)
+        // ==========================================
+        window.ejecutarExportacionNube = async function() {
+            if (typeof datosListosParaExportar === 'undefined' || datosListosParaExportar.length === 0) return;
+
+            const btn = document.getElementById('btnExportacionNube');
+            const originalHTML = btn.innerHTML;
+            btn.disabled = true;
+
+            try {
+                let arrayBuffer;
+                let nombreFinalExcel = "Tareo_Exportado.xlsx";
+
+                // 🔥 LÓGICA INFALIBLE DE LECTURA (RAM vs NUBE)
+                if (archivoPadronS10) {
+                    // 1. Está creando un tareo en este momento (Lee RAM)
+                    arrayBuffer = await archivoPadronS10.arrayBuffer();
+                    nombreFinalExcel = archivoPadronS10.name;
+                } else if (window.currentPadronUrl) {
+                    // 2. Viene del Historial (Lee desde Firebase automáticamente)
+                    btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-down fa-bounce mr-2"></i> Descargando Padrón...';
+                    const response = await fetch(window.currentPadronUrl);
+                    if (!response.ok) throw new Error("No se pudo descargar el archivo de la nube.");
+                    arrayBuffer = await response.arrayBuffer();
+                    // 🔥 Usa el nombre exacto del S10 recuperado de la base de datos
+                    nombreFinalExcel = window.currentPadronName || `Plantilla_S10_Semana_${window.semanaActualTareo}.xlsx`;
+                } else {
+                    throw new Error("El archivo no está en la nube. Debes crear y guardar un Tareo nuevo primero para que se suba el Padrón base.");
+                }
+
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Inyectando a S10...';
+
+                // --- INYECTAR DATOS CON EXCELJS ---
+                const wb = new ExcelJS.Workbook();
+                await wb.xlsx.load(arrayBuffer);
+
+                wb.worksheets.forEach(sheet => {
+                    if (sheet._rows) {
+                        sheet._rows[0] = undefined; 
+                        for (let i = 1; i < sheet._rows.length; i++) {
+                            if (sheet._rows[i]) sheet._rows[i].number = i;
+                        }
+                    }
+                });
+
+                const ws = wb.worksheets[0]; 
+                let proyectoLobby = window.proyectoSeleccionadoGlobal || document.getElementById('proyectoSelect').value || "";
+
+                let masterRow = ws.getRow(8);
+                let dvProyecto = masterRow.getCell(5).dataValidation; 
+                let dvPartida = masterRow.getCell(7).dataValidation;  
+                let dvConcepto = masterRow.getCell(8).dataValidation; 
+
+                const tbody = document.getElementById('tablaVistaPreviaTareo');
+                const filasTr = Array.from(tbody.querySelectorAll('tr')).filter(tr => !tr.classList.contains('sticky')); 
+                
+                let dataPorObrero = [];
+                datosListosParaExportar.forEach((rowObj, index) => {
+                    const tr = filasTr[index];
+                    if(!tr) return;
+                    
+                    let lineaVisual = tr.querySelectorAll('td')[1].innerText.trim();
+                    const selectsConcepto = tr.querySelectorAll('.selector-concepto-fila');
+                    const selectsPartida = tr.querySelectorAll('.selector-partida-fila');
+                    const inputsHoras = tr.querySelectorAll('.input-horas-fila');
+                    
+                    let selectIdx = 0;
+                    let rowData = { dni: String(rowObj.dni).trim(), linea: lineaVisual, nombre: rowObj.nombre, dias: [] };
+
+                    rowObj.dias.forEach((diaData, dIdx) => {
+                        if (diaData !== null && diaData.horas > 0) {
+                            const concepto = selectsConcepto[selectIdx] ? selectsConcepto[selectIdx].value : "";
+                            const partida = selectsPartida[selectIdx] ? selectsPartida[selectIdx].value : diaData.partida;
+                            const horas = inputsHoras[selectIdx] ? parseFloat(inputsHoras[selectIdx].value) || 0 : diaData.horas;
+                            rowData.dias[dIdx] = { partida, concepto, horas };
+                            selectIdx++;
+                        } else {
+                            rowData.dias[dIdx] = null;
+                        }
+                    });
+                    dataPorObrero.push(rowData);
+                });
+
+                let mapaFilasExcel = {};
+                ws.eachRow({ includeEmpty: false }, function(row, rowNumber) {
+                    if (rowNumber >= 8) {
+                        let cellDNI = row.getCell(3).value; 
+                        if (cellDNI && String(cellDNI).trim().length >= 4) {
+                            mapaFilasExcel[String(cellDNI).trim()] = rowNumber;
+                        }
+                    }
+                });
+
+                let trabajadoresAgrupados = {};
+                dataPorObrero.forEach(wd => {
+                    if (!trabajadoresAgrupados[wd.dni]) trabajadoresAgrupados[wd.dni] = [];
+                    trabajadoresAgrupados[wd.dni].push(wd);
+                });
+
+                let dnisOrdenados = Object.keys(trabajadoresAgrupados).sort((a, b) => {
+                    return (mapaFilasExcel[b] || 0) - (mapaFilasExcel[a] || 0);
+                });
+
+                const columnasInicioDia = [7, 10, 13, 16, 19, 22, 25]; 
+
+                dnisOrdenados.forEach(dni => {
+                    let excelRowIdx = mapaFilasExcel[dni];
+                    if (!excelRowIdx) return;
+
+                    let filasDelTrabajador = trabajadoresAgrupados[dni];
+                    let sourceRow = ws.getRow(excelRowIdx);
+                    
+                    filasDelTrabajador.forEach((wd, i) => {
+                        let targetRow;
+                        let currentRowIdx = excelRowIdx + i;
+                        let lineaFija = wd.linea;
+                        let valorLineaFinal = (lineaFija && !isNaN(lineaFija)) ? Number(lineaFija) : lineaFija;
+
+                        if (i === 0) {
+                            targetRow = sourceRow;
+                            targetRow.getCell(1).value = valorLineaFinal;
+                            if (proyectoLobby) targetRow.getCell(5).value = proyectoLobby;
+                            for (let c = 7; c <= 27; c++) { targetRow.getCell(c).value = null; }
+                        } else {
+                            targetRow = ws.insertRow(currentRowIdx, []);
+                            targetRow.height = sourceRow.height;
+                            for (let c = 1; c <= 27; c++) {
+                                let oldStyle = sourceRow.getCell(c).style;
+                                if (oldStyle) targetRow.getCell(c).style = JSON.parse(JSON.stringify(oldStyle));
+                                targetRow.getCell(c).value = null; 
+                            }
+                            try { ws.unmergeCells(currentRowIdx, 1, currentRowIdx, 2); } catch(e) {}
+                            
+                            targetRow.getCell(1).value = valorLineaFinal;            
+                            targetRow.getCell(2).value = null;                       
+                            targetRow.getCell(3).value = sourceRow.getCell(3).value; 
+                            targetRow.getCell(4).value = sourceRow.getCell(4).value; 
+                            targetRow.getCell(5).value = proyectoLobby;              
+                            targetRow.getCell(6).value = sourceRow.getCell(6).value; 
+                            targetRow.getCell(4).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDDEBF7' } };
+                        }
+
+                        if (dvProyecto) targetRow.getCell(5).dataValidation = JSON.parse(JSON.stringify(dvProyecto));
+
+                        columnasInicioDia.forEach((startCol, diaIndex) => {
+                            let diaInfo = wd.dias[diaIndex];
+                            if (diaInfo) {
+                                targetRow.getCell(startCol).value = diaInfo.partida;     
+                                targetRow.getCell(startCol + 1).value = diaInfo.concepto; 
+                                targetRow.getCell(startCol + 2).value = diaInfo.horas;    
+                            }
+                            if (dvPartida) targetRow.getCell(startCol).dataValidation = JSON.parse(JSON.stringify(dvPartida));
+                            if (dvConcepto) targetRow.getCell(startCol + 1).dataValidation = JSON.parse(JSON.stringify(dvConcepto));
+                        });
+                    });
+                });
+
+                const buffer = await wb.xlsx.writeBuffer();
+                
+                // 🔥 Eliminamos el código que le agregaba "_Exportado" para que el S10 no lo rechace.
+                saveAs(new Blob([buffer]), nombreFinalExcel);
+                
+                alert("✅ ¡Exportación S10 completada! Los datos se inyectaron automáticamente desde la nube.");
+
+            } catch (err) {
+                console.error("Error en la inyección:", err);
+                alert("❌ Error: " + err.message);
+            } finally {
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            }
+        };
     </script>
 </body>
 </html>
