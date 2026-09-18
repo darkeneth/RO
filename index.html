@@ -1192,12 +1192,32 @@
                 stockRows = dataPesada.stock || []; window.stockRows = stockRows;
                 subcontratoRows = dataPesada.subcontratos || []; window.subcontratoRows = subcontratoRows;
 
-                // 🔥 PASO 3: Indicar que este SÍ es un reporte existente (Desactiva el Modo Aislado)
+                // 🔥 RECUPERAR REASIGNACIONES DIRECTAMENTE DESDE LA NUBE (Sincrónico)
+                window.reasignacionesNube = snap.exists() && snap.data().reasignaciones ? snap.data().reasignaciones : {};
+                
+                let huboCambiosHistoricos = false;
+                consolidatedRows.forEach(r => {
+                    let destino = window.reasignacionesNube[r._id] || r._PartidaOriginal;
+                    if (r._PartidaActual !== destino) {
+                        r._PartidaActual = destino;
+                        huboCambiosHistoricos = true;
+                    }
+                });
+                
+                // Si la base de datos tenía reasignaciones, forzamos la actualización de la matriz RO antes de agrupar
+                if (huboCambiosHistoricos && typeof window.actualizarMatrizROEnVivo === 'function') {
+                    window.actualizarMatrizROEnVivo();
+                }
+
+                // 🔥 PASO 3: Indicar que este SÍ es un reporte existente (Desbloquea auto-guardado)
                 window.esNuevoReporte = false;
 
-                const proy = dataPesada.proyecciones || {};
+                // 🔥 FIX CRÍTICO: Cargar proyecciones de Firebase y anular la memoria vacía
+                const proy = snap.exists() && snap.data().proyecciones ? snap.data().proyecciones : (dataPesada.proyecciones || {});
                 localStorage.setItem('s10_ro_projections', JSON.stringify(proy));
-                roProjections = proy; window.roProjections = proy;
+                roProjections = proy; 
+                window.roProjections = proy;
+                window.proyeccionesNube = proy; // <-- ESTO REPARA EL BUG VISUAL
 
                 if (typeof extractSemanasFromSubcontratos === 'function') extractSemanasFromSubcontratos();
                 groupDataByPartida();
@@ -1312,12 +1332,14 @@ window.iniciarNuevoReporte = function() {
                     }
                 }
 
+                // Empaquetar la data para Firebase (Ahora incluye las reasignaciones que hiciste ANTES de guardar)
                 const reporteData = {
                     proyecto: proyecto,
                     periodo: mes,
                     fechaGuardado: new Date().toISOString(),
                     creadoPor: window.firebaseAuth.currentUser.email,
                     archivoUrl: archivoUrl,
+                    reasignaciones: window.reasignacionesNube || {}, // 🔥 LA CLAVE: Guarda los movimientos en la base
                     estadisticas: {
                         resumen: { vCosto: t_V, eac: t_EAC, margen: t_Margen },
                         partidas: document.getElementById('metricPartidas').textContent,
@@ -1326,9 +1348,16 @@ window.iniciarNuevoReporte = function() {
                 };
 
                 const reporteRef = window.fsDoc(window.firebaseDb, `proyectos/${proyecto}/reportes/${mes}`);
-                await window.fsSetDoc(reporteRef, reporteData);
+                await window.fsSetDoc(reporteRef, reporteData, { merge: true }); 
                 
                 alert(`✅ ¡El reporte de ${mes} se guardó exitosamente en la nube con tus filtros de semanas!`);
+                
+                // 🔥 DESBLOQUEAR EL AUTO-GUARDADO (Ya no es un reporte "nuevo")
+                window.esNuevoReporte = false;
+                
+                // 🔥 INICIAR LA ESCUCHA MULTIJUGADOR INMEDIATAMENTE
+                if (typeof window.escucharSemanasEnVivo === 'function') window.escucharSemanasEnVivo();
+
                 // 🔥 Iniciar aprendizaje silencioso de partidas
                 if (typeof window.sincronizarCatalogoPartidas === 'function') window.sincronizarCatalogoPartidas();
             } catch (error) {
@@ -2615,6 +2644,63 @@ window.iniciarNuevoReporte = function() {
                 partidasGrouped[pKey] = [...originalItems, ...movedInItems];
             });
         }
+        // 🔥 NUEVA FUNCIÓN MAESTRA: Recalcula la matriz RO en tiempo real al mover ítems
+        window.actualizarMatrizROEnVivo = function() {
+            if (!roFilteredMatrix2D || roFilteredMatrix2D.length === 0) return;
+            if (!consolidatedRows || consolidatedRows.length === 0) return;
+
+            // 1. Recalcular la sumatoria exacta del Consolidado actual
+            const partidaCostsMap = {};
+            consolidatedRows.forEach(r => {
+                let pAct = String(r._PartidaActual || '').trim();
+                let origCost = parseNumberValue(getConsolidadoRowValue(r, 'R Costo'));
+                if (pAct) partidaCostsMap[pAct] = (partidaCostsMap[pAct] || 0) + origCost;
+            });
+
+            // 2. Identificar columnas clave en la matriz RO
+            const headers = roFilteredMatrix2D[0];
+            const idxCodigo = headers.findIndex(h => h === 'Código');
+            const idxDesc = headers.findIndex(h => h === 'Descripción');
+            const idxCorregido = headers.findIndex(h => h === 'R Costo Corregido');
+            const idxDiffCP = headers.findIndex(h => h === 'Diferencia (C - P)');
+            const idxVCosto = headers.findIndex(h => h === 'V costo');
+            
+            // 🛡️ Detección segura de la fila donde empiezan los datos (Ignora las cabeceras)
+            let dataStart = 1;
+            for (let i = 0; i < Math.min(10, roFilteredMatrix2D.length); i++) {
+                let c0 = String(roFilteredMatrix2D[i][idxCodigo] || '').trim();
+                if (/^[\d\.\-\s]{2,15}$/.test(c0) && /^\d/.test(c0)) { dataStart = i; break; }
+            }
+
+            // 3. Inyectar los nuevos valores fila por fila
+            for (let r = dataStart; r < roFilteredMatrix2D.length; r++) {
+                let row = roFilteredMatrix2D[r];
+                let rawCode = String(row[idxCodigo] || '').trim();
+                let rawDesc = normStr(row[idxDesc] || '');
+
+                let sumCorregido = 0;
+                Object.keys(partidaCostsMap).forEach(partName => {
+                    let partClean = normStr(partName);
+                    let partCode = partName.split(' ')[0].trim();
+                    let isMatch = false;
+                    
+                    if (rawCode && rawCode.length > 0) {
+                        if (partCode.startsWith(rawCode) || partName.startsWith(rawCode)) isMatch = true;
+                        else if (/^\d+$/.test(rawCode) && partCode.endsWith(rawCode)) isMatch = true;
+                    }
+                    if (!isMatch && rawDesc.length > 3 && partClean.includes(rawDesc)) isMatch = true;
+                    if (isMatch) sumCorregido += partidaCostsMap[partName];
+                });
+
+                // Actualizar Costo Corregido y Diferencias en vivo
+                if (idxCorregido !== -1) row[idxCorregido] = sumCorregido !== 0 ? sumCorregido : 0;
+                if (idxDiffCP !== -1 && idxVCosto !== -1) {
+                    let vCostoVal = typeof row[idxVCosto] === 'number' ? row[idxVCosto] : 0;
+                    let diff = vCostoVal - sumCorregido;
+                    row[idxDiffCP] = diff !== 0 ? diff : 0;
+                }
+            }
+        };
 
         function reassignItemPartida(rowId, newPartidaKey) {
             const row = consolidatedRows.find(r => r._id === rowId);
@@ -2648,23 +2734,25 @@ window.iniciarNuevoReporte = function() {
                 return;
             }
 
+            if (typeof window.reasignacionesNube === 'undefined') window.reasignacionesNube = {};
+
             consolidatedRows.forEach(row => {
                 row._PartidaActual = row._PartidaOriginal;
                 row._SuggestedPartida = null; 
                 row._reassignedTimestamp = 0;
+                // 🔥 Forzar a la nube a recordar explícitamente el estado original
+                window.reasignacionesNube[row._id] = row._PartidaOriginal;
             });
 
             if (typeof clearAuditSuggestionsUI === 'function') clearAuditSuggestionsUI();
 
-            // 🔥 LIMPIAR LA MEMORIA VIVA Y LA NUBE
-            window.reasignacionesNube = {};
             if (typeof window.guardarReasignacionesEnVivo === 'function') window.guardarReasignacionesEnVivo();
 
             groupDataByPartida();
             buildPartidaTabsAndSelect();
             updateReassignmentCountUI();
             
-            window.actualizarMatrizROEnVivo();
+            if (typeof window.actualizarMatrizROEnVivo === 'function') window.actualizarMatrizROEnVivo();
             renderTableData();
 
             alert("🔄 Restablecimiento completo: Todas las partidas han vuelto a su estado original.");
@@ -4658,9 +4746,18 @@ window.iniciarNuevoReporte = function() {
         };
 
         window.guardarReasignacionesEnVivo = async function() {
+            if (window.esNuevoReporte) return; 
             const { proj, per } = window.getSincronizacionParams();
             if (!proj || !per) return;
-            try { await window.fsSetDoc(window.fsDoc(window.firebaseDb, `proyectos/${proj}/reportes/${per}`), { reasignaciones: window.reasignacionesNube || {} }, { merge: true }); } catch (e) {}
+            try { 
+                await window.fsSetDoc(window.fsDoc(window.firebaseDb, `proyectos/${proj}/reportes/${per}`), { 
+                    reasignaciones: window.reasignacionesNube || {} 
+                }, { merge: true }); 
+                // Actualizar la Curva S automáticamente
+                if (typeof window.subirCTCaFirebase === 'function') window.subirCTCaFirebase();
+            } catch (e) {
+                console.error("Error en auto-guardado: ", e);
+            }
         };
 
         window.guardarProyeccionesEnVivo = async function() {
@@ -4669,9 +4766,14 @@ window.iniciarNuevoReporte = function() {
             try { await window.fsSetDoc(window.fsDoc(window.firebaseDb, `proyectos/${proj}/reportes/${per}`), { proyecciones: window.roProjections || {} }, { merge: true }); } catch (e) {}
         };
 
-        // 🔥 ESCUCHADOR MAESTRO DE FIREBASE
+        // Escuchador blindado MULTI-SISTEMA
         window.escucharSemanasEnVivo = function() {
-            const { proj, per } = window.getSincronizacionParams();
+            let pSel = document.getElementById('proyectoSelect');
+            let proj = (pSel && pSel.value) ? pSel.value : window.proyectoActualGlobal;
+            let statusStr = document.getElementById('statusText') ? document.getElementById('statusText').textContent : '';
+            let match = statusStr.match(/\((.*?)\)/); 
+            let per = match ? match[1] : (document.getElementById('mesSelect') ? document.getElementById('mesSelect').value : window.currentPeriodo);
+
             if (!proj || !per) return;
             
             const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proj}/reportes/${per}`);
@@ -4680,7 +4782,7 @@ window.iniciarNuevoReporte = function() {
             window.semanasUnsubscribe = window.fsOnSnapshot(docRef, (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    let necesitaRepintar = false;
+                    let repintar = false;
 
                     // A) Sincronizar Semanas
                     if (data.activeSemanas && Array.isArray(data.activeSemanas)) {
@@ -4688,12 +4790,15 @@ window.iniciarNuevoReporte = function() {
                         document.querySelectorAll('.semana-chk').forEach(chk => { chk.checked = activeSemanas.has(chk.value); });
                         const chkAll = document.getElementById('chkAllSemanas');
                         if (chkAll && typeof subcontratoSemanas !== 'undefined') chkAll.checked = (activeSemanas.size === subcontratoSemanas.size);
-                        necesitaRepintar = true;
+                        repintar = true;
                     }
 
-                    // B) Sincronizar Reasignaciones (Consolidado)
+                    // B) Sincronizar Reasignaciones (Doble Blindaje)
                     if (data.reasignaciones) {
-                        window.reasignacionesNube = data.reasignaciones;
+                        if (typeof window.reasignacionesNube === 'undefined') window.reasignacionesNube = {};
+                        // 🔥 Aquí está la magia: Mezcla la nube con la RAM para no perder nada
+                        window.reasignacionesNube = { ...window.reasignacionesNube, ...data.reasignaciones };
+                        
                         let huboCambios = false;
                         if (typeof consolidatedRows !== 'undefined') {
                             consolidatedRows.forEach(row => {
@@ -4705,27 +4810,29 @@ window.iniciarNuevoReporte = function() {
                                 }
                             });
                             if (huboCambios) {
-                                groupDataByPartida(); buildPartidaTabsAndSelect(); updateReassignmentCountUI(); window.actualizarMatrizROEnVivo();
-                                necesitaRepintar = true;
+                                groupDataByPartida(); 
+                                buildPartidaTabsAndSelect(); 
+                                updateReassignmentCountUI(); 
+                                if (typeof window.actualizarMatrizROEnVivo === 'function') window.actualizarMatrizROEnVivo();
+                                repintar = true;
                             }
                         }
                     }
 
-                    // C) Sincronizar Proyecciones y Notas
+                    // C) Sincronizar Proyecciones
                     if (data.proyecciones) {
-                        const localStr = JSON.stringify(window.roProjections || {});
+                        const localStr = JSON.stringify(typeof roProjections !== 'undefined' ? roProjections : {});
                         const nubeStr = JSON.stringify(data.proyecciones);
                         if (localStr !== nubeStr) {
-                            // Actualizar la memoria maestra con lo que viene de la nube
-                            window.roProjections = data.proyecciones; 
+                            roProjections = data.proyecciones;
+                            window.proyeccionesNube = data.proyecciones;
                             localStorage.setItem('s10_ro_projections', nubeStr);
-                            necesitaRepintar = true;
+                            repintar = true;
                         }
                     }
 
-                    // Repintar solo si la nube trajo datos nuevos
-                    if (necesitaRepintar && (currentMainView === 'SUBCONTRATO' || currentMainView === 'RO' || currentMainView === 'CONSOLIDADO')) {
-                        renderTableData();
+                    if (repintar && typeof renderTableData === 'function') {
+                        setTimeout(() => renderTableData(), 50);
                     }
                 }
             });
@@ -6038,7 +6145,30 @@ window.iniciarNuevoReporte = function() {
             zonaRes.innerHTML = '<div class="text-indigo-600 font-bold flex flex-col items-center gap-4 py-10"><i class="fa-solid fa-spinner fa-spin text-5xl"></i> <span class="tracking-widest uppercase text-sm">Procesando y cruzando datos...</span></div>';
 
             try {
-                // 🔥 PASO 3: Leer el Padrón S10 y crear el Diccionario Maestro
+                // 🔥 1. DESCARGAR DICCIONARIOS MAESTROS DE FIREBASE (TODO CENTRALIZADO)
+                const proyectoLobby = window.proyectoActualGlobal || "General";
+
+                try {
+                    const maestroRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Maestro`);
+                    const maestroSnap = await window.fsGetDoc(maestroRef);
+                    if (maestroSnap.exists()) {
+                        window.traduccionPartidasTareo = maestroSnap.data().diccionarioActividades || {};
+                        window.traduccionTrabajadoresTareo = maestroSnap.data().diccionarioTrabajadores || {};
+                        window.mapeoConceptosTareo = maestroSnap.data().diccionarioConceptos || {};
+                        // 🔥 CARGAMOS CONVENIOS Y PROYECTO DESDE EL MAESTRO GLOBAL
+                        window.mapeoConveniosTareo = maestroSnap.data().diccionarioConvenios || {};
+                        window.proyectoSeleccionadoGlobal = maestroSnap.data().proyectoS10Vinculado || "";
+                    } else {
+                        window.traduccionPartidasTareo = {}; window.traduccionTrabajadoresTareo = {}; 
+                        window.mapeoConceptosTareo = {}; window.mapeoConveniosTareo = {}; 
+                        window.proyectoSeleccionadoGlobal = "";
+                    }
+                } catch(e) {
+                    console.warn("Iniciando con memoria en blanco:", e);
+                    window.traduccionPartidasTareo = {}; window.traduccionTrabajadoresTareo = {}; 
+                    window.mapeoConceptosTareo = {}; window.mapeoConveniosTareo = {};
+                    window.proyectoSeleccionadoGlobal = "";
+                }
                 const arrayBufferS10 = await archivoPadronS10.arrayBuffer();
                 const workbookS10 = XLSX.read(arrayBufferS10, { type: 'array' });
                 const worksheetS10 = workbookS10.Sheets[workbookS10.SheetNames[0]];
@@ -6229,33 +6359,49 @@ window.iniciarNuevoReporte = function() {
                             });
                             if (nombreCampoVal.includes('/') && !tieneHoras) continue;
 
-                            // 🔥 PASO 5: Cruce inteligente de nombres con S10
+                            // 🔥 PASO 5: Cruce inteligente de nombres con S10 (MEMORIA + ALGORITMO)
                             let dniTrabajador = null;
-                            const palabrasCampo = nombreCampoVal.replace(/,/g, ' ').split(/\s+/).filter(p => p.length > 2);
+                            let nombreOficialS10 = null;
+                            let lineaOriginalS10 = null;
 
-                            const t_match = window.diccionarioPadronS10.find(t => {
-                                const palabrasS10 = t.nombreOficial.replace(/,/g, ' ').split(/\s+/).filter(p => p.length > 2);
-                                let coincidencias = 0;
-                                palabrasCampo.forEach(palabra => {
-                                    if (palabrasS10.includes(palabra)) coincidencias++;
+                            // 1. Revisar si la Memoria Maestra de la Nube ya lo conoce
+                            if (window.traduccionTrabajadoresTareo && window.traduccionTrabajadoresTareo[nombreCampoVal]) {
+                                dniTrabajador = window.traduccionTrabajadoresTareo[nombreCampoVal];
+                                const tMem = window.diccionarioPadronS10.find(t => t.dni === dniTrabajador);
+                                if (tMem) {
+                                    nombreOficialS10 = tMem.nombreOficial;
+                                    lineaOriginalS10 = tMem.lineaOriginal;
+                                }
+                            }
+
+                            // 2. Si la Nube no lo conoce, intentar cruce algorítmico
+                            if (!dniTrabajador) {
+                                const palabrasCampo = nombreCampoVal.replace(/,/g, ' ').split(/\s+/).filter(p => p.length > 2);
+                                const t_match = window.diccionarioPadronS10.find(t => {
+                                    const palabrasS10 = t.nombreOficial.replace(/,/g, ' ').split(/\s+/).filter(p => p.length > 2);
+                                    let coincidencias = 0;
+                                    palabrasCampo.forEach(palabra => {
+                                        if (palabrasS10.includes(palabra)) coincidencias++;
+                                    });
+                                    return coincidencias >= 3 || (palabrasCampo.length === 2 && coincidencias === 2) || t.nombreOficial.includes(nombreCampoVal);
                                 });
-                                return coincidencias >= 3 || (palabrasCampo.length === 2 && coincidencias === 2) || t.nombreOficial.includes(nombreCampoVal);
-                            });
 
-                            if (t_match) {
-                                dniTrabajador = t_match.dni;
-                                mapeosTrabajadores[nombreCampoVal] = dniTrabajador;
-                            } else {
-                                if(!trabajadoresDesconocidos.includes(nombreCampoVal)) trabajadoresDesconocidos.push(nombreCampoVal);
-                                continue; 
+                                if (t_match) {
+                                    dniTrabajador = t_match.dni;
+                                    nombreOficialS10 = t_match.nombreOficial;
+                                    lineaOriginalS10 = t_match.lineaOriginal;
+                                } else {
+                                    if(!trabajadoresDesconocidos.includes(nombreCampoVal)) trabajadoresDesconocidos.push(nombreCampoVal);
+                                    continue; 
+                                }
                             }
                             
                             // Crear registro en memoria para el trabajador
                             if (!window.datosCampoProcesados[dniTrabajador]) {
                                 window.datosCampoProcesados[dniTrabajador] = {
                                     dni: dniTrabajador,
-                                    nombreOficial: t_match.nombreOficial,
-                                    lineaOriginal: t_match.lineaOriginal,
+                                    nombreOficial: nombreOficialS10,
+                                    lineaOriginal: lineaOriginalS10,
                                     category: category,
                                     tareasDiarias: {} 
                                 };
@@ -6508,7 +6654,7 @@ window.iniciarNuevoReporte = function() {
             document.getElementById('modalProyecto').classList.remove('hidden');
         };
 
-        // 🔥 GUARDAR PROYECTO EN FIREBASE
+        // 🔥 GUARDAR PROYECTO EN FIREBASE (MEMORIA GLOBAL)
         window.guardarProyecto = async function() {
             const select = document.getElementById('selectorModalProyecto');
             if (select.value) {
@@ -6521,12 +6667,11 @@ window.iniciarNuevoReporte = function() {
 
                 try {
                     const proyectoLobby = window.proyectoActualGlobal || "General";
-                    const semana = window.semanaActualTareo || "00";
-                    const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Semana_${semana}`);
-                    
+                    // 🔥 GUARDAR EN EL MAESTRO
+                    const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Maestro`);
                     await window.fsSetDoc(docRef, { proyectoS10Vinculado: window.proyectoSeleccionadoGlobal }, { merge: true });
 
-                    alert(`✅ Proyecto vinculado y guardado en la nube:\n${window.proyectoSeleccionadoGlobal}`);
+                    alert(`✅ Proyecto vinculado y guardado en la nube para siempre:\n${window.proyectoSeleccionadoGlobal}`);
                     document.getElementById('modalProyecto').classList.add('hidden');
                 } catch (e) {
                     console.error("Error al guardar Proyecto:", e);
@@ -6540,97 +6685,252 @@ window.iniciarNuevoReporte = function() {
             }
         };
 
-        // 🔥 GUARDAR ACTIVIDADES EN FIREBASE
+        // 🔥 GUARDAR ACTIVIDADES EN FIREBASE (MEMORIA GLOBAL)
         window.guardarMapeoActividades = async function() {
             const selects = document.querySelectorAll('[id^="mapeoActividad_"]');
             let mapeosGuardados = 0;
-
             if (!window.traduccionPartidasTareo) window.traduccionPartidasTareo = {};
 
             selects.forEach(select => {
                 if (select.value) {
                     const actividadCapataz = select.getAttribute('data-actividad-capataz');
                     window.traduccionPartidasTareo[actividadCapataz] = select.value;
+                    window.pendientesActividades = window.pendientesActividades.filter(a => a !== actividadCapataz);
                     mapeosGuardados++;
                 }
             });
 
             if (mapeosGuardados > 0) {
-                const btn = document.querySelector('#modalActividades button');
+                const btn = document.querySelector('#modalActividades .p-5 button');
                 const txtOriginal = btn.innerHTML;
-                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> GUARDANDO EN NUBE...';
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> GUARDANDO...';
                 btn.disabled = true;
 
                 try {
                     const proyectoLobby = window.proyectoActualGlobal || "General";
-                    const semana = window.semanaActualTareo || "00";
-                    const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Semana_${semana}`);
-                    
+                    const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Maestro`);
                     await window.fsSetDoc(docRef, { diccionarioActividades: window.traduccionPartidasTareo }, { merge: true });
 
-                    alert(`✅ Se han guardado ${mapeosGuardados} actividades en la base de datos para la Semana ${semana}.`);
+                    const btnPanel = document.querySelector('button[onclick*="abrirModalActividades"]');
+                    if (btnPanel) {
+                        const quedan = window.pendientesActividades.length;
+                        if (quedan === 0) {
+                            btnPanel.className = "bg-slate-100 text-slate-400 font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 cursor-not-allowed border border-slate-200 transition shadow-none";
+                            btnPanel.innerHTML = '<i class="fa-solid fa-check text-indigo-500"></i> TAREAS (0)';
+                            btnPanel.onclick = null;
+                        } else { btnPanel.innerHTML = `<i class="fa-solid fa-list-check"></i> TAREAS (${quedan})`; }
+                    }
                     document.getElementById('modalActividades').classList.add('hidden');
-                } catch (e) {
-                    console.error("Error al guardar Actividades:", e);
-                    alert("⚠️ Error al sincronizar con Firebase.");
-                } finally {
-                    btn.innerHTML = txtOriginal;
-                    btn.disabled = false;
-                }
-            } else {
-                alert("⚠️ No seleccionaste ninguna partida oficial del S10 para vincular.");
-            }
+                } catch (e) { alert("⚠️ Error al sincronizar con Firebase."); } finally { btn.innerHTML = txtOriginal; btn.disabled = false; }
+            } else { alert("⚠️ No seleccionaste ninguna partida oficial."); }
         };
 
-        // 🔥 GUARDAR TRABAJADORES EN FIREBASE
+        // 🔥 GUARDAR TRABAJADORES EN FIREBASE (MEMORIA GLOBAL)
         window.guardarMapeoTrabajadores = async function() {
             const selects = document.querySelectorAll('[id^="mapeoTrabajador_"]');
             let mapeosGuardados = 0;
-
             if (!window.traduccionTrabajadoresTareo) window.traduccionTrabajadoresTareo = {};
 
             selects.forEach(select => {
                 if (select.value) {
                     const nombreCapataz = select.getAttribute('data-nombre-capataz');
                     window.traduccionTrabajadoresTareo[nombreCapataz] = select.value;
+                    window.pendientesTrabajadores = window.pendientesTrabajadores.filter(t => t !== nombreCapataz);
                     mapeosGuardados++;
                 }
             });
 
             if (mapeosGuardados > 0) {
-                const btn = document.querySelector('#modalTrabajadores button');
+                const btn = document.querySelector('#modalTrabajadores .p-5 button');
                 const txtOriginal = btn.innerHTML;
-                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> GUARDANDO EN NUBE...';
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> GUARDANDO...';
                 btn.disabled = true;
 
                 try {
                     const proyectoLobby = window.proyectoActualGlobal || "General";
-                    const semana = window.semanaActualTareo || "00";
-                    const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Semana_${semana}`);
-                    
+                    const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Maestro`);
                     await window.fsSetDoc(docRef, { diccionarioTrabajadores: window.traduccionTrabajadoresTareo }, { merge: true });
 
-                    alert(`✅ Se han guardado ${mapeosGuardados} trabajadores en la base de datos para la Semana ${semana}.`);
+                    const btnPanel = document.querySelector('button[onclick*="abrirModalTrabajadores"]');
+                    if (btnPanel) {
+                        const quedan = window.pendientesTrabajadores.length;
+                        if (quedan === 0) {
+                            btnPanel.className = "bg-slate-100 text-slate-400 font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 cursor-not-allowed border border-slate-200 transition shadow-none";
+                            btnPanel.innerHTML = '<i class="fa-solid fa-check text-teal-500"></i> PERSONAL (0)';
+                            btnPanel.onclick = null;
+                        } else { btnPanel.innerHTML = `<i class="fa-solid fa-user-gear"></i> PERSONAL (${quedan})`; }
+                    }
                     document.getElementById('modalTrabajadores').classList.add('hidden');
-                } catch (e) {
-                    console.error("Error al guardar Trabajadores:", e);
-                    alert("⚠️ Error al sincronizar con Firebase.");
-                } finally {
-                    btn.innerHTML = txtOriginal;
-                    btn.disabled = false;
+                } catch (e) { alert("⚠️ Error al sincronizar con Firebase."); } finally { btn.innerHTML = txtOriginal; btn.disabled = false; }
+            } else { alert("⚠️ No seleccionaste ningún trabajador oficial."); }
+        };
+
+        // 🔥 GUARDAR CONCEPTOS EN FIREBASE (MEMORIA GLOBAL)
+        window.guardarMapeoConceptos = async function() {
+            const selects = document.querySelectorAll('.select-concepto-worker');
+            let mapeosGuardados = 0;
+            if (!window.mapeoConceptosTareo) window.mapeoConceptosTareo = {};
+
+            selects.forEach(select => {
+                const dni = select.getAttribute('data-dni');
+                if (select.value) {
+                    window.mapeoConceptosTareo[dni] = select.value;
+                    mapeosGuardados++;
+                } else { delete window.mapeoConceptosTareo[dni]; }
+            });
+
+            const btn = document.querySelector('#modalConceptos button');
+            const txtOriginal = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> GUARDANDO...';
+            btn.disabled = true;
+
+            try {
+                const proyectoLobby = window.proyectoActualGlobal || "General";
+                const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Maestro`);
+                await window.fsSetDoc(docRef, { diccionarioConceptos: window.mapeoConceptosTareo }, { merge: true });
+
+                const btnPanel = document.querySelector('button[onclick*="abrirModalConceptos"]');
+                if (btnPanel) {
+                    btnPanel.className = "bg-slate-100 text-slate-400 font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 border border-slate-200 transition shadow-none cursor-not-allowed";
+                    btnPanel.innerHTML = '<i class="fa-solid fa-check text-amber-500"></i> CONCEPTOS (OK)';
                 }
+                document.getElementById('modalConceptos').classList.add('hidden');
+            } catch (e) { alert("⚠️ Error al sincronizar con Firebase."); } finally { btn.innerHTML = txtOriginal; btn.disabled = false; }
+        };
+
+        // ==========================================
+        // MÓDULO DE CONVENIOS (HORAS EXTRA EN NUBE)
+        // ==========================================
+        window.abrirModalConvenios = function() {
+            const tbody = document.getElementById('listaConvenios');
+            tbody.innerHTML = '';
+            
+            let conveniosCargados = window.mapeoConveniosTareo || {};
+            
+            if (Object.keys(conveniosCargados).length === 0) {
+                window.agregarFilaConvenio(); 
             } else {
-                alert("⚠️ No seleccionaste ningún trabajador oficial del S10 para vincular.");
+                Object.entries(conveniosCargados).forEach(([dni, horasDia]) => {
+                    window.agregarFilaConvenio(dni, horasDia);
+                });
+            }
+            document.getElementById('modalConvenios').classList.remove('hidden');
+        };
+
+        window.agregarFilaConvenio = function(dniGuardado = '', horasGuardadas = [0,0,0,0,0,0]) {
+            const tbody = document.getElementById('listaConvenios');
+            const tr = document.createElement('tr');
+            
+            let opcionesS10 = '<option value="">-- Seleccionar Personal --</option>';
+            Object.values(window.datosCampoProcesados).forEach(t => {
+                const sel = t.dni === dniGuardado ? 'selected' : '';
+                opcionesS10 += `<option value="${t.dni}" ${sel}>${t.nombreOficial}</option>`;
+            });
+
+            tr.innerHTML = `
+                <td class="p-2 border-r border-slate-200">
+                    <select class="w-full bg-white border border-slate-300 text-[10px] rounded focus:ring-fuchsia-500 p-2 font-bold cursor-pointer">
+                        ${opcionesS10}
+                    </select>
+                </td>
+                ${horasGuardadas.map(h => `<td class="p-2 border-r border-slate-200"><input type="number" step="0.5" value="${h}" class="w-full bg-white border border-slate-300 text-center text-[11px] font-mono rounded focus:ring-fuchsia-500 p-1.5"></td>`).join('')}
+                <td class="p-2 text-center">
+                    <button onclick="window.eliminarFilaConvenio(this)" class="w-8 h-8 rounded-full text-slate-400 hover:text-white hover:bg-red-500 transition cursor-pointer"><i class="fa-solid fa-trash-can"></i></button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        };
+
+        window.eliminarFilaConvenio = function(btn) { btn.closest('tr').remove(); };
+
+        // 🔥 GUARDAR CONVENIOS EN FIREBASE (MEMORIA GLOBAL)
+        window.guardarMapeoConvenios = async function() {
+            const tbody = document.getElementById('listaConvenios');
+            const filas = tbody.querySelectorAll('tr');
+            
+            window.mapeoConveniosTareo = {};
+            let conveniosGuardados = 0;
+
+            filas.forEach(tr => {
+                const select = tr.querySelector('select'); 
+                const inputDatalist = tr.querySelector('input[list="datalistPersonalConvenios"]');
+                const inputsHoras = tr.querySelectorAll('input[type="number"]');
+                
+                let dni = "";
+                // Soporta tanto el buscador nuevo (datalist) como el select antiguo
+                if (inputDatalist && inputDatalist.value && inputDatalist.value.includes('|')) {
+                    dni = inputDatalist.value.split('|')[1].trim();
+                } else if (select && select.value) {
+                    dni = select.value;
+                }
+
+                if (dni) {
+                    const horas = Array.from(inputsHoras).map(i => parseFloat(i.value) || 0);
+                    if (horas.some(h => h > 0)) {
+                        window.mapeoConveniosTareo[dni] = horas;
+                        conveniosGuardados++;
+                    }
+                }
+            });
+
+            const btn = document.querySelector('#modalConvenios .p-5 button');
+            const txtOriginal = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> GUARDANDO...';
+            btn.disabled = true;
+
+            try {
+                const proyectoLobby = window.proyectoActualGlobal || "General";
+                // 🔥 GUARDAR EN EL MAESTRO GLOBAL PARA QUE DURE PARA SIEMPRE
+                const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Maestro`);
+                await window.fsSetDoc(docRef, { diccionarioConvenios: window.mapeoConveniosTareo }, { merge: true });
+
+                const btnPanel = document.querySelector('button[onclick*="abrirModalConvenios"]');
+                if (btnPanel) {
+                    btnPanel.className = "bg-slate-100 text-slate-400 font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 border border-slate-200 transition shadow-none cursor-not-allowed";
+                    btnPanel.innerHTML = `<i class="fa-solid fa-check text-fuchsia-500"></i> CONVENIOS (OK)`;
+                }
+                document.getElementById('modalConvenios').classList.add('hidden');
+            } catch (e) { 
+                alert("⚠️ Error al sincronizar con Firebase."); 
+            } finally { 
+                btn.innerHTML = txtOriginal; 
+                btn.disabled = false; 
             }
         };
-        // 🔥 FUNCIONES DE CONCEPTOS (TIPOS DE HORA)
+
+        // 🔥 ABRIR MODAL CONCEPTOS (AHORA CON ASIGNACIÓN MASIVA)
         window.abrirModalConceptos = function() {
             const contenedor = document.getElementById('listaConceptosPendientes');
+            if (!contenedor) return;
             contenedor.innerHTML = '';
             
             if (!window.mapeoConceptosTareo) window.mapeoConceptosTareo = {};
 
-            // Renderizar la lista de trabajadores con su selector
+            // 1. Armar las opciones base del S10
+            let opcionesS10Base = `<option value="">-- Por defecto (Vacío) --</option>`;
+            if (window.conceptosS10) {
+                window.conceptosS10.forEach(c => {
+                    opcionesS10Base += `<option value="${c}">${c}</option>`;
+                });
+            }
+
+            // 2. 🔥 Inyectar el Selector General en la cabecera de la ventana
+            const headerDiv = contenedor.previousElementSibling;
+            if (headerDiv) {
+                headerDiv.innerHTML = `
+                    <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <p class="text-xs text-slate-600 flex-1">Asigna el concepto S10 a cada trabajador. Usa el selector general para aplicar a todos a la vez.</p>
+                        <div class="flex items-center gap-2 w-full sm:w-auto bg-amber-50 p-2 rounded-lg border border-amber-200 shadow-sm shrink-0">
+                            <span class="text-[10px] font-black text-amber-800 uppercase tracking-widest whitespace-nowrap"><i class="fa-solid fa-bolt text-amber-500 mr-1"></i> Asignación Masiva:</span>
+                            <select onchange="window.aplicarConceptoGeneral(this.value)" class="bg-white border border-slate-300 text-slate-700 text-[11px] rounded focus:ring-amber-500 focus:border-amber-500 p-1.5 font-bold cursor-pointer min-w-[180px]">
+                                ${opcionesS10Base}
+                            </select>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 3. Renderizar la lista de trabajadores con su selector individual
             Object.values(window.datosCampoProcesados).forEach(trabajador => {
                 const conceptoGuardado = window.mapeoConceptosTareo[trabajador.dni] || "";
                 
@@ -6655,6 +6955,19 @@ window.iniciarNuevoReporte = function() {
                 `;
             });
             document.getElementById('modalConceptos').classList.remove('hidden');
+        };
+
+        // 🔥 NUEVA FUNCIÓN: Cambia todos los selectores al mismo tiempo
+        window.aplicarConceptoGeneral = function(valor) {
+            const selects = document.querySelectorAll('.select-concepto-worker');
+            selects.forEach(select => {
+                select.value = valor;
+            });
+            
+            // Efecto visual para confirmar que se aplicó a todos
+            const contenedor = document.getElementById('listaConceptosPendientes');
+            contenedor.classList.add('opacity-50');
+            setTimeout(() => contenedor.classList.remove('opacity-50'), 150);
         };
 
         window.guardarMapeoConceptos = async function() {
@@ -7692,9 +8005,17 @@ window.iniciarNuevoReporte = function() {
         // 2. MODAL DE ACTIVIDADES (Filtra leyendo Columna A y mostrando Columna D)
         window.abrirModalActividades = function() {
             const contenedor = document.getElementById('listaActividadesPendientes');
+            if (!contenedor) return;
             contenedor.innerHTML = '';
             
-            let opcionesS10 = '<option value="">-- Seleccionar Partida/Concepto Oficial S10 --</option>';
+            // 🔥 INYECTAR DATALIST GLOBAL PARA BÚSQUEDA INTELIGENTE
+            if (!document.getElementById('datalistActividadesS10')) {
+                const dl = document.createElement('datalist');
+                dl.id = 'datalistActividadesS10';
+                document.body.appendChild(dl);
+            }
+            const datalist = document.getElementById('datalistActividadesS10');
+            datalist.innerHTML = '';
             
             // Atrapar código del proyecto seleccionado (Ej: "03027")
             let pCrudo = window.proyectoSeleccionadoGlobal || window.proyectoSeleccionado || window.proyectoActualGlobal || "";
@@ -7706,45 +8027,48 @@ window.iniciarNuevoReporte = function() {
             const codigoProyecto = pCrudo ? String(pCrudo).split(' ')[0].trim() : "";
             let encontradas = 0;
 
-            // Filtro estricto por coordenadas
+            // Filtro estricto por coordenadas y llenado del buscador
+            let opcionesUnicas = new Set();
             if (codigoProyecto && window.hojaActividadesCruda) {
                 window.hojaActividadesCruda.forEach(fila => {
                     let colA = String(fila.A || '').trim();
                     let colD = String(fila.D || '').trim();
                     
                     if (colA.startsWith(codigoProyecto) && colD.length > 5) {
-                        if (!opcionesS10.includes(`value="${colD}"`)) {
-                            opcionesS10 += `<option value="${colD}">${colD}</option>`;
-                            encontradas++;
-                        }
+                        opcionesUnicas.add(colD);
+                        encontradas++;
                     }
                 });
             }
 
+            // Alimentar el datalist
+            opcionesUnicas.forEach(opt => {
+                datalist.innerHTML += `<option value="${opt}"></option>`;
+            });
+
             // Diagnósticos visuales
             if (encontradas === 0) {
                 if (!window.hojaActividadesCruda) {
-                    opcionesS10 += `<option disabled>❌ ERROR: La hoja 'Actividad' no se guardó en memoria.</option>`;
+                    contenedor.innerHTML += `<p class="text-xs text-red-500 font-bold mb-4">❌ ERROR: La hoja 'Actividad' no se guardó en memoria.</p>`;
                 } else {
-                    opcionesS10 += `<option disabled>⚠️ Cero partidas encontradas para el proyecto ${codigoProyecto}</option>`;
+                    contenedor.innerHTML += `<p class="text-xs text-amber-500 font-bold mb-4">⚠️ Cero partidas encontradas para el proyecto ${codigoProyecto}</p>`;
                 }
             }
 
-            // Dibujar interfaz
+            // Dibujar interfaz con el nuevo <input> (Buscador Inteligente)
             window.pendientesActividades.forEach((actividad, idx) => {
                 contenedor.innerHTML += `
                     <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-3">
                         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Columna del Excel (Capataz):</p>
                         <p class="text-sm font-extrabold text-blue-600 mb-3"><i class="fa-solid fa-clipboard-list mr-1"></i> ${actividad}</p>
-                        <select id="mapeoActividad_${idx}" data-actividad-capataz="${actividad}" class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-xs rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 font-bold cursor-pointer">
-                            ${opcionesS10}
-                        </select>
+                        <input type="text" id="mapeoActividad_${idx}" data-actividad-capataz="${actividad}" list="datalistActividadesS10" placeholder="Escribe para buscar (Ej: ACERO)..." class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-xs rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 font-bold cursor-text shadow-inner">
                     </div>
                 `;
             });
 
             document.getElementById('modalActividades').classList.remove('hidden');
         };
+
     </script>
     <!-- ========================================== -->
     <!-- MOTOR DE CONVENIOS Y DISTRIBUCIÓN 0.5 -->
@@ -8081,8 +8405,27 @@ window.iniciarNuevoReporte = function() {
             btn.disabled = true;
 
             try {
+                // 🔥 1. CAPTURAR EL NOMBRE OFICIAL DEL PROYECTO S10
+                let proyectoLobby = window.proyectoSeleccionadoGlobal;
+                
+                // Si la página se recargó y la variable se borró, la rescatamos del Modal directamente
+                if (!proyectoLobby) {
+                    const modalSelect = document.getElementById('selectorModalProyecto');
+                    if (modalSelect && modalSelect.value) {
+                        proyectoLobby = modalSelect.value;
+                    }
+                }
+                
+                // Si AÚN no hay nombre, lanzamos alerta para evitar exportar mal
+                if (!proyectoLobby) {
+                    alert("⚠️ FALTA VINCULAR EL PROYECTO OFICIAL S10.\n\nPor favor, haz clic en el botón azul 'PROYECTO', selecciona tu obra en la lista y guárdalo antes de exportar.");
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                    return;
+                }
+
                 let arrayBuffer;
-                let nombreFinalExcel = "Tareo_Exportado.xlsx";
+                let nombreFinalExcel = "Tareo_Exportado";
 
                 // 🔥 LÓGICA INFALIBLE DE LECTURA (RAM vs NUBE)
                 if (archivoPadronS10) {
@@ -8095,8 +8438,7 @@ window.iniciarNuevoReporte = function() {
                     const response = await fetch(window.currentPadronUrl);
                     if (!response.ok) throw new Error("No se pudo descargar el archivo de la nube.");
                     arrayBuffer = await response.arrayBuffer();
-                    // 🔥 Usa el nombre exacto del S10 recuperado de la base de datos
-                    nombreFinalExcel = window.currentPadronName || `Plantilla_S10_Semana_${window.semanaActualTareo}.xlsx`;
+                    nombreFinalExcel = window.currentPadronName || `Plantilla_S10_Semana_${window.semanaActualTareo}`;
                 } else {
                     throw new Error("El archivo no está en la nube. Debes crear y guardar un Tareo nuevo primero para que se suba el Padrón base.");
                 }
@@ -8117,8 +8459,6 @@ window.iniciarNuevoReporte = function() {
                 });
 
                 const ws = wb.worksheets[0]; 
-                let proyectoLobby = window.proyectoSeleccionadoGlobal || document.getElementById('proyectoSelect').value || "";
-
                 let masterRow = ws.getRow(8);
                 let dvProyecto = masterRow.getCell(5).dataValidation; 
                 let dvPartida = masterRow.getCell(7).dataValidation;  
@@ -8192,7 +8532,7 @@ window.iniciarNuevoReporte = function() {
                         if (i === 0) {
                             targetRow = sourceRow;
                             targetRow.getCell(1).value = valorLineaFinal;
-                            if (proyectoLobby) targetRow.getCell(5).value = proyectoLobby;
+                            targetRow.getCell(5).value = proyectoLobby; // 🔥 Forzamos la escritura del nombre oficial
                             for (let c = 7; c <= 27; c++) { targetRow.getCell(c).value = null; }
                         } else {
                             targetRow = ws.insertRow(currentRowIdx, []);
@@ -8208,7 +8548,7 @@ window.iniciarNuevoReporte = function() {
                             targetRow.getCell(2).value = null;                       
                             targetRow.getCell(3).value = sourceRow.getCell(3).value; 
                             targetRow.getCell(4).value = sourceRow.getCell(4).value; 
-                            targetRow.getCell(5).value = proyectoLobby;              
+                            targetRow.getCell(5).value = proyectoLobby; // 🔥 Forzamos la escritura del nombre oficial
                             targetRow.getCell(6).value = sourceRow.getCell(6).value; 
                             targetRow.getCell(4).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDDEBF7' } };
                         }
@@ -8230,8 +8570,9 @@ window.iniciarNuevoReporte = function() {
 
                 const buffer = await wb.xlsx.writeBuffer();
                 
-                // 🔥 Eliminamos el código que le agregaba "_Exportado" para que el S10 no lo rechace.
-                saveAs(new Blob([buffer]), nombreFinalExcel);
+                // 🔥 LIMPIEZA DE EXTENSIÓN PARA EVITAR ERRORES AL ABRIR EN EXCEL
+                let nombreLimpio = nombreFinalExcel.replace(/\.xls[mx]?$/i, '');
+                saveAs(new Blob([buffer]), nombreLimpio + ".xlsx");
                 
                 alert("✅ ¡Exportación S10 completada! Los datos se inyectaron automáticamente desde la nube.");
 
