@@ -6147,17 +6147,20 @@ window.iniciarNuevoReporte = function() {
             try {
                 // 🔥 1. DESCARGAR DICCIONARIOS MAESTROS DE FIREBASE (TODO CENTRALIZADO)
                 const proyectoLobby = window.proyectoActualGlobal || "General";
+                
+                // Función segura para evitar que un JSON corrupto borre la memoria
+                const parseSeguro = (str, fallback) => { try { return str ? JSON.parse(str) : fallback; } catch(e) { return fallback; } };
 
                 try {
                     const maestroRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Maestro`);
                     const maestroSnap = await window.fsGetDoc(maestroRef);
                     if (maestroSnap.exists()) {
-                        window.traduccionPartidasTareo = maestroSnap.data().diccionarioActividades || {};
-                        window.traduccionTrabajadoresTareo = maestroSnap.data().diccionarioTrabajadores || {};
-                        window.mapeoConceptosTareo = maestroSnap.data().diccionarioConceptos || {};
-                        // 🔥 CARGAMOS CONVENIOS Y PROYECTO DESDE EL MAESTRO GLOBAL
-                        window.mapeoConveniosTareo = maestroSnap.data().diccionarioConvenios || {};
-                        window.proyectoSeleccionadoGlobal = maestroSnap.data().proyectoS10Vinculado || "";
+                        const data = maestroSnap.data();
+                        window.traduccionPartidasTareo = parseSeguro(data.diccionarioActividadesStr, data.diccionarioActividades || {});
+                        window.traduccionTrabajadoresTareo = parseSeguro(data.diccionarioTrabajadoresStr, data.diccionarioTrabajadores || {});
+                        window.mapeoConceptosTareo = parseSeguro(data.diccionarioConceptosStr, data.diccionarioConceptos || {});
+                        window.mapeoConveniosTareo = parseSeguro(data.diccionarioConveniosStr, data.diccionarioConvenios || {});
+                        window.proyectoSeleccionadoGlobal = data.proyectoS10Vinculado || "";
                     } else {
                         window.traduccionPartidasTareo = {}; window.traduccionTrabajadoresTareo = {}; 
                         window.mapeoConceptosTareo = {}; window.mapeoConveniosTareo = {}; 
@@ -6169,6 +6172,7 @@ window.iniciarNuevoReporte = function() {
                     window.mapeoConceptosTareo = {}; window.mapeoConveniosTareo = {};
                     window.proyectoSeleccionadoGlobal = "";
                 }
+                
                 const arrayBufferS10 = await archivoPadronS10.arrayBuffer();
                 const workbookS10 = XLSX.read(arrayBufferS10, { type: 'array' });
                 const worksheetS10 = workbookS10.Sheets[workbookS10.SheetNames[0]];
@@ -6177,14 +6181,13 @@ window.iniciarNuevoReporte = function() {
                 window.diccionarioPadronS10 = [];
                 let headerRowIdx = -1, colDNI = -1, colNombre = -1, colLinea = -1;
 
-                // Buscar dinámicamente las columnas
                 for (let i = 0; i < Math.min(20, jsonS10.length); i++) {
                     const row = jsonS10[i] || [];
                     for (let j = 0; j < row.length; j++) {
                         const cellVal = String(row[j]).toUpperCase().trim();
                         if (cellVal === 'DNI') { headerRowIdx = i; colDNI = j; }
                         if (cellVal === 'NOMBRE') { colNombre = j; }
-                        if (cellVal === 'LINEA' || cellVal === 'LÍNEA') { colLinea = j; } // Atrpar columna Línea
+                        if (cellVal === 'LINEA' || cellVal === 'LÍNEA') { colLinea = j; } 
                     }
                     if (headerRowIdx !== -1) break;
                 }
@@ -6199,7 +6202,7 @@ window.iniciarNuevoReporte = function() {
                     
                     const dniVal = row[colDNI];
                     const nombreVal = row[colNombre];
-                    const lineaVal = colLinea !== -1 ? row[colLinea] : ''; // Extraer el valor de Línea
+                    const lineaVal = colLinea !== -1 ? row[colLinea] : ''; 
                     
                     if (dniVal && nombreVal && String(dniVal).trim().length >= 8) {
                         const existe = window.diccionarioPadronS10.find(t => t.dni === String(dniVal).trim());
@@ -6207,19 +6210,16 @@ window.iniciarNuevoReporte = function() {
                             window.diccionarioPadronS10.push({
                                 dni: String(dniVal).trim(),
                                 nombreOficial: String(nombreVal).trim().toUpperCase(),
-                                lineaOriginal: lineaVal // Guardar la línea intacta en memoria
+                                lineaOriginal: lineaVal 
                             });
                         }
                     }
                 }
-                
-                // (Aquí termina el paso 3 de leer los nombres...)
             
-                // 🔥 PASO 3.5: Leer Hojas Ocultas (Actividad, Proyecto y Tipos de Hora)
+                // 🔥 PASO 3.5: Leer Hojas Ocultas
                 window.catalogoPartidasS10 = [];
                 window.proyectosS10 = [];
                 window.conceptosS10 = [];
-                window.proyectoSeleccionadoGlobal = ""; // Memoria para el proyecto elegido
                 
                 workbookS10.SheetNames.forEach(nombreHoja => {
                     const nombreUpper = nombreHoja.trim().toUpperCase();
@@ -6228,7 +6228,6 @@ window.iniciarNuevoReporte = function() {
 
                     if (nombreUpper === 'ACTIVIDAD') {
                         window.hojaActividadesCruda = XLSX.utils.sheet_to_json(hoja, { header: "A", defval: "" });
-
                         jsonData.forEach(row => {
                             if (row && row[3] && String(row[3]).trim() !== '') {
                                 const val = String(row[3]).trim();
@@ -6239,11 +6238,9 @@ window.iniciarNuevoReporte = function() {
                     }
                     else if (nombreUpper === 'PROYECTO') {
                         const rawDataProyecto = XLSX.utils.sheet_to_json(hoja, { header: "A", defval: "" });
-                        
                         rawDataProyecto.forEach(row => {
                             let val = String(row["D"] || "").trim();
                             if (val === "") val = String(row["C"] || "").trim();
-
                             if (val !== "" && val.length > 3 && !window.proyectosS10.includes(val)) {
                                 window.proyectosS10.push(val);
                             }
@@ -6253,7 +6250,7 @@ window.iniciarNuevoReporte = function() {
                         const rawDataConcepto = XLSX.utils.sheet_to_json(hoja, { header: "A", defval: "" });
                         rawDataConcepto.forEach(row => {
                             let val = String(row["D"] || "").trim();
-                            if (val === "") val = String(row["C"] || "").trim(); // Respaldo
+                            if (val === "") val = String(row["C"] || "").trim(); 
                             if (val !== "" && val.length > 2 && !window.conceptosS10.includes(val)) {
                                 window.conceptosS10.push(val);
                             }
@@ -6261,14 +6258,14 @@ window.iniciarNuevoReporte = function() {
                     }
                 });
 
-                // 🔥 PASO 4: Leer y Procesar el Tareo de Campo (CON DETECCIÓN DINÁMICA DE COLUMNAS)
-                window.traduccionPartidasTareo = {}; 
-                window.traduccionTrabajadoresTareo = {}; 
-
+                // 🔥 PASO 4: Leer y Procesar el Tareo de Campo
                 window.datosCampoProcesados = {}; 
                 const trabajadoresDesconocidos = []; 
                 const nuevasActividades = [];
-                const mapeosTrabajadores = {}; 
+                
+                // 🔥 NUEVOS ARREGLOS PARA QUE PUEDAS EDITAR LO QUE YA SE MAPEÓ ANTES
+                window.actividadesEnEsteTareo = [];
+                window.trabajadoresManualesDelTareo = [];
 
                 for (const archivoTareo of archivosTareoCampo) {
                     const arrayBufferTareo = await archivoTareo.arrayBuffer();
@@ -6281,90 +6278,75 @@ window.iniciarNuevoReporte = function() {
 
                         let fechaTareo = sheetName; 
 
-                        // 🧠 DETECCIÓN DINÁMICA DE CABECERAS Y DATOS
-                        let headerRowIdx = 23; // Respaldo: Fila 24 del Excel
-                        let dataRowIdx = 26;   // Respaldo: Fila 27 del Excel
-                        let colNombreIdx = 1;  // Respaldo: Columna B (Índice 1)
-                        let colActividadesStart = 4; // Respaldo: Columna E (Índice 4)
+                        let headerRowIdx = 23; 
+                        let dataRowIdx = 26;   
+                        let colNombreIdx = 1;  
+                        let colActividadesStart = 4; 
 
                         for (let i = 0; i < Math.min(40, jsonTareo.length); i++) {
                             const row = jsonTareo[i] || [];
                             const rowStr = row.map(c => String(c).toUpperCase().trim());
                             
-                            // El escáner busca la fila que contiene las palabras clave de la tabla
                             if (rowStr.includes('NOMBRE') && (rowStr.includes('CATEG') || rowStr.includes('COD'))) {
-                                dataRowIdx = i + 1; // Los datos de los obreros empiezan justo debajo
-                                headerRowIdx = i - 2; // Las cabeceras de actividades están 2 filas arriba
-                                
+                                dataRowIdx = i + 1; 
+                                headerRowIdx = i - 2; 
                                 colNombreIdx = rowStr.indexOf('NOMBRE');
                                 const catIdx = rowStr.indexOf('CATEG');
-                                
-                                // Las actividades empiezan inmediatamente después de la categoría
-                                if (catIdx !== -1) {
-                                    colActividadesStart = catIdx + 1; 
-                                } else {
-                                    colActividadesStart = colNombreIdx + 2; 
-                                }
+                                if (catIdx !== -1) colActividadesStart = catIdx + 1; 
+                                else colActividadesStart = colNombreIdx + 2; 
                                 break;
                             }
                         }
 
                         const rawHeader_Row1 = jsonTareo[headerRowIdx] || [];
                         const rawHeader_Row2 = jsonTareo[headerRowIdx + 1] || [];
-                        
                         const actividadesColumnas = {}; 
                         const maxCols = Math.max(rawHeader_Row1.length, rawHeader_Row2.length);
                         
-                        // 🔥 1. EXTRAER NOMBRES DE LAS ACTIVIDADES
+                        // 🔥 1. EXTRAER ACTIVIDADES Y GUARDAR TODAS
                         for(let j = colActividadesStart; j < maxCols; j++) {
                             let part1 = rawHeader_Row1[j] ? String(rawHeader_Row1[j]).trim() : '';
                             let part2 = rawHeader_Row2[j] ? String(rawHeader_Row2[j]).trim() : '';
-                            
-                            // 🧠 FILTRO ANTI-NÚMEROS
                             const isPuroNumero = (str) => /^[\d\s\.\,]+$/.test(str);
-                            
                             if (isPuroNumero(part1)) part1 = '';
                             if (isPuroNumero(part2)) part2 = '';
 
                             const fullActivityName = `${part1} ${part2}`.trim();
                             const nameUpper = fullActivityName.toUpperCase();
                             
-                            // 🧠 FILTRO ANTI-DUPLICADOS Y COLUMNAS DE SUMATORIA
-                            if (fullActivityName.length > 2 
-                                && !nameUpper.includes('TOTAL')
-                                && !nameUpper.includes('SUMA')
-                                && !nameUpper.includes('DESCRIP')) {
-                                
+                            if (fullActivityName.length > 2 && !nameUpper.includes('TOTAL') && !nameUpper.includes('SUMA') && !nameUpper.includes('DESCRIP')) {
                                 actividadesColumnas[j] = fullActivityName;
+                                
+                                // Guardamos para la edición
+                                if (!window.actividadesEnEsteTareo.includes(fullActivityName)) {
+                                    window.actividadesEnEsteTareo.push(fullActivityName);
+                                }
+
                                 if (!window.traduccionPartidasTareo[fullActivityName] && !nuevasActividades.includes(fullActivityName)) {
                                     nuevasActividades.push(fullActivityName);
                                 }
                             }
                         }
 
-                        // 🔥 2. EXTRAER DATOS Y HORAS DE LOS TRABAJADORES
+                        // 🔥 2. EXTRAER DATOS Y HORAS
                         for (let i = dataRowIdx; i < jsonTareo.length; i++) {
                             const row = jsonTareo[i];
-                            
-                            // Si la fila está vacía o no tiene nombre, la saltamos
                             if (!row || !row[colNombreIdx] || String(row[colNombreIdx]).trim() === '') continue; 
 
                             const nombreCampoVal = String(row[colNombreIdx]).trim().toUpperCase();
                             const category = row[colActividadesStart - 1] ? String(row[colActividadesStart - 1]).trim().toUpperCase() : ''; 
                             
-                            // Saltar filas que sean títulos de agrupadores
                             let tieneHoras = false;
                             Object.keys(actividadesColumnas).forEach(colIdx => {
                                 if (parseFloat(row[colIdx]) > 0) tieneHoras = true;
                             });
                             if (nombreCampoVal.includes('/') && !tieneHoras) continue;
 
-                            // 🔥 PASO 5: Cruce inteligente de nombres con S10 (MEMORIA + ALGORITMO)
                             let dniTrabajador = null;
                             let nombreOficialS10 = null;
                             let lineaOriginalS10 = null;
 
-                            // 1. Revisar si la Memoria Maestra de la Nube ya lo conoce
+                            // Revisar si ya lo conoce la memoria
                             if (window.traduccionTrabajadoresTareo && window.traduccionTrabajadoresTareo[nombreCampoVal]) {
                                 dniTrabajador = window.traduccionTrabajadoresTareo[nombreCampoVal];
                                 const tMem = window.diccionarioPadronS10.find(t => t.dni === dniTrabajador);
@@ -6372,9 +6354,13 @@ window.iniciarNuevoReporte = function() {
                                     nombreOficialS10 = tMem.nombreOficial;
                                     lineaOriginalS10 = tMem.lineaOriginal;
                                 }
+                                // Guardar para edición
+                                if (!window.trabajadoresManualesDelTareo.includes(nombreCampoVal)) {
+                                    window.trabajadoresManualesDelTareo.push(nombreCampoVal);
+                                }
                             }
 
-                            // 2. Si la Nube no lo conoce, intentar cruce algorítmico
+                            // Intento algorítmico si no lo conoce
                             if (!dniTrabajador) {
                                 const palabrasCampo = nombreCampoVal.replace(/,/g, ' ').split(/\s+/).filter(p => p.length > 2);
                                 const t_match = window.diccionarioPadronS10.find(t => {
@@ -6392,18 +6378,15 @@ window.iniciarNuevoReporte = function() {
                                     lineaOriginalS10 = t_match.lineaOriginal;
                                 } else {
                                     if(!trabajadoresDesconocidos.includes(nombreCampoVal)) trabajadoresDesconocidos.push(nombreCampoVal);
+                                    if(!window.trabajadoresManualesDelTareo.includes(nombreCampoVal)) window.trabajadoresManualesDelTareo.push(nombreCampoVal);
                                     continue; 
                                 }
                             }
                             
-                            // Crear registro en memoria para el trabajador
                             if (!window.datosCampoProcesados[dniTrabajador]) {
                                 window.datosCampoProcesados[dniTrabajador] = {
-                                    dni: dniTrabajador,
-                                    nombreOficial: nombreOficialS10,
-                                    lineaOriginal: lineaOriginalS10,
-                                    category: category,
-                                    tareasDiarias: {} 
+                                    dni: dniTrabajador, nombreOficial: nombreOficialS10,
+                                    lineaOriginal: lineaOriginalS10, category: category, tareasDiarias: {} 
                                 };
                             }
 
@@ -6411,13 +6394,11 @@ window.iniciarNuevoReporte = function() {
                                 window.datosCampoProcesados[dniTrabajador].tareasDiarias[fechaTareo] = [];
                             }
                             
-                            // 🔥 LA INTERSECCIÓN: Guardar horas para cada actividad de este trabajador
                             Object.entries(actividadesColumnas).forEach(([colIdx, activityName]) => {
                                 const horas = parseFloat(row[colIdx]) || 0;
                                 if (horas > 0) {
                                     window.datosCampoProcesados[dniTrabajador].tareasDiarias[fechaTareo].push({
-                                        activityNameField: activityName,
-                                        hours: horas
+                                        activityNameField: activityName, hours: horas
                                     });
                                 }
                             });
@@ -6429,7 +6410,7 @@ window.iniciarNuevoReporte = function() {
                     throw new Error("No se pudo procesar ningún dato válido de los tareos de campo. Verifica el formato de tus archivos.");
                 }
 
-                // 🔥 NUEVO: ESCÁNER AUTOMÁTICO DE FALTAS
+                // ESCÁNER DE FALTAS
                 window.reporteFaltas = [];
                 const diasLaborables = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
                 
@@ -6437,7 +6418,6 @@ window.iniciarNuevoReporte = function() {
                     let horasPorDia = {0:0, 1:0, 2:0, 3:0, 4:0, 5:0, 6:0};
                     let totalHorasSemana = 0;
 
-                    // Acumulamos las horas que el trabajador hizo en cada día
                     Object.entries(trabajador.tareasDiarias).forEach(([fechaHoja, tareas], indexHoja) => {
                         const idxDia = obtenerIndiceDia(fechaHoja, indexHoja);
                         if(idxDia !== -1 && idxDia <= 6) {
@@ -6447,30 +6427,24 @@ window.iniciarNuevoReporte = function() {
                         }
                     });
 
-                    // Si el trabajador NO es un retirado definitivo (tiene horas en la semana)
                     if (totalHorasSemana > 0) {
-                        for (let i = 0; i < 6; i++) { // Revisamos los huecos de Lunes a Sábado
+                        for (let i = 0; i < 6; i++) { 
                             if (horasPorDia[i] === 0) {
-                                window.reporteFaltas.push({
-                                    dni: trabajador.dni,
-                                    nombre: trabajador.nombreOficial,
-                                    diaStr: diasLaborables[i]
-                                });
+                                window.reporteFaltas.push({ dni: trabajador.dni, nombre: trabajador.nombreOficial, diaStr: diasLaborables[i] });
                             }
                         }
                     }
                 });
 
-                // 🔥 PASO 6: Generar y mostrar el Panel de Resolución
+                // 🔥 PASO 6: Generar y mostrar el Panel de Resolución con BOTONES SIEMPRE ACTIVOS
                 zonaRes.innerHTML = ''; 
-
                 let htmlResolucion = '';
                 const totalWorkersKnown = Object.keys(window.datosCampoProcesados).length;
                 const totalWorkersUnknown = trabajadoresDesconocidos.length;
                 const totalNewActivities = nuevasActividades.length;
                 const totalFaltas = window.reporteFaltas.length;
 
-                // 1. Cabecera y Tarjetas
+                // Tarjetas
                 htmlResolucion += `
                     <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mb-6 text-center w-full">
                         <div class="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-100 shadow-inner">
@@ -6479,7 +6453,6 @@ window.iniciarNuevoReporte = function() {
                         <h4 class="text-2xl font-black text-emerald-600 mb-1">¡DATOS CRUZADOS!</h4>
                         <p class="text-sm text-slate-500">El cruce de información se realizó con éxito.</p>
                     </div>
-
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6 w-full">
                         <div class="bg-emerald-50 text-emerald-900 p-4 rounded-xl border border-emerald-100 flex flex-col items-center justify-center text-center shadow-sm">
                             <i class="fa-solid fa-users text-2xl text-emerald-500 mb-2"></i>
@@ -6507,28 +6480,56 @@ window.iniciarNuevoReporte = function() {
                 window.pendientesTrabajadores = trabajadoresDesconocidos;
                 window.pendientesActividades = nuevasActividades;
 
-                const btnTrabajadoresStatus = totalWorkersUnknown > 0 ? 'cursor-pointer hover:bg-teal-600' : 'cursor-not-allowed opacity-50';
-                const btnActividadesStatus = totalNewActivities > 0 ? 'cursor-pointer hover:bg-indigo-800' : 'cursor-not-allowed opacity-50';
+                // 🔥 VALIDACIÓN INTELIGENTE DE BOTONES
+                const trabajadoresDNI = Object.keys(window.datosCampoProcesados);
+                
+                // Falta concepto si su clave nunca se guardó (es undefined)
+                const faltanConceptos = trabajadoresDNI.length === 0 || trabajadoresDNI.some(dni => typeof window.mapeoConceptosTareo[dni] === 'undefined');
+
+                // Falta actividad si alguna del excel no está en el diccionario de la nube
+                let actividadesPresentes = new Set();
+                if (window.datosCampoProcesados) {
+                    Object.values(window.datosCampoProcesados).forEach(t => {
+                        if (t.tareasDiarias) Object.values(t.tareasDiarias).forEach(d => d.forEach(tarea => {
+                            if (tarea.activityNameField) actividadesPresentes.add(tarea.activityNameField);
+                        }));
+                    });
+                }
+                const faltanActividades = Array.from(actividadesPresentes).some(act => !window.traduccionPartidasTareo[act]);
+
+                // BOTONES SIEMPRE CLICKEABLES Y EDITABLES (SIN DISABLED NI ONCLICK=NULL)
+                const btnOKClass = "bg-slate-700 hover:bg-slate-600 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 transition cursor-pointer shadow-sm border border-slate-600";
+                
+                // Botón Proyecto Siempre Editable
+                const btnProyectoHTML = window.proyectoSeleccionadoGlobal 
+                    ? `<button onclick="window.abrirModalProyecto()" class="${btnOKClass}" title="Editar Proyecto"><i class="fa-solid fa-check text-emerald-400"></i> PROYECTO (OK)</button>`
+                    : `<button onclick="window.abrirModalProyecto()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 transition cursor-pointer shadow-sm"><i class="fa-solid fa-building"></i> PROYECTO</button>`;
+
+                const btnConceptosHTML = !faltanConceptos 
+                    ? `<button onclick="window.abrirModalConceptos()" class="${btnOKClass}" title="Editar Conceptos"><i class="fa-solid fa-check text-emerald-400"></i> CONCEPTOS (OK)</button>`
+                    : `<button onclick="window.abrirModalConceptos()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 transition cursor-pointer shadow-sm"><i class="fa-solid fa-clock"></i> CONCEPTOS</button>`;
+
+                const btnConveniosHTML = Object.keys(window.mapeoConveniosTareo || {}).length > 0
+                    ? `<button onclick="window.abrirModalConvenios()" class="${btnOKClass}" title="Editar Convenios"><i class="fa-solid fa-check text-emerald-400"></i> CONVENIOS (OK)</button>`
+                    : `<button onclick="window.abrirModalConvenios()" class="bg-fuchsia-600 hover:bg-fuchsia-700 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 transition cursor-pointer shadow-sm"><i class="fa-solid fa-handshake"></i> CONVENIOS</button>`;
+
+                const btnPersonalHTML = totalWorkersUnknown === 0
+                    ? `<button onclick="window.abrirModalTrabajadores()" class="${btnOKClass}" title="Editar Mapeos de Personal"><i class="fa-solid fa-check text-emerald-400"></i> PERSONAL (OK)</button>`
+                    : `<button onclick="window.abrirModalTrabajadores()" class="bg-teal-700 hover:bg-teal-600 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 transition cursor-pointer shadow-sm"><i class="fa-solid fa-user-gear"></i> PERSONAL (${totalWorkersUnknown})</button>`;
+
+                const btnTareasHTML = !faltanActividades
+                    ? `<button onclick="window.abrirModalActividades()" class="${btnOKClass}" title="Editar Mapeos de Tareas"><i class="fa-solid fa-check text-emerald-400"></i> TAREAS (OK)</button>`
+                    : `<button onclick="window.abrirModalActividades()" class="bg-indigo-900 hover:bg-indigo-800 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 transition cursor-pointer shadow-sm"><i class="fa-solid fa-list-check"></i> TAREAS (${Array.from(actividadesPresentes).filter(a => !window.traduccionPartidasTareo[a]).length})</button>`;
+
                 const btnFaltasStatus = totalFaltas > 0 ? 'cursor-pointer hover:bg-red-700' : 'cursor-not-allowed opacity-50';
 
-                // 2. Botones de Acción
                 htmlResolucion += `
                     <div class="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-4 w-full">
-                        <button onclick="window.abrirModalProyecto()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 transition cursor-pointer shadow-sm">
-                            <i class="fa-solid fa-building"></i> PROYECTO
-                        </button>
-                        <button onclick="window.abrirModalConceptos()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 transition cursor-pointer shadow-sm">
-                            <i class="fa-solid fa-clock"></i> CONCEPTOS
-                        </button>
-                        <button onclick="window.abrirModalConvenios()" class="bg-fuchsia-600 hover:bg-fuchsia-700 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 transition cursor-pointer shadow-sm">
-                            <i class="fa-solid fa-handshake"></i> CONVENIOS
-                        </button>
-                        <button onclick="if(${totalWorkersUnknown} > 0) window.abrirModalTrabajadores()" class="bg-teal-700 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 transition ${btnTrabajadoresStatus} shadow-sm">
-                            <i class="fa-solid fa-user-gear"></i> PERSONAL (${totalWorkersUnknown})
-                        </button>
-                        <button onclick="if(${totalNewActivities} > 0) window.abrirModalActividades()" class="bg-indigo-900 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 transition ${btnActividadesStatus} shadow-sm">
-                            <i class="fa-solid fa-list-check"></i> TAREAS (${totalNewActivities})
-                        </button>
+                        ${btnProyectoHTML}
+                        ${btnConceptosHTML}
+                        ${btnConveniosHTML}
+                        ${btnPersonalHTML}
+                        ${btnTareasHTML}
                         <button onclick="if(${totalFaltas} > 0) window.abrirModalFaltas()" class="bg-red-600 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 transition ${btnFaltasStatus} shadow-sm">
                             <i class="fa-solid fa-user-clock"></i> FALTAS (${totalFaltas})
                         </button>
@@ -6549,183 +6550,505 @@ window.iniciarNuevoReporte = function() {
         });
 
         // ==========================================
-        // FUNCIONES DE EMPAREJAMIENTO (MODALES)
+        // FUNCIONES DE EMPAREJAMIENTO Y EDICIÓN (MODALES INFALIBLES)
         // ==========================================
         
-        window.abrirModalTrabajadores = function() {
-            const contenedor = document.getElementById('listaTrabajadoresPendientes');
-            contenedor.innerHTML = '';
-            
-            // Crear el combo (select) maestro con todos los nombres del padrón S10
-            let opcionesS10 = '<option value="">-- Seleccionar Trabajador Oficial --</option>';
-            window.diccionarioPadronS10.forEach(t => {
-                opcionesS10 += `<option value="${t.dni}">${t.nombreOficial} (DNI: ${t.dni})</option>`;
-            });
-
-            // Por cada trabajador desconocido, pintar una cajita para emparejar
-            window.pendientesTrabajadores.forEach((nombreCapataz, idx) => {
-                contenedor.innerHTML += `
-                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-3">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Escrito por Capataz:</p>
-                        <p class="text-sm font-extrabold text-amber-600 mb-3"><i class="fa-solid fa-triangle-exclamation mr-1"></i> ${nombreCapataz}</p>
-                        <select id="mapeoTrabajador_${idx}" data-nombre-capataz="${nombreCapataz}" class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-xs rounded-lg focus:ring-teal-500 focus:border-teal-500 block p-2.5 font-bold cursor-pointer">
-                            ${opcionesS10}
-                        </select>
-                    </div>
-                `;
-            });
-
-            document.getElementById('modalTrabajadores').classList.remove('hidden');
-        };
-
-        window.abrirModalActividades = function() {
-            const contenedor = document.getElementById('listaActividadesPendientes');
-            contenedor.innerHTML = '';
-            
-            let opcionesS10 = '<option value="">-- Seleccionar Partida/Concepto Oficial S10 --</option>';
-            
-            // 1. Obtener el proyecto (Ej: "03027")
-            let pCrudo = window.proyectoSeleccionado || window.proyectoActual || "";
-            if (!pCrudo) {
-                document.querySelectorAll('select').forEach(s => {
-                    if (s.value && /^\d{4,6}\s/.test(s.value)) pCrudo = s.value;
-                });
-            }
-            const codigoProyecto = pCrudo ? String(pCrudo).split(' ')[0].trim() : "";
-            let encontradas = 0;
-
-            // 2. Filtrar leyendo las letras exactas de Excel
-            if (codigoProyecto && window.hojaActividadesCruda) {
-                window.hojaActividadesCruda.forEach(fila => {
-                    // Mapeamos directamente a las letras de las columnas
-                    let colA = String(fila.A || '').trim(); // Columna A del Excel
-                    let colD = String(fila.D || '').trim(); // Columna D del Excel
-                    
-                    // Si la Columna A empieza con "03027" (Atrapa "03027001")
-                    if (colA.startsWith(codigoProyecto) && colD.length > 5) {
-                        if (!opcionesS10.includes(`value="${colD}"`)) {
-                            opcionesS10 += `<option value="${colD}">${colD}</option>`;
-                            encontradas++;
-                        }
-                    }
-                });
-            }
-
-            // 3. Alertas si algo falta
-            if (encontradas === 0) {
-                if (!window.hojaActividadesCruda) {
-                    opcionesS10 += `<option disabled>❌ ERROR: La hoja 'Actividad' no se cargó al subir el Excel.</option>`;
-                } else {
-                    opcionesS10 += `<option disabled>⚠️ Cero partidas encontradas para el proyecto ${codigoProyecto}</option>`;
-                }
-            }
-
-            // 4. Dibujar la ventana
-            window.pendientesActividades.forEach((actividad, idx) => {
-                contenedor.innerHTML += `
-                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-3">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Columna del Excel (Capataz):</p>
-                        <p class="text-sm font-extrabold text-blue-600 mb-3"><i class="fa-solid fa-clipboard-list mr-1"></i> ${actividad}</p>
-                        <select id="mapeoActividad_${idx}" data-actividad-capataz="${actividad}" class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-xs rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 font-bold cursor-pointer">
-                            ${opcionesS10}
-                        </select>
-                    </div>
-                `;
-            });
-
-            document.getElementById('modalActividades').classList.remove('hidden');
-        };
-
-        // 👉 FUNCIONES DEL MODAL DE PROYECTO
+        // 👉 1. MODAL PROYECTO
         window.abrirModalProyecto = function() {
             const select = document.getElementById('selectorModalProyecto');
             if (!select) return;
 
             select.innerHTML = '<option value="">-- Seleccione el Proyecto Oficial S10 --</option>';
             
-            if (window.proyectosS10 && window.proyectosS10.length > 0) {
-                window.proyectosS10.forEach(p => {
+            // Usar proyectos de la nube si no se detectaron en el Excel para evitar fallos
+            let proyectosDisponibles = (window.proyectosS10 && window.proyectosS10.length > 0) 
+                                       ? window.proyectosS10 
+                                       : Object.keys(window.proyectosNube || {});
+
+            if (proyectosDisponibles.length > 0) {
+                proyectosDisponibles.forEach(p => {
                     const selected = (window.proyectoSeleccionadoGlobal === p) ? 'selected' : '';
                     select.innerHTML += `<option value="${p}" ${selected}>${p}</option>`;
                 });
             } else {
-                select.innerHTML += `<option disabled selected>⚠️ No se encontraron proyectos en la hoja 'Proyecto'</option>`;
+                select.innerHTML += `<option value="${window.proyectoActualGlobal}" selected>${window.proyectoActualGlobal}</option>`;
             }
             document.getElementById('modalProyecto').classList.remove('hidden');
         };
 
-        // 🔥 GUARDAR PROYECTO EN FIREBASE (MEMORIA GLOBAL)
         window.guardarProyecto = async function() {
             const select = document.getElementById('selectorModalProyecto');
             if (select.value) {
                 window.proyectoSeleccionadoGlobal = select.value;
-                
                 const btn = document.querySelector('#modalProyecto button');
-                const txtOriginal = btn.innerHTML;
-                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> GUARDANDO EN NUBE...';
-                btn.disabled = true;
-
-                try {
-                    const proyectoLobby = window.proyectoActualGlobal || "General";
-                    // 🔥 GUARDAR EN EL MAESTRO
-                    const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Maestro`);
-                    await window.fsSetDoc(docRef, { proyectoS10Vinculado: window.proyectoSeleccionadoGlobal }, { merge: true });
-
-                    alert(`✅ Proyecto vinculado y guardado en la nube para siempre:\n${window.proyectoSeleccionadoGlobal}`);
-                    document.getElementById('modalProyecto').classList.add('hidden');
-                } catch (e) {
-                    console.error("Error al guardar Proyecto:", e);
-                    alert("⚠️ Error al sincronizar con Firebase.");
-                } finally {
-                    btn.innerHTML = txtOriginal;
-                    btn.disabled = false;
-                }
-            } else {
-                alert("⚠️ Por favor selecciona un proyecto de la lista antes de guardar.");
-            }
-        };
-
-        // 🔥 GUARDAR ACTIVIDADES EN FIREBASE (MEMORIA GLOBAL)
-        window.guardarMapeoActividades = async function() {
-            const selects = document.querySelectorAll('[id^="mapeoActividad_"]');
-            let mapeosGuardados = 0;
-            if (!window.traduccionPartidasTareo) window.traduccionPartidasTareo = {};
-
-            selects.forEach(select => {
-                if (select.value) {
-                    const actividadCapataz = select.getAttribute('data-actividad-capataz');
-                    window.traduccionPartidasTareo[actividadCapataz] = select.value;
-                    window.pendientesActividades = window.pendientesActividades.filter(a => a !== actividadCapataz);
-                    mapeosGuardados++;
-                }
-            });
-
-            if (mapeosGuardados > 0) {
-                const btn = document.querySelector('#modalActividades .p-5 button');
                 const txtOriginal = btn.innerHTML;
                 btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> GUARDANDO...';
                 btn.disabled = true;
-
                 try {
                     const proyectoLobby = window.proyectoActualGlobal || "General";
                     const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Maestro`);
-                    await window.fsSetDoc(docRef, { diccionarioActividades: window.traduccionPartidasTareo }, { merge: true });
-
-                    const btnPanel = document.querySelector('button[onclick*="abrirModalActividades"]');
+                    await window.fsSetDoc(docRef, { proyectoS10Vinculado: window.proyectoSeleccionadoGlobal }, { merge: true });
+                    
+                    const btnPanel = document.querySelector('button[onclick*="abrirModalProyecto"]');
                     if (btnPanel) {
-                        const quedan = window.pendientesActividades.length;
-                        if (quedan === 0) {
-                            btnPanel.className = "bg-slate-100 text-slate-400 font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 cursor-not-allowed border border-slate-200 transition shadow-none";
-                            btnPanel.innerHTML = '<i class="fa-solid fa-check text-indigo-500"></i> TAREAS (0)';
-                            btnPanel.onclick = null;
-                        } else { btnPanel.innerHTML = `<i class="fa-solid fa-list-check"></i> TAREAS (${quedan})`; }
+                        btnPanel.className = "bg-slate-700 hover:bg-slate-600 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 transition cursor-pointer shadow-sm border border-slate-600";
+                        btnPanel.innerHTML = '<i class="fa-solid fa-check text-emerald-400"></i> PROYECTO (OK)';
                     }
-                    document.getElementById('modalActividades').classList.add('hidden');
-                } catch (e) { alert("⚠️ Error al sincronizar con Firebase."); } finally { btn.innerHTML = txtOriginal; btn.disabled = false; }
-            } else { alert("⚠️ No seleccionaste ninguna partida oficial."); }
+                    document.getElementById('modalProyecto').classList.add('hidden');
+                } catch (e) { alert("⚠️ Error de conexión."); } finally { btn.innerHTML = txtOriginal; btn.disabled = false; }
+            }
         };
 
-        // 🔥 GUARDAR TRABAJADORES EN FIREBASE (MEMORIA GLOBAL)
+        // 👉 3. MODAL TRABAJADORES (A PRUEBA DE DUPLICADOS)
+        window.abrirModalTrabajadores = function() {
+            const contenedores = document.querySelectorAll('#listaTrabajadoresPendientes');
+            if (contenedores.length === 0) return;
+            
+            let trabajadoresPresentes = new Set();
+            if (window.trabajadoresManualesDelTareo) window.trabajadoresManualesDelTareo.forEach(t => trabajadoresPresentes.add(t));
+            if (window.pendientesTrabajadores) window.pendientesTrabajadores.forEach(t => trabajadoresPresentes.add(t));
+
+            let listaFinal = Array.from(trabajadoresPresentes).sort();
+
+            contenedores.forEach(contenedor => {
+                contenedor.innerHTML = '';
+                if (listaFinal.length === 0) {
+                    contenedor.innerHTML = `<div class="p-6 text-center text-slate-500 font-medium border border-dashed border-slate-300 rounded-lg">⚠️ No se encontró personal para mapear en este archivo.</div>`;
+                    return;
+                }
+
+                if (!window.traduccionTrabajadoresTareo) window.traduccionTrabajadoresTareo = {};
+
+                listaFinal.forEach((nombreCapataz) => {
+                    let savedDNI = window.traduccionTrabajadoresTareo[nombreCapataz] || "";
+                    let opcionesS10 = '<option value="">-- Seleccionar Trabajador Oficial --</option>';
+                    window.diccionarioPadronS10.forEach(t => {
+                        let isSelected = (savedDNI === t.dni) ? 'selected' : '';
+                        opcionesS10 += `<option value="${t.dni}" ${isSelected}>${t.nombreOficial} (DNI: ${t.dni})</option>`;
+                    });
+
+                    contenedor.innerHTML += `
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-3">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Escrito por Capataz:</p>
+                            <p class="text-sm font-extrabold text-amber-600 mb-3"><i class="fa-solid fa-user-pen mr-1"></i> ${nombreCapataz}</p>
+                            <select data-nombre-capataz="${nombreCapataz}" class="mapeo-trabajador-select w-full bg-slate-50 border border-slate-300 text-slate-700 text-xs rounded-lg focus:ring-teal-500 focus:border-teal-500 block p-2.5 font-bold cursor-pointer">
+                                ${opcionesS10}
+                            </select>
+                        </div>
+                    `;
+                });
+            });
+            document.querySelectorAll('#modalTrabajadores').forEach(m => m.classList.remove('hidden'));
+        };
+
+        window.guardarMapeoTrabajadores = async function() {
+            const selects = document.querySelectorAll('.mapeo-trabajador-select');
+            if (!window.traduccionTrabajadoresTareo) window.traduccionTrabajadoresTareo = {};
+            
+            let processedNames = new Set();
+            let trabajadoresFaltantes = 0;
+
+            selects.forEach(select => {
+                const nombreCapataz = select.getAttribute('data-nombre-capataz');
+                if(!processedNames.has(nombreCapataz)){
+                    if (select.value) {
+                        window.traduccionTrabajadoresTareo[nombreCapataz] = select.value;
+                    } else {
+                        delete window.traduccionTrabajadoresTareo[nombreCapataz];
+                        trabajadoresFaltantes++;
+                    }
+                    processedNames.add(nombreCapataz);
+                }
+            });
+
+            const btns = document.querySelectorAll('#modalTrabajadores button');
+            btns.forEach(btn => {
+                if(btn.innerText.includes('GUARDAR')){
+                    btn.setAttribute('data-original', btn.innerHTML);
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> GUARDANDO...';
+                    btn.disabled = true;
+                }
+            });
+
+            try {
+                const proyectoLobby = window.proyectoActualGlobal || "General";
+                const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Maestro`);
+                await window.fsSetDoc(docRef, { diccionarioTrabajadoresStr: JSON.stringify(window.traduccionTrabajadoresTareo) }, { merge: true });
+
+                const btnPanels = document.querySelectorAll('button[onclick*="abrirModalTrabajadores"]');
+                btnPanels.forEach(btnPanel => {
+                    if (trabajadoresFaltantes === 0) {
+                        btnPanel.className = "bg-slate-700 hover:bg-slate-600 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 transition cursor-pointer shadow-sm border border-slate-600";
+                        btnPanel.innerHTML = '<i class="fa-solid fa-check text-emerald-400"></i> PERSONAL (OK)';
+                    } else { 
+                        btnPanel.className = "bg-teal-700 hover:bg-teal-600 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 transition cursor-pointer shadow-sm";
+                        btnPanel.innerHTML = `<i class="fa-solid fa-user-gear"></i> PERSONAL (${trabajadoresFaltantes})`; 
+                    }
+                });
+                document.querySelectorAll('#modalTrabajadores').forEach(m => m.classList.add('hidden'));
+            } catch (e) { alert("⚠️ Error de conexión."); } finally { 
+                btns.forEach(btn => {
+                    if (btn.hasAttribute('data-original')) {
+                        btn.innerHTML = btn.getAttribute('data-original');
+                        btn.disabled = false;
+                    }
+                });
+            }
+        };
+
+        // 👉 4. MODAL CONCEPTOS (A PRUEBA DE DUPLICADOS Y PRE-CARGADO)
+        window.abrirModalConceptos = function() {
+            const contenedores = document.querySelectorAll('#listaConceptosPendientes');
+            if (contenedores.length === 0) return;
+            
+            if (!window.mapeoConceptosTareo) window.mapeoConceptosTareo = {};
+
+            let opcionesS10Base = `<option value="">-- Por defecto (Vacío) --</option>`;
+            if (window.conceptosS10) {
+                window.conceptosS10.forEach(c => { opcionesS10Base += `<option value="${c}">${c}</option>`; });
+            }
+
+            contenedores.forEach(contenedor => {
+                contenedor.innerHTML = '';
+                const headerDiv = contenedor.previousElementSibling;
+                if (headerDiv) {
+                    headerDiv.innerHTML = `
+                        <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+                            <p class="text-xs text-slate-600 flex-1">Asigna el concepto S10 a cada trabajador. Usa el selector general para aplicar a todos a la vez.</p>
+                            <div class="flex items-center gap-2 w-full sm:w-auto bg-amber-50 p-2 rounded-lg border border-amber-200 shadow-sm shrink-0">
+                                <span class="text-[10px] font-black text-amber-800 uppercase tracking-widest whitespace-nowrap"><i class="fa-solid fa-bolt text-amber-500 mr-1"></i> Masiva:</span>
+                                <select onchange="window.aplicarConceptoGeneral(this.value)" class="bg-white border border-slate-300 text-slate-700 text-[11px] rounded focus:ring-amber-500 focus:border-amber-500 p-1.5 font-bold cursor-pointer min-w-[180px]">
+                                    ${opcionesS10Base}
+                                </select>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                Object.values(window.datosCampoProcesados).forEach(trabajador => {
+                    const dniKey = String(trabajador.dni).trim();
+                    let conceptoGuardado = window.mapeoConceptosTareo[dniKey];
+                    if (conceptoGuardado === undefined) conceptoGuardado = ""; 
+                    
+                    let opcionesConSeleccion = `<option value="">-- Por defecto (Vacío) --</option>`;
+                    if (window.conceptosS10) {
+                        window.conceptosS10.forEach(c => {
+                            const sel = (String(conceptoGuardado).trim() === String(c).trim()) ? 'selected' : '';
+                            opcionesConSeleccion += `<option value="${c}" ${sel}>${c}</option>`;
+                        });
+                    }
+                    contenedor.innerHTML += `
+                        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm mb-2 flex items-center justify-between gap-4 hover:border-amber-300 transition">
+                            <div class="overflow-hidden">
+                                <p class="text-xs font-extrabold text-slate-800 truncate">${trabajador.nombreOficial}</p>
+                                <p class="text-[10px] text-slate-500">DNI: ${dniKey}</p>
+                            </div>
+                            <select data-dni="${dniKey}" class="select-concepto-worker w-1/2 bg-slate-50 border border-slate-300 text-slate-700 text-[11px] rounded-lg focus:ring-amber-500 focus:border-amber-500 p-2 font-bold cursor-pointer">
+                                ${opcionesConSeleccion}
+                            </select>
+                        </div>
+                    `;
+                });
+            });
+            document.querySelectorAll('#modalConceptos').forEach(m => m.classList.remove('hidden'));
+        };
+
+        window.aplicarConceptoGeneral = function(valor) {
+            const selects = document.querySelectorAll('.select-concepto-worker');
+            selects.forEach(select => { select.value = valor; });
+            const contenedores = document.querySelectorAll('#listaConceptosPendientes');
+            contenedores.forEach(c => {
+                c.classList.add('opacity-50');
+                setTimeout(() => c.classList.remove('opacity-50'), 150);
+            });
+        };
+
+        window.guardarMapeoConceptos = async function() {
+            const selects = document.querySelectorAll('.select-concepto-worker');
+            if (!window.mapeoConceptosTareo) window.mapeoConceptosTareo = {};
+            
+            let processedDNIs = new Set();
+            selects.forEach(select => {
+                const dni = String(select.getAttribute('data-dni')).trim();
+                if(!processedDNIs.has(dni)){
+                    window.mapeoConceptosTareo[dni] = select.value || "";
+                    processedDNIs.add(dni);
+                }
+            });
+
+            const btns = document.querySelectorAll('#modalConceptos button');
+            btns.forEach(btn => {
+                if(btn.innerText.includes('GUARDAR')){
+                    btn.setAttribute('data-original', btn.innerHTML);
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> GUARDANDO...';
+                    btn.disabled = true;
+                }
+            });
+
+            try {
+                const proyectoLobby = window.proyectoActualGlobal || "General";
+                const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Maestro`);
+                await window.fsSetDoc(docRef, { diccionarioConceptosStr: JSON.stringify(window.mapeoConceptosTareo) }, { merge: true });
+
+                const btnPanels = document.querySelectorAll('button[onclick*="abrirModalConceptos"]');
+                btnPanels.forEach(btnPanel => {
+                    btnPanel.className = "bg-slate-700 hover:bg-slate-600 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 border border-slate-600 shadow-none hover:bg-slate-600";
+                    btnPanel.innerHTML = '<i class="fa-solid fa-check text-emerald-400"></i> CONCEPTOS (OK)';
+                });
+                document.querySelectorAll('#modalConceptos').forEach(m => m.classList.add('hidden'));
+            } catch (e) { alert("⚠️ Error de conexión."); } finally { 
+                btns.forEach(btn => {
+                    if (btn.hasAttribute('data-original')) {
+                        btn.innerHTML = btn.getAttribute('data-original');
+                        btn.disabled = false;
+                    }
+                });
+            }
+        };
+
+        // 👉 5. MODAL CONVENIOS (A PRUEBA DE DUPLICADOS)
+        window.guardarMapeoConvenios = async function() {
+            const tbodys = document.querySelectorAll('#listaConvenios');
+            if (!window.mapeoConveniosTareo) window.mapeoConveniosTareo = {};
+
+            let processedDNIs = new Set();
+            tbodys.forEach(tbody => {
+                const filas = tbody.querySelectorAll('tr');
+                filas.forEach(tr => {
+                    const select = tr.querySelector('select'); 
+                    const inputDatalist = tr.querySelector('input[list="datalistPersonalConvenios"]');
+                    const inputsHoras = tr.querySelectorAll('input[type="number"]');
+                    
+                    let dni = "";
+                    if (inputDatalist && inputDatalist.value && inputDatalist.value.includes('|')) {
+                        dni = inputDatalist.value.split('|')[1].trim();
+                    } else if (select && select.value) {
+                        dni = select.value;
+                    }
+
+                    if (dni && !processedDNIs.has(dni)) {
+                        const horas = Array.from(inputsHoras).map(i => parseFloat(i.value) || 0);
+                        if (horas.some(h => h > 0)) {
+                            window.mapeoConveniosTareo[dni] = horas;
+                        } else {
+                            delete window.mapeoConveniosTareo[dni];
+                        }
+                        processedDNIs.add(dni);
+                    }
+                });
+            });
+
+            const btns = document.querySelectorAll('#modalConvenios button');
+            btns.forEach(btn => {
+                if(btn.innerText.includes('GUARDAR')){
+                    btn.setAttribute('data-original', btn.innerHTML);
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> GUARDANDO...';
+                    btn.disabled = true;
+                }
+            });
+
+            try {
+                const proyectoLobby = window.proyectoActualGlobal || "General";
+                const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Maestro`);
+                await window.fsSetDoc(docRef, { diccionarioConveniosStr: JSON.stringify(window.mapeoConveniosTareo) }, { merge: true });
+
+                const btnPanels = document.querySelectorAll('button[onclick*="abrirModalConvenios"]');
+                btnPanels.forEach(btnPanel => {
+                    btnPanel.className = "bg-slate-700 hover:bg-slate-600 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 border border-slate-600 shadow-none hover:bg-slate-600";
+                    btnPanel.innerHTML = `<i class="fa-solid fa-check text-emerald-400"></i> CONVENIOS (OK)`;
+                });
+                document.querySelectorAll('#modalConvenios').forEach(m => m.classList.add('hidden'));
+            } catch (e) { alert("⚠️ Error de conexión."); } finally { 
+                btns.forEach(btn => {
+                    if (btn.hasAttribute('data-original')) {
+                        btn.innerHTML = btn.getAttribute('data-original');
+                        btn.disabled = false;
+                    }
+                });
+            }
+        };
+
+        window.guardarMapeoTrabajadores = async function() {
+            const selects = document.querySelectorAll('[id^="mapeoTrabajador_"]');
+            if (!window.traduccionTrabajadoresTareo) window.traduccionTrabajadoresTareo = {};
+
+            let trabajadoresFaltantes = 0;
+
+            selects.forEach(select => {
+                const nombreCapataz = select.getAttribute('data-nombre-capataz');
+                if (select.value) {
+                    window.traduccionTrabajadoresTareo[nombreCapataz] = select.value;
+                } else {
+                    delete window.traduccionTrabajadoresTareo[nombreCapataz];
+                    trabajadoresFaltantes++;
+                }
+            });
+
+            const btn = document.querySelector('#modalTrabajadores .p-5 button');
+            const txtOriginal = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> GUARDANDO...';
+            btn.disabled = true;
+            try {
+                const proyectoLobby = window.proyectoActualGlobal || "General";
+                const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Maestro`);
+                await window.fsSetDoc(docRef, { diccionarioTrabajadoresStr: JSON.stringify(window.traduccionTrabajadoresTareo) }, { merge: true });
+
+                const btnPanel = document.querySelector('button[onclick*="abrirModalTrabajadores"]');
+                if (btnPanel) {
+                    if (trabajadoresFaltantes === 0) {
+                        btnPanel.className = "bg-slate-700 hover:bg-slate-600 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 transition cursor-pointer shadow-sm border border-slate-600";
+                        btnPanel.innerHTML = '<i class="fa-solid fa-check text-emerald-400"></i> PERSONAL (OK)';
+                    } else { 
+                        btnPanel.className = "bg-teal-700 hover:bg-teal-600 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 transition cursor-pointer shadow-sm";
+                        btnPanel.innerHTML = `<i class="fa-solid fa-user-gear"></i> PERSONAL (${trabajadoresFaltantes})`; 
+                    }
+                }
+                document.getElementById('modalTrabajadores').classList.add('hidden');
+            } catch (e) { alert("⚠️ Error de conexión."); } finally { btn.innerHTML = txtOriginal; btn.disabled = false; }
+        };
+
+        // 🔥 MODAL CONCEPTOS (CON ASIGNACIÓN MASIVA MANTENIDA)
+        window.abrirModalConceptos = function() {
+            const contenedor = document.getElementById('listaConceptosPendientes');
+            if (!contenedor) return;
+            contenedor.innerHTML = '';
+            
+            if (!window.mapeoConceptosTareo) window.mapeoConceptosTareo = {};
+
+            let opcionesS10Base = `<option value="">-- Por defecto (Vacío) --</option>`;
+            if (window.conceptosS10) {
+                window.conceptosS10.forEach(c => { opcionesS10Base += `<option value="${c}">${c}</option>`; });
+            }
+
+            const headerDiv = contenedor.previousElementSibling;
+            if (headerDiv) {
+                headerDiv.innerHTML = `
+                    <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <p class="text-xs text-slate-600 flex-1">Asigna el concepto S10 a cada trabajador. Usa el selector general para aplicar a todos a la vez.</p>
+                        <div class="flex items-center gap-2 w-full sm:w-auto bg-amber-50 p-2 rounded-lg border border-amber-200 shadow-sm shrink-0">
+                            <span class="text-[10px] font-black text-amber-800 uppercase tracking-widest whitespace-nowrap"><i class="fa-solid fa-bolt text-amber-500 mr-1"></i> Asignación Masiva:</span>
+                            <select onchange="window.aplicarConceptoGeneral(this.value)" class="bg-white border border-slate-300 text-slate-700 text-[11px] rounded focus:ring-amber-500 focus:border-amber-500 p-1.5 font-bold cursor-pointer min-w-[180px]">
+                                ${opcionesS10Base}
+                            </select>
+                        </div>
+                    </div>
+                `;
+            }
+
+            Object.values(window.datosCampoProcesados).forEach(trabajador => {
+                // 🔥 FIX INFALIBLE: Forzar a que el DNI sea texto limpio
+                const dniKey = String(trabajador.dni).trim();
+                let conceptoGuardado = window.mapeoConceptosTareo[dniKey];
+                if (conceptoGuardado === undefined) conceptoGuardado = ""; 
+                
+                let opcionesConSeleccion = `<option value="">-- Por defecto (Vacío) --</option>`;
+                if (window.conceptosS10) {
+                    window.conceptosS10.forEach(c => {
+                        const sel = (String(conceptoGuardado).trim() === String(c).trim()) ? 'selected' : '';
+                        opcionesConSeleccion += `<option value="${c}" ${sel}>${c}</option>`;
+                    });
+                }
+                contenedor.innerHTML += `
+                    <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm mb-2 flex items-center justify-between gap-4 hover:border-amber-300 transition">
+                        <div class="overflow-hidden">
+                            <p class="text-xs font-extrabold text-slate-800 truncate">${trabajador.nombreOficial}</p>
+                            <p class="text-[10px] text-slate-500">DNI: ${dniKey}</p>
+                        </div>
+                        <select data-dni="${dniKey}" class="select-concepto-worker w-1/2 bg-slate-50 border border-slate-300 text-slate-700 text-[11px] rounded-lg focus:ring-amber-500 focus:border-amber-500 p-2 font-bold cursor-pointer">
+                            ${opcionesConSeleccion}
+                        </select>
+                    </div>
+                `;
+            });
+            document.getElementById('modalConceptos').classList.remove('hidden');
+        };
+
+        window.aplicarConceptoGeneral = function(valor) {
+            const selects = document.querySelectorAll('.select-concepto-worker');
+            selects.forEach(select => { select.value = valor; });
+            const contenedor = document.getElementById('listaConceptosPendientes');
+            contenedor.classList.add('opacity-50');
+            setTimeout(() => contenedor.classList.remove('opacity-50'), 150);
+        };
+
+        window.guardarMapeoConceptos = async function() {
+            const selects = document.querySelectorAll('.select-concepto-worker');
+            if (!window.mapeoConceptosTareo) window.mapeoConceptosTareo = {};
+
+            selects.forEach(select => {
+                const dni = String(select.getAttribute('data-dni')).trim();
+                window.mapeoConceptosTareo[dni] = select.value || "";
+            });
+
+            const btn = document.querySelector('#modalConceptos button');
+            const txtOriginal = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> GUARDANDO...';
+            btn.disabled = true;
+
+            try {
+                let selectorSup = document.getElementById('proyectoSelect');
+                const proyectoLobby = (selectorSup && selectorSup.value) ? selectorSup.value : (window.proyectoActualGlobal || "General");
+                const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Maestro`);
+                
+                await window.fsSetDoc(docRef, { diccionarioConceptosStr: JSON.stringify(window.mapeoConceptosTareo) }, { merge: true });
+
+                const btnPanel = document.querySelector('button[onclick*="abrirModalConceptos"]');
+                if (btnPanel) {
+                    btnPanel.className = "bg-slate-700 hover:bg-slate-600 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 border border-slate-600 shadow-none hover:bg-slate-600";
+                    btnPanel.innerHTML = '<i class="fa-solid fa-check text-emerald-400"></i> CONCEPTOS (OK)';
+                }
+                document.getElementById('modalConceptos').classList.add('hidden');
+            } catch (e) { alert("⚠️ Error de conexión."); } finally { btn.innerHTML = txtOriginal; btn.disabled = false; }
+        };
+
+        // 🔥 CONVENIOS
+        window.guardarMapeoConvenios = async function() {
+            const tbody = document.getElementById('listaConvenios');
+            const filas = tbody.querySelectorAll('tr');
+            if (!window.mapeoConveniosTareo) window.mapeoConveniosTareo = {};
+
+            filas.forEach(tr => {
+                const select = tr.querySelector('select'); 
+                const inputDatalist = tr.querySelector('input[list="datalistPersonalConvenios"]');
+                const inputsHoras = tr.querySelectorAll('input[type="number"]');
+                
+                let dni = "";
+                if (inputDatalist && inputDatalist.value && inputDatalist.value.includes('|')) {
+                    dni = inputDatalist.value.split('|')[1].trim();
+                } else if (select && select.value) {
+                    dni = select.value;
+                }
+
+                if (dni) {
+                    const horas = Array.from(inputsHoras).map(i => parseFloat(i.value) || 0);
+                    if (horas.some(h => h > 0)) {
+                        window.mapeoConveniosTareo[dni] = horas;
+                    } else {
+                        delete window.mapeoConveniosTareo[dni];
+                    }
+                }
+            });
+
+            const btn = document.querySelector('#modalConvenios .p-5 button');
+            const txtOriginal = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> GUARDANDO...';
+            btn.disabled = true;
+            try {
+                let selectorSup = document.getElementById('proyectoSelect');
+                const proyectoLobby = (selectorSup && selectorSup.value) ? selectorSup.value : (window.proyectoActualGlobal || "General");
+                const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Maestro`);
+                await window.fsSetDoc(docRef, { diccionarioConveniosStr: JSON.stringify(window.mapeoConveniosTareo) }, { merge: true });
+
+                const btnPanel = document.querySelector('button[onclick*="abrirModalConvenios"]');
+                if (btnPanel) {
+                    btnPanel.className = "bg-slate-700 hover:bg-slate-600 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 border border-slate-600 shadow-none hover:bg-slate-600";
+                    btnPanel.innerHTML = `<i class="fa-solid fa-check text-emerald-400"></i> CONVENIOS (OK)`;
+                }
+                document.getElementById('modalConvenios').classList.add('hidden');
+            } catch (e) { alert("⚠️ Error de conexión."); } finally { btn.innerHTML = txtOriginal; btn.disabled = false; }
+        };
+
+        // 🔥 GUARDAR TRABAJADORES EN FIREBASE (MEMORIA GLOBAL BLINDADA)
         window.guardarMapeoTrabajadores = async function() {
             const selects = document.querySelectorAll('[id^="mapeoTrabajador_"]');
             let mapeosGuardados = 0;
@@ -6745,27 +7068,26 @@ window.iniciarNuevoReporte = function() {
                 const txtOriginal = btn.innerHTML;
                 btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> GUARDANDO...';
                 btn.disabled = true;
-
                 try {
                     const proyectoLobby = window.proyectoActualGlobal || "General";
                     const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Maestro`);
-                    await window.fsSetDoc(docRef, { diccionarioTrabajadores: window.traduccionTrabajadoresTareo }, { merge: true });
+                    await window.fsSetDoc(docRef, { diccionarioTrabajadoresStr: JSON.stringify(window.traduccionTrabajadoresTareo) }, { merge: true });
 
                     const btnPanel = document.querySelector('button[onclick*="abrirModalTrabajadores"]');
                     if (btnPanel) {
                         const quedan = window.pendientesTrabajadores.length;
                         if (quedan === 0) {
-                            btnPanel.className = "bg-slate-100 text-slate-400 font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 cursor-not-allowed border border-slate-200 transition shadow-none";
+                            btnPanel.className = "bg-slate-100 text-slate-400 font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 cursor-not-allowed border border-slate-200 shadow-none";
                             btnPanel.innerHTML = '<i class="fa-solid fa-check text-teal-500"></i> PERSONAL (0)';
                             btnPanel.onclick = null;
                         } else { btnPanel.innerHTML = `<i class="fa-solid fa-user-gear"></i> PERSONAL (${quedan})`; }
                     }
                     document.getElementById('modalTrabajadores').classList.add('hidden');
-                } catch (e) { alert("⚠️ Error al sincronizar con Firebase."); } finally { btn.innerHTML = txtOriginal; btn.disabled = false; }
-            } else { alert("⚠️ No seleccionaste ningún trabajador oficial."); }
+                } catch (e) { alert("⚠️ Error de conexión."); } finally { btn.innerHTML = txtOriginal; btn.disabled = false; }
+            }
         };
 
-        // 🔥 GUARDAR CONCEPTOS EN FIREBASE (MEMORIA GLOBAL)
+        // 🔥 GUARDAR CONCEPTOS EN FIREBASE (MEMORIA GLOBAL BLINDADA)
         window.guardarMapeoConceptos = async function() {
             const selects = document.querySelectorAll('.select-concepto-worker');
             let mapeosGuardados = 0;
@@ -6783,73 +7105,25 @@ window.iniciarNuevoReporte = function() {
             const txtOriginal = btn.innerHTML;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> GUARDANDO...';
             btn.disabled = true;
-
             try {
                 const proyectoLobby = window.proyectoActualGlobal || "General";
                 const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Maestro`);
-                await window.fsSetDoc(docRef, { diccionarioConceptos: window.mapeoConceptosTareo }, { merge: true });
+                await window.fsSetDoc(docRef, { diccionarioConceptosStr: JSON.stringify(window.mapeoConceptosTareo) }, { merge: true });
 
                 const btnPanel = document.querySelector('button[onclick*="abrirModalConceptos"]');
                 if (btnPanel) {
-                    btnPanel.className = "bg-slate-100 text-slate-400 font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 border border-slate-200 transition shadow-none cursor-not-allowed";
+                    btnPanel.className = "bg-slate-100 text-slate-500 font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 border border-slate-200 shadow-none hover:bg-slate-200";
                     btnPanel.innerHTML = '<i class="fa-solid fa-check text-amber-500"></i> CONCEPTOS (OK)';
                 }
                 document.getElementById('modalConceptos').classList.add('hidden');
-            } catch (e) { alert("⚠️ Error al sincronizar con Firebase."); } finally { btn.innerHTML = txtOriginal; btn.disabled = false; }
+            } catch (e) { alert("⚠️ Error de conexión."); } finally { btn.innerHTML = txtOriginal; btn.disabled = false; }
         };
 
-        // ==========================================
-        // MÓDULO DE CONVENIOS (HORAS EXTRA EN NUBE)
-        // ==========================================
-        window.abrirModalConvenios = function() {
-            const tbody = document.getElementById('listaConvenios');
-            tbody.innerHTML = '';
-            
-            let conveniosCargados = window.mapeoConveniosTareo || {};
-            
-            if (Object.keys(conveniosCargados).length === 0) {
-                window.agregarFilaConvenio(); 
-            } else {
-                Object.entries(conveniosCargados).forEach(([dni, horasDia]) => {
-                    window.agregarFilaConvenio(dni, horasDia);
-                });
-            }
-            document.getElementById('modalConvenios').classList.remove('hidden');
-        };
-
-        window.agregarFilaConvenio = function(dniGuardado = '', horasGuardadas = [0,0,0,0,0,0]) {
-            const tbody = document.getElementById('listaConvenios');
-            const tr = document.createElement('tr');
-            
-            let opcionesS10 = '<option value="">-- Seleccionar Personal --</option>';
-            Object.values(window.datosCampoProcesados).forEach(t => {
-                const sel = t.dni === dniGuardado ? 'selected' : '';
-                opcionesS10 += `<option value="${t.dni}" ${sel}>${t.nombreOficial}</option>`;
-            });
-
-            tr.innerHTML = `
-                <td class="p-2 border-r border-slate-200">
-                    <select class="w-full bg-white border border-slate-300 text-[10px] rounded focus:ring-fuchsia-500 p-2 font-bold cursor-pointer">
-                        ${opcionesS10}
-                    </select>
-                </td>
-                ${horasGuardadas.map(h => `<td class="p-2 border-r border-slate-200"><input type="number" step="0.5" value="${h}" class="w-full bg-white border border-slate-300 text-center text-[11px] font-mono rounded focus:ring-fuchsia-500 p-1.5"></td>`).join('')}
-                <td class="p-2 text-center">
-                    <button onclick="window.eliminarFilaConvenio(this)" class="w-8 h-8 rounded-full text-slate-400 hover:text-white hover:bg-red-500 transition cursor-pointer"><i class="fa-solid fa-trash-can"></i></button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        };
-
-        window.eliminarFilaConvenio = function(btn) { btn.closest('tr').remove(); };
-
-        // 🔥 GUARDAR CONVENIOS EN FIREBASE (MEMORIA GLOBAL)
+        // 🔥 GUARDAR CONVENIOS EN FIREBASE (MEMORIA GLOBAL BLINDADA)
         window.guardarMapeoConvenios = async function() {
             const tbody = document.getElementById('listaConvenios');
             const filas = tbody.querySelectorAll('tr');
-            
-            window.mapeoConveniosTareo = {};
-            let conveniosGuardados = 0;
+            if (!window.mapeoConveniosTareo) window.mapeoConveniosTareo = {};
 
             filas.forEach(tr => {
                 const select = tr.querySelector('select'); 
@@ -6857,7 +7131,6 @@ window.iniciarNuevoReporte = function() {
                 const inputsHoras = tr.querySelectorAll('input[type="number"]');
                 
                 let dni = "";
-                // Soporta tanto el buscador nuevo (datalist) como el select antiguo
                 if (inputDatalist && inputDatalist.value && inputDatalist.value.includes('|')) {
                     dni = inputDatalist.value.split('|')[1].trim();
                 } else if (select && select.value) {
@@ -6868,7 +7141,8 @@ window.iniciarNuevoReporte = function() {
                     const horas = Array.from(inputsHoras).map(i => parseFloat(i.value) || 0);
                     if (horas.some(h => h > 0)) {
                         window.mapeoConveniosTareo[dni] = horas;
-                        conveniosGuardados++;
+                    } else {
+                        delete window.mapeoConveniosTareo[dni];
                     }
                 }
             });
@@ -6877,25 +7151,18 @@ window.iniciarNuevoReporte = function() {
             const txtOriginal = btn.innerHTML;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> GUARDANDO...';
             btn.disabled = true;
-
             try {
                 const proyectoLobby = window.proyectoActualGlobal || "General";
-                // 🔥 GUARDAR EN EL MAESTRO GLOBAL PARA QUE DURE PARA SIEMPRE
                 const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Maestro`);
-                await window.fsSetDoc(docRef, { diccionarioConvenios: window.mapeoConveniosTareo }, { merge: true });
+                await window.fsSetDoc(docRef, { diccionarioConveniosStr: JSON.stringify(window.mapeoConveniosTareo) }, { merge: true });
 
                 const btnPanel = document.querySelector('button[onclick*="abrirModalConvenios"]');
                 if (btnPanel) {
-                    btnPanel.className = "bg-slate-100 text-slate-400 font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 border border-slate-200 transition shadow-none cursor-not-allowed";
+                    btnPanel.className = "bg-slate-100 text-slate-500 font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 border border-slate-200 shadow-none hover:bg-slate-200";
                     btnPanel.innerHTML = `<i class="fa-solid fa-check text-fuchsia-500"></i> CONVENIOS (OK)`;
                 }
                 document.getElementById('modalConvenios').classList.add('hidden');
-            } catch (e) { 
-                alert("⚠️ Error al sincronizar con Firebase."); 
-            } finally { 
-                btn.innerHTML = txtOriginal; 
-                btn.disabled = false; 
-            }
+            } catch (e) { alert("⚠️ Error de conexión."); } finally { btn.innerHTML = txtOriginal; btn.disabled = false; }
         };
 
         // 🔥 ABRIR MODAL CONCEPTOS (AHORA CON ASIGNACIÓN MASIVA)
@@ -8002,13 +8269,13 @@ window.iniciarNuevoReporte = function() {
             }
         };
 
-        // 2. MODAL DE ACTIVIDADES (Filtra leyendo Columna A y mostrando Columna D)
+        // 🔥 2. MODAL ACTIVIDADES (MUESTRA TODAS Y ES A PRUEBA DE DUPLICADOS)
         window.abrirModalActividades = function() {
-            const contenedor = document.getElementById('listaActividadesPendientes');
-            if (!contenedor) return;
-            contenedor.innerHTML = '';
+            // 1. Buscamos TODOS los contenedores (por si hay HTML duplicado)
+            const contenedores = document.querySelectorAll('#listaActividadesPendientes');
+            if (contenedores.length === 0) return;
             
-            // 🔥 INYECTAR DATALIST GLOBAL PARA BÚSQUEDA INTELIGENTE
+            // 2. Inyectar buscador inteligente S10
             if (!document.getElementById('datalistActividadesS10')) {
                 const dl = document.createElement('datalist');
                 dl.id = 'datalistActividadesS10';
@@ -8017,56 +8284,132 @@ window.iniciarNuevoReporte = function() {
             const datalist = document.getElementById('datalistActividadesS10');
             datalist.innerHTML = '';
             
-            // Atrapar código del proyecto seleccionado (Ej: "03027")
             let pCrudo = window.proyectoSeleccionadoGlobal || window.proyectoSeleccionado || window.proyectoActualGlobal || "";
             if (!pCrudo) {
-                document.querySelectorAll('select').forEach(s => {
-                    if (s.value && /^\d{4,6}\s/.test(s.value)) pCrudo = s.value;
-                });
+                document.querySelectorAll('select').forEach(s => { if (s.value && /^\d{4,6}\s/.test(s.value)) pCrudo = s.value; });
             }
             const codigoProyecto = pCrudo ? String(pCrudo).split(' ')[0].trim() : "";
-            let encontradas = 0;
-
-            // Filtro estricto por coordenadas y llenado del buscador
+            
             let opcionesUnicas = new Set();
-            if (codigoProyecto && window.hojaActividadesCruda) {
+            if (codigoProyecto && window.hojaActividadesCruda && Array.isArray(window.hojaActividadesCruda)) {
                 window.hojaActividadesCruda.forEach(fila => {
-                    let colA = String(fila.A || '').trim();
-                    let colD = String(fila.D || '').trim();
-                    
-                    if (colA.startsWith(codigoProyecto) && colD.length > 5) {
-                        opcionesUnicas.add(colD);
-                        encontradas++;
+                    let colA = String(fila.A || '').trim(); 
+                    let colD = String(fila.D || '').trim(); 
+                    if (colA.startsWith(codigoProyecto) && colD.length > 5) { opcionesUnicas.add(colD); }
+                });
+            }
+            
+            // Si falla el cruce, usar catálogo global S10
+            if (opcionesUnicas.size === 0 && window.catalogoPartidasS10) {
+                window.catalogoPartidasS10.forEach(p => opcionesUnicas.add(p));
+            }
+            opcionesUnicas.forEach(opt => { datalist.innerHTML += `<option value="${opt}"></option>`; });
+
+            // 🔥 RASTREADOR INFALIBLE: Extraer TODAS las actividades que vinieron en el Excel
+            let actividadesPresentes = new Set();
+            if (window.datosCampoProcesados) {
+                Object.values(window.datosCampoProcesados).forEach(trabajador => {
+                    if (trabajador.tareasDiarias) {
+                        Object.values(trabajador.tareasDiarias).forEach(diaArr => {
+                            if (Array.isArray(diaArr)) {
+                                diaArr.forEach(t => {
+                                    if (t.activityNameField) actividadesPresentes.add(t.activityNameField);
+                                });
+                            }
+                        });
                     }
                 });
             }
 
-            // Alimentar el datalist
-            opcionesUnicas.forEach(opt => {
-                datalist.innerHTML += `<option value="${opt}"></option>`;
-            });
+            if (window.actividadesEnEsteTareo) window.actividadesEnEsteTareo.forEach(a => actividadesPresentes.add(a));
+            if (window.pendientesActividades) window.pendientesActividades.forEach(a => actividadesPresentes.add(a));
 
-            // Diagnósticos visuales
-            if (encontradas === 0) {
-                if (!window.hojaActividadesCruda) {
-                    contenedor.innerHTML += `<p class="text-xs text-red-500 font-bold mb-4">❌ ERROR: La hoja 'Actividad' no se guardó en memoria.</p>`;
-                } else {
-                    contenedor.innerHTML += `<p class="text-xs text-amber-500 font-bold mb-4">⚠️ Cero partidas encontradas para el proyecto ${codigoProyecto}</p>`;
+            let listaFinal = Array.from(actividadesPresentes).sort();
+
+            // 4. Dibujar TODAS las actividades en TODAS las ventanas ocultas
+            contenedores.forEach(contenedor => {
+                contenedor.innerHTML = '';
+                
+                if (listaFinal.length === 0) {
+                    contenedor.innerHTML = `<div class="p-6 text-center text-slate-500 font-bold border border-dashed border-slate-300 rounded-lg">⚠️ No se encontraron actividades procesadas. Asegúrate de cruzar los datos primero.</div>`;
+                    return;
                 }
-            }
 
-            // Dibujar interfaz con el nuevo <input> (Buscador Inteligente)
-            window.pendientesActividades.forEach((actividad, idx) => {
-                contenedor.innerHTML += `
-                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-3">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Columna del Excel (Capataz):</p>
-                        <p class="text-sm font-extrabold text-blue-600 mb-3"><i class="fa-solid fa-clipboard-list mr-1"></i> ${actividad}</p>
-                        <input type="text" id="mapeoActividad_${idx}" data-actividad-capataz="${actividad}" list="datalistActividadesS10" placeholder="Escribe para buscar (Ej: ACERO)..." class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-xs rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 font-bold cursor-text shadow-inner">
-                    </div>
-                `;
+                if (!window.traduccionPartidasTareo) window.traduccionPartidasTareo = {};
+
+                listaFinal.forEach((actividad, idx) => {
+                    let savedPartida = window.traduccionPartidasTareo[actividad] || "";
+                    contenedor.innerHTML += `
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-3">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Actividad del Excel (Capataz):</p>
+                            <p class="text-sm font-extrabold text-blue-600 mb-3"><i class="fa-solid fa-clipboard-list mr-1"></i> ${actividad}</p>
+                            <input type="text" data-actividad-capataz="${actividad}" list="datalistActividadesS10" value="${savedPartida}" placeholder="Escribe para buscar o reasignar (Ej: ACERO)..." class="mapeo-actividad-input w-full bg-slate-50 border border-slate-300 text-slate-700 text-[11px] rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 font-bold cursor-text shadow-inner">
+                        </div>
+                    `;
+                });
             });
 
-            document.getElementById('modalActividades').classList.remove('hidden');
+            // Abrimos todas las ventanas que encuentre el HTML
+            document.querySelectorAll('#modalActividades').forEach(m => m.classList.remove('hidden'));
+        };
+
+        window.guardarMapeoActividades = async function() {
+            // Leemos todos los inputs usando la nueva clase, ignorando IDs duplicados
+            const inputs = document.querySelectorAll('.mapeo-actividad-input');
+            if (!window.traduccionPartidasTareo) window.traduccionPartidasTareo = {};
+            
+            let faltantes = 0;
+
+            inputs.forEach(input => {
+                const actividadCapataz = input.getAttribute('data-actividad-capataz');
+                if (input.value && input.value.trim() !== "") {
+                    window.traduccionPartidasTareo[actividadCapataz] = input.value;
+                } else {
+                    delete window.traduccionPartidasTareo[actividadCapataz];
+                    faltantes++;
+                }
+            });
+
+            // Evitamos que guarde varias veces por los duplicados dividiéndolo por 2 (ya que hay 2 modales)
+            faltantes = Math.floor(faltantes / document.querySelectorAll('#modalActividades').length);
+
+            const btns = document.querySelectorAll('#modalActividades button');
+            btns.forEach(btn => {
+                if (btn.innerText.includes('GUARDAR')) {
+                    btn.setAttribute('data-original', btn.innerHTML);
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> GUARDANDO...';
+                    btn.disabled = true;
+                }
+            });
+            
+            try {
+                const proyectoLobby = window.proyectoActualGlobal || "General";
+                const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Maestro`);
+                await window.fsSetDoc(docRef, { diccionarioActividadesStr: JSON.stringify(window.traduccionPartidasTareo) }, { merge: true });
+                
+                // Actualizar los botones de la pantalla en vivo
+                const btnPanels = document.querySelectorAll('button[onclick*="abrirModalActividades"]');
+                btnPanels.forEach(btnPanel => {
+                    if (faltantes === 0) {
+                        btnPanel.className = "bg-slate-700 hover:bg-slate-600 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 transition cursor-pointer shadow-sm border border-slate-600";
+                        btnPanel.innerHTML = '<i class="fa-solid fa-check text-emerald-400"></i> TAREAS (OK)';
+                    } else {
+                        btnPanel.className = "bg-indigo-900 hover:bg-indigo-800 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 transition cursor-pointer shadow-sm";
+                        btnPanel.innerHTML = `<i class="fa-solid fa-list-check"></i> TAREAS (${faltantes})`;
+                    }
+                });
+                
+                document.querySelectorAll('#modalActividades').forEach(m => m.classList.add('hidden'));
+            } catch (e) { 
+                alert("⚠️ Error al guardar en Firebase."); 
+            } finally { 
+                btns.forEach(btn => {
+                    if (btn.hasAttribute('data-original')) {
+                        btn.innerHTML = btn.getAttribute('data-original');
+                        btn.disabled = false;
+                    }
+                });
+            }
         };
 
     </script>
