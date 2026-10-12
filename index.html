@@ -192,6 +192,7 @@
                 <button id="btnTabInicio" onclick="window.cambiarTabAjustes('inicio')" class="text-center px-4 py-2.5 rounded-full font-bold text-[11px] uppercase tracking-widest border-2 border-slate-300 text-slate-500 hover:border-slate-400 hover:text-slate-700 transition cursor-pointer">PANTALLA DE INICIO</button>
                 <!-- 🔥 AQUÍ ESTÁ EL NUEVO BOTÓN -->
                 <button id="btnTabAuditoria" onclick="window.cambiarTabAjustes('auditoria')" class="text-center px-4 py-2.5 rounded-full font-bold text-[11px] uppercase tracking-widest border-2 border-slate-300 text-slate-500 hover:border-slate-400 hover:text-slate-700 transition cursor-pointer">REGLAS IA</button>
+                <button id="btnTabFormatoRdi" onclick="window.cambiarTabAjustes('formatoRdi')" class="text-center px-4 py-2.5 rounded-full font-bold text-[11px] uppercase tracking-widest border-2 border-slate-300 text-slate-500 hover:border-slate-400 hover:text-slate-700 transition cursor-pointer">FORMATO RDI</button>
             </div>
 
             <!-- Contenido Principal -->
@@ -269,6 +270,37 @@
                     </div>
                 </div>
 
+                <!-- 🔥 NUEVO TAB: FORMATO RDI -->
+                <div id="tabFormatoRdi" class="hidden">
+                    <h3 class="text-base font-bold text-slate-800 mb-2 border-b border-slate-100 pb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-file-excel text-emerald-600"></i> Configuración del Formato RDI
+                    </h3>
+                    <p class="text-sm text-slate-500 mb-6">Personaliza el logo y los datos maestros que aparecerán en la cabecera al exportar tus RDIs.</p>
+                    
+                    <div class="flex flex-col md:flex-row gap-6 bg-slate-50 p-6 rounded-xl border border-slate-200">
+                        <div class="flex-1 flex flex-col gap-4">
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Nombre Oficial del Sistema / Empresa</label>
+                                <input type="text" id="configRdiEmpresa" placeholder="Ej: SISTEMA INTEGRADO DE GESTIÓN" class="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm font-bold shadow-inner">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Logo de la Empresa (Aparecerá en el Excel)</label>
+                                <input type="file" id="configRdiLogo" accept="image/png, image/jpeg" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:font-bold file:bg-emerald-100 file:text-emerald-700 hover:file:bg-emerald-200 cursor-pointer bg-white border border-slate-300 rounded-lg">
+                            </div>
+                            <div class="pt-2">
+                                <button onclick="window.guardarConfiguracionRDI()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-lg shadow-md transition cursor-pointer flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-floppy-disk"></i> Guardar Formato
+                                </button>
+                            </div>
+                        </div>
+                        <div class="w-full md:w-64 flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-xl bg-white p-4">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Logo Actual</span>
+                            <img id="previewLogoRDI" src="" class="max-w-full max-h-24 object-contain hidden" alt="Logo RDI">
+                            <i id="placeholderLogoRDI" class="fa-solid fa-image text-4xl text-slate-300"></i>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -307,6 +339,15 @@
                     </div>
                     <h3 class="text-2xl font-extrabold text-slate-800 mb-2 tracking-tight">Tareo de Obra</h3>
                     <p class="text-slate-500 text-sm">Procesamiento automático para S10.</p>
+                </div>
+
+                <!-- Tarjeta: Control de RDI -->
+                <div onclick="window.abrirModulo('RDI')" class="bg-white rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-200 cursor-pointer group flex flex-col items-center text-center w-full max-w-sm transform hover:-translate-y-2">
+                    <div class="w-24 h-24 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mb-6 shadow-inner group-hover:bg-amber-600 group-hover:text-white transition-colors duration-300">
+                        <i class="fa-solid fa-file-circle-question text-4xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-extrabold text-slate-800 mb-2 tracking-tight">Control de RDI</h3>
+                    <p class="text-slate-500 text-sm">Matriz de consultas, emisión y control de respuestas.</p>
                 </div>
 
             </div>
@@ -465,6 +506,218 @@
                     
                 </div>
             </div> <!-- FIN DE moduloProyectoTareos -->
+
+            <!-- ========================================== -->
+            <!-- CONTENEDOR MÓDULO RDI -->
+            <!-- ========================================== -->
+            <div id="moduloProyectoRDI" class="hidden w-full">
+                
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 w-full gap-4">
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-800 tracking-tight">Requerimientos de Información (RDI)</h2>
+                        <p class="text-sm text-slate-500">Matriz de consultas, emisión y control de respuestas técnicas.</p>
+                    </div>
+                    <button onclick="window.abrirModalEdicionRDI()" class="bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold uppercase tracking-widest py-3.5 px-6 rounded-full shadow-md transition flex items-center gap-2 cursor-pointer transform hover:-translate-y-0.5 whitespace-nowrap">
+                        <i class="fa-solid fa-plus text-sm"></i> CREAR NUEVO RDI
+                    </button>
+                </div>
+
+                <!-- DASHBOARD RDI -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Emitidos</span>
+                        <span id="dashRdiTotal" class="text-3xl font-black text-slate-700">0</span>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col border-l-4 border-l-red-500">
+                        <span class="text-[10px] font-bold text-red-500 uppercase tracking-widest mb-1">Pendientes</span>
+                        <span id="dashRdiPendientes" class="text-3xl font-black text-red-600">0</span>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col border-l-4 border-l-emerald-500">
+                        <span class="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Absueltos</span>
+                        <span id="dashRdiAbsueltos" class="text-3xl font-black text-emerald-600">0</span>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col border-l-4 border-l-amber-500">
+                        <span class="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-1">Con Modif. Plano</span>
+                        <span id="dashRdiPlanos" class="text-3xl font-black text-amber-600">0</span>
+                    </div>
+                </div>
+
+                <!-- MATRIZ RDI -->
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+                    <div class="p-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row justify-between gap-4">
+                        <div class="relative w-full sm:w-72">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400"></i>
+                            <input type="text" id="buscadorRDI" placeholder="Buscar por N°, Asunto o Especialidad..." class="w-full pl-9 pr-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        </div>
+                        <div class="flex gap-2">
+                            <select id="filtroEspecialidadRDI" class="text-sm border border-slate-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-amber-500 outline-none">
+                                <option value="ALL">Todas las Especialidades</option>
+                                <option value="ARQUITECTURA">Arquitectura</option>
+                                <option value="ESTRUCTURAS">Estructuras</option>
+                                <option value="SANITARIAS">Sanitarias</option>
+                                <option value="ELECTRICAS">Eléctricas</option>
+                                <option value="MECANICAS">Mecánicas</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto w-full">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead class="bg-slate-800 text-white text-xs uppercase tracking-wider">
+                                <tr>
+                                    <th class="p-3 font-bold whitespace-nowrap">N° RDI</th>
+                                    <th class="p-3 font-bold">Fecha</th>
+                                    <th class="p-3 font-bold">Especialidad</th>
+                                    <th class="p-3 font-bold w-1/3">Asunto</th>
+                                    <th class="p-3 font-bold text-center">Estado</th>
+                                    <th class="p-3 font-bold text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cuerpoMatrizRDI" class="divide-y divide-slate-200 text-slate-700">
+                                <tr>
+                                    <td colspan="6" class="p-8 text-center text-slate-400 italic">No hay RDIs creados en este proyecto aún.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- MODAL: CREAR / EDITAR / RESPONDER RDI NATIVO -->
+            <!-- ========================================== -->
+            <div id="modalEdicionRDI" class="hidden fixed inset-0 bg-slate-900/90 z-50 flex items-center justify-center p-4">
+                <div class="bg-slate-50 rounded-[24px] w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+                    
+                    <!-- Header -->
+                    <div class="bg-amber-600 p-5 flex justify-between items-center text-white shrink-0">
+                        <h3 class="font-extrabold tracking-widest uppercase flex items-center gap-2 text-lg">
+                            <i class="fa-solid fa-file-signature"></i> <span id="tituloModalRDI">NUEVO RDI</span>
+                        </h3>
+                        <button onclick="document.getElementById('modalEdicionRDI').classList.add('hidden')" class="hover:text-amber-200 transition text-xl cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+
+                    <!-- Body Scrolleable -->
+                    <div class="p-6 overflow-y-auto flex-1 flex flex-col gap-6 custom-scrollbar">
+                        
+                        <!-- SECCIÓN 1: Datos Generales -->
+                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                            <h4 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2"><i class="fa-solid fa-clipboard-list text-amber-500 mr-2"></i> 1. Datos Generales</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">N° Correlativo</label>
+                                    <input type="text" id="rdiCorrelativo" readonly class="w-full bg-slate-100 border border-slate-300 text-slate-500 text-sm rounded focus:outline-none p-2 font-mono font-bold cursor-not-allowed">
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Fecha de Emisión</label>
+                                    <input type="date" id="rdiFechaEmision" class="w-full bg-white border border-slate-300 text-slate-700 text-sm rounded focus:ring-amber-500 focus:border-amber-500 p-2 font-bold outline-none">
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Especialidad</label>
+                                    <select id="rdiEspecialidad" class="w-full bg-white border border-slate-300 text-slate-700 text-sm rounded focus:ring-amber-500 focus:border-amber-500 p-2 font-bold outline-none cursor-pointer">
+                                        <option value="ARQUITECTURA">Arquitectura</option>
+                                        <option value="ESTRUCTURAS" selected>Estructuras</option>
+                                        <option value="SANITARIAS">Sanitarias</option>
+                                        <option value="ELECTRICAS">Eléctricas</option>
+                                        <option value="MECANICAS">Mecánicas</option>
+                                        <option value="SEGURIDAD">Seguridad</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Plano de Referencia</label>
+                                    <input type="text" id="rdiPlano" placeholder="Ej: E-02 Planta Cimentación" class="w-full bg-white border border-slate-300 text-slate-700 text-sm rounded focus:ring-amber-500 focus:border-amber-500 p-2 font-bold outline-none">
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Emisor (Pregunta)</label>
+                                    <input type="text" id="rdiEmisor" placeholder="Tu nombre / Cargo" class="w-full bg-white border border-slate-300 text-slate-700 text-sm rounded focus:ring-amber-500 focus:border-amber-500 p-2 font-bold outline-none">
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Receptor (Responde)</label>
+                                    <input type="text" id="rdiReceptor" placeholder="Proyectista / Supervisor" class="w-full bg-white border border-slate-300 text-slate-700 text-sm rounded focus:ring-amber-500 focus:border-amber-500 p-2 font-bold outline-none">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECCIÓN 2: Requerimiento Solicitado -->
+                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                            <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-2">
+                                <h4 class="text-xs font-black text-slate-800 uppercase tracking-widest"><i class="fa-solid fa-circle-question text-amber-500 mr-2"></i> 2. Requerimiento Solicitado</h4>
+                                <div class="flex items-center gap-2">
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Prioridad:</label>
+                                    <select id="rdiPrioridad" class="text-xs bg-white border border-slate-300 text-slate-700 rounded focus:ring-amber-500 p-1 font-bold outline-none cursor-pointer">
+                                        <option value="ALTA" class="text-red-600 font-bold">ALTA</option>
+                                        <option value="MEDIA" class="text-amber-500 font-bold" selected>MEDIA</option>
+                                        <option value="BAJA" class="text-emerald-600 font-bold">BAJA</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="flex flex-col gap-4">
+                                <div>
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Asunto</label>
+                                    <input type="text" id="rdiAsunto" placeholder="Resumen corto del problema..." class="w-full bg-white border border-slate-300 text-slate-700 text-sm rounded focus:ring-amber-500 p-2 font-bold outline-none">
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Descripción Detallada (Consulta)</label>
+                                    <textarea id="rdiDescripcion" rows="4" placeholder="Ej: Tal como se observa en la FIGURA 01, la viga cruza la cisterna..." class="w-full bg-white border border-slate-300 text-slate-700 text-sm rounded focus:ring-amber-500 p-3 outline-none resize-none"></textarea>
+                                </div>
+                                
+                                <!-- ZONA DE IMÁGENES -->
+                                <div class="border-2 border-dashed border-amber-300 bg-amber-50/50 rounded-xl p-6 text-center group transition relative" id="rdiDropZone">
+                                    <i class="fa-solid fa-images text-3xl text-amber-300 mb-2 group-hover:text-amber-500 transition-colors"></i>
+                                    <p class="text-sm font-bold text-slate-600">Imágenes de Sustento</p>
+                                    <p class="text-xs text-slate-500 mt-1">Arrastra archivos o presiona <span class="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-mono font-bold">Ctrl + V</span> para pegar pantallazos.</p>
+                                    
+                                    <!-- Galería Dinámica -->
+                                    <div id="rdiGaleriaMiniaturas" class="flex flex-wrap justify-center gap-4 mt-4 hidden">
+                                        <!-- Inyectado por JS -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECCIÓN 3: Respuesta del Proyectista (Oculta al crear, visible al editar) -->
+                        <div id="seccionRespuestaRDI" class="hidden bg-emerald-50 p-5 rounded-xl border border-emerald-200 shadow-sm">
+                            <h4 class="text-xs font-black text-emerald-800 uppercase tracking-widest mb-4 border-b border-emerald-200 pb-2"><i class="fa-solid fa-reply text-emerald-500 mr-2"></i> 3. Respuesta al Requerimiento</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="md:col-span-2">
+                                    <label class="text-[10px] font-bold text-emerald-700 uppercase tracking-widest mb-1 block">Respuesta Oficial del Proyectista</label>
+                                    <textarea id="rdiRespuestaTexto" rows="4" placeholder="Escribe la solución o indicación técnica..." class="w-full bg-white border border-emerald-300 text-slate-700 text-sm rounded focus:ring-emerald-500 p-3 outline-none resize-none"></textarea>
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-bold text-emerald-700 uppercase tracking-widest mb-1 block">Análisis de Incidencia</label>
+                                    <div class="flex gap-4 bg-white p-2.5 border border-emerald-300 rounded-lg text-xs font-bold text-slate-600">
+                                        <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="rdiIncCosto" class="accent-emerald-600 w-4 h-4"> Costo</label>
+                                        <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="rdiIncPlazo" class="accent-emerald-600 w-4 h-4"> Plazo</label>
+                                        <label class="flex items-center gap-1.5 cursor-pointer w-full"><input type="checkbox" id="rdiIncOtros" class="accent-emerald-600 w-4 h-4"> Otros: <input type="text" id="rdiIncOtrosTexto" class="border-b border-slate-300 w-full ml-1 focus:outline-none bg-transparent" placeholder="Especifique..."></label>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-bold text-emerald-700 uppercase tracking-widest mb-1 block">Resolución / Estado</label>
+                                    <select id="rdiResolucion" class="w-full bg-white border border-emerald-300 text-slate-700 text-sm rounded-lg focus:ring-emerald-500 p-2.5 font-bold outline-none cursor-pointer">
+                                        <option value="PENDIENTE" class="text-slate-500">⏳ PENDIENTE DE RESPUESTA</option>
+                                        <option value="CUMPLE" class="text-emerald-600 font-bold">✔️ CUMPLE (ABSUELTO)</option>
+                                        <option value="NO CUMPLE" class="text-red-600 font-bold">❌ NO CUMPLE</option>
+                                        <option value="GENERA MODIFICACION PLANO" class="text-amber-600 font-bold">📐 GENERA MODIFICACIÓN DE PLANOS</option>
+                                        <option value="GENERA NUEVA RFI" class="text-purple-600 font-bold">🔁 GENERA NUEVA RFI</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Footer / Acciones -->
+                    <div class="bg-white p-5 border-t border-slate-200 shrink-0 flex justify-end gap-3">
+                        <button onclick="document.getElementById('modalEdicionRDI').classList.add('hidden')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs uppercase tracking-widest py-3 px-6 rounded-xl transition cursor-pointer">
+                            Cancelar
+                        </button>
+                        <button id="btnGuardarRDI" class="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs uppercase tracking-widest py-3 px-6 rounded-xl shadow transition cursor-pointer flex items-center gap-2">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> Guardar RDI en Nube
+                        </button>
+                    </div>
+                </div>
+            </div>
 
             <!-- ========================================== -->
             <!-- AQUÍ PEGAS LOS MODALES DE EMPAREJAMIENTO -->
@@ -5278,7 +5531,7 @@ window.iniciarNuevoReporte = function() {
         // LÓGICA DE PESTAÑAS Y ADMINISTRACIÓN EN AJUSTES
         // ==========================================
         window.cambiarTabAjustes = function(tab) {
-            const tabs = ['proyectos', 'usuarios', 'inicio', 'auditoria'];
+            const tabs = ['proyectos', 'usuarios', 'inicio', 'auditoria', 'formatoRdi'];
             
             tabs.forEach(t => {
                 const nombreFormateado = t.charAt(0).toUpperCase() + t.slice(1);
@@ -5298,10 +5551,61 @@ window.iniciarNuevoReporte = function() {
 
             if (tab === 'usuarios') window.cargarUsuariosAdmin();
             if (tab === 'auditoria') {
+            if (tab === 'formatoRdi') window.cargarConfiguracionRDIAdmin();
                 window.cargarReglasAuditoriaAdmin();
                 // 🔥 FORZAR ACTUALIZACIÓN DEL DESPLEGABLE AL ABRIR LA PESTAÑA
                 if (typeof window.actualizarDropdownReglasIA === 'function') window.actualizarDropdownReglasIA();
             }
+        };
+
+        window.cargarConfiguracionRDIAdmin = async function() {
+            try {
+                const docRef = window.fsDoc(window.firebaseDb, "configuracion", "rdi");
+                const snap = await window.fsGetDoc(docRef);
+                if (snap.exists()) {
+                    const data = snap.data();
+                    document.getElementById('configRdiEmpresa').value = data.nombreEmpresa || '';
+                    if (data.logoUrl) {
+                        document.getElementById('previewLogoRDI').src = data.logoUrl;
+                        document.getElementById('previewLogoRDI').classList.remove('hidden');
+                        document.getElementById('placeholderLogoRDI').classList.add('hidden');
+                    }
+                }
+            } catch(e) { console.error("Error al cargar config RDI", e); }
+        };
+
+        window.guardarConfiguracionRDI = async function() {
+            const btn = document.querySelector('#tabFormatoRdi button');
+            const txtOriginal = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
+            btn.disabled = true;
+
+            try {
+                let logoUrl = document.getElementById('previewLogoRDI').src;
+                const fileInput = document.getElementById('configRdiLogo');
+                
+                if (fileInput.files.length > 0) {
+                    const archivo = fileInput.files[0];
+                    const storageRef = window.fsRef(window.firebaseStorage, `configuracion/logo_rdi_${Date.now()}.${archivo.name.split('.').pop()}`);
+                    await window.fsUploadBytes(storageRef, archivo);
+                    logoUrl = await window.fsGetDownloadURL(storageRef);
+                }
+
+                const data = {
+                    nombreEmpresa: document.getElementById('configRdiEmpresa').value.trim(),
+                    logoUrl: logoUrl !== window.location.href ? logoUrl : null
+                };
+
+                await window.fsSetDoc(window.fsDoc(window.firebaseDb, "configuracion", "rdi"), data, { merge: true });
+                
+                if (data.logoUrl) {
+                    document.getElementById('previewLogoRDI').src = data.logoUrl;
+                    document.getElementById('previewLogoRDI').classList.remove('hidden');
+                    document.getElementById('placeholderLogoRDI').classList.add('hidden');
+                }
+                alert("✅ Formato RDI actualizado.");
+            } catch(e) { alert("❌ Error al guardar."); console.error(e); } 
+            finally { btn.innerHTML = txtOriginal; btn.disabled = false; }
         };
 
         // 🔥 NUEVA FUNCIÓN: Construye la lista desplegable en vivo
@@ -5704,7 +6008,7 @@ window.iniciarNuevoReporte = function() {
             document.getElementById('lobbyProyectos').classList.remove('hidden');
         };
 
-        // 🔥 Botón de Retroceso Inteligente
+        /// 🔥 Botón de Retroceso Inteligente
         window.navegarAtras = function(pushHistory = true) {
             const lobbyModulos = document.getElementById('lobbyModulosProyecto');
             
@@ -5713,6 +6017,11 @@ window.iniciarNuevoReporte = function() {
                 if (modRO) modRO.classList.add('hidden');
                 const modTareo = document.getElementById('moduloProyectoTareos');
                 if (modTareo) modTareo.classList.add('hidden');
+                
+                // 🔥 NUEVO: Ocultar el módulo RDI al retroceder
+                const modRDI = document.getElementById('moduloProyectoRDI');
+                if (modRDI) modRDI.classList.add('hidden'); 
+                
                 const btnNuevoRO = document.getElementById('btnNuevoReporteRO');
                 if (btnNuevoRO) btnNuevoRO.classList.add('hidden');
                 
@@ -5723,7 +6032,7 @@ window.iniciarNuevoReporte = function() {
             }
         };
 
-        // 1. Mostrar Lobby de Módulos (2 Tarjetas) al entrar a un Proyecto
+        // 1. Mostrar Lobby de Módulos (Tarjetas) al entrar a un Proyecto
         window.abrirHistorialProyecto = function(nombreProyecto, pushHistory = true) {
             window.proyectoActualGlobal = nombreProyecto;
             if (pushHistory) history.pushState({ vista: 'historial', proyecto: nombreProyecto }, '', '#historial');
@@ -5742,7 +6051,6 @@ window.iniciarNuevoReporte = function() {
             const mesSel = document.getElementById('mesSelectContainer');
             if (mesSel) mesSel.classList.add('hidden');
             
-            // 🔥 CIERRE FORZOSO DE LA VISTA PREVIA
             const vistaPrevia = document.getElementById('vistaPreviaExportacion');
             if (vistaPrevia) vistaPrevia.classList.add('hidden');
             
@@ -5750,6 +6058,11 @@ window.iniciarNuevoReporte = function() {
             if (modRO) modRO.classList.add('hidden');
             const modTareo = document.getElementById('moduloProyectoTareos');
             if (modTareo) modTareo.classList.add('hidden');
+            
+            // 🔥 NUEVO: Asegurarse de que el RDI esté oculto al entrar al lobby del proyecto
+            const modRDI = document.getElementById('moduloProyectoRDI');
+            if (modRDI) modRDI.classList.add('hidden'); 
+            
             const btnNuevoRO = document.getElementById('btnNuevoReporteRO');
             if (btnNuevoRO) btnNuevoRO.classList.add('hidden');
             
@@ -5767,9 +6080,9 @@ window.iniciarNuevoReporte = function() {
             
             const modRO = document.getElementById('moduloProyectoRO');
             const modTareo = document.getElementById('moduloProyectoTareos');
+            const modRDI = document.getElementById('moduloProyectoRDI'); // NUEVO
             const btnNuevoRO = document.getElementById('btnNuevoReporteRO');
             
-            // 🔥 CIERRE FORZOSO DE LA VISTA PREVIA (Por si cambia de pestaña directo)
             const vistaPrevia = document.getElementById('vistaPreviaExportacion');
             if (vistaPrevia) vistaPrevia.classList.add('hidden');
 
@@ -5777,17 +6090,27 @@ window.iniciarNuevoReporte = function() {
                 if (pushHistory) history.pushState({ vista: 'modulo_ro', proyecto: window.proyectoActualGlobal }, '', '#modulo-ro');
                 if (modRO) modRO.classList.remove('hidden');
                 if (modTareo) modTareo.classList.add('hidden');
+                if (modRDI) modRDI.classList.add('hidden');
                 if (btnNuevoRO) btnNuevoRO.classList.remove('hidden');
             } else if (modulo === 'TAREOS') {
                 if (pushHistory) history.pushState({ vista: 'modulo_tareo', proyecto: window.proyectoActualGlobal }, '', '#modulo-tareo');
                 if (modTareo) modTareo.classList.remove('hidden');
                 if (modRO) modRO.classList.add('hidden');
+                if (modRDI) modRDI.classList.add('hidden');
                 if (btnNuevoRO) btnNuevoRO.classList.add('hidden');
 
-                // Disparar la carga del Historial automáticamente al entrar
                 document.getElementById('historialTareos').classList.remove('hidden');
                 document.getElementById('zonaCargaTareo').classList.add('hidden');
                 if(typeof window.cargarHistorialTareos === 'function') window.cargarHistorialTareos(window.proyectoActualGlobal);
+            } else if (modulo === 'RDI') { // NUEVO
+                if (pushHistory) history.pushState({ vista: 'modulo_rdi', proyecto: window.proyectoActualGlobal }, '', '#modulo-rdi');
+                if (modRDI) modRDI.classList.remove('hidden');
+                if (modTareo) modTareo.classList.add('hidden');
+                if (modRO) modRO.classList.add('hidden');
+                if (btnNuevoRO) btnNuevoRO.classList.add('hidden');
+                
+                // Activar el motor en tiempo real
+                if(typeof window.cargarMatrizRDI === 'function') window.cargarMatrizRDI(window.proyectoActualGlobal);
             }
         };
 
@@ -8925,6 +9248,559 @@ window.iniciarNuevoReporte = function() {
             } finally {
                 btn.innerHTML = originalHTML;
                 btn.disabled = false;
+            }
+        };
+    </script>
+
+<script>
+        // ==========================================
+        // MÓDULO RDI: MOTOR LÓGICO Y FIREBASE
+        // ==========================================
+        
+        window.rdiImagenesTemp = []; // Memoria temporal para pantallazos
+        window.rdiImagenesGuardadas = []; // Memoria de fotos que ya estaban en Firebase
+        window.rdiListaGlobal = [];  // Memoria en tiempo real de la base de datos
+        window.rdiModoEdicion = false; // Bandera para saber si creamos o editamos
+
+        // 1. ESCUCHAR LA BASE DE DATOS EN TIEMPO REAL (Tabla y Dashboard)
+        window.cargarMatrizRDI = function(proyecto) {
+            if (!proyecto) return;
+            const rdiRef = window.fsCollection(window.firebaseDb, `proyectos/${proyecto}/rdis`);
+            if (window.rdiUnsubscribe) window.rdiUnsubscribe(); 
+            
+            window.rdiUnsubscribe = window.fsOnSnapshot(rdiRef, (snapshot) => {
+                window.rdiListaGlobal = [];
+                let total = 0, pendientes = 0, absueltos = 0, conPlanos = 0;
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    window.rdiListaGlobal.push(data);
+                    
+                    total++;
+                    if (data.estado === 'PENDIENTE') pendientes++;
+                    if (data.estado === 'ABSUELTO') absueltos++;
+                    if (data.generaModificacionPlano === 'SI') conPlanos++;
+                });
+
+                document.getElementById('dashRdiTotal').textContent = total;
+                document.getElementById('dashRdiPendientes').textContent = pendientes;
+                document.getElementById('dashRdiAbsueltos').textContent = absueltos;
+                document.getElementById('dashRdiPlanos').textContent = conPlanos;
+
+                const tbody = document.getElementById('cuerpoMatrizRDI');
+                if (!tbody) return;
+                tbody.innerHTML = '';
+                
+                if (window.rdiListaGlobal.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-400 italic">No hay RDIs creados en este proyecto aún.</td></tr>';
+                    return;
+                }
+
+                // Ordenar del más antiguo al más nuevo (1, 2, 3...)
+                window.rdiListaGlobal.sort((a, b) => a.correlativoInt - b.correlativoInt).forEach(rdi => {
+                    let badgeEstado = '';
+                    if (rdi.estado === 'PENDIENTE') badgeEstado = '<span class="bg-red-100 text-red-700 px-2 py-1 rounded text-[10px] font-bold tracking-widest border border-red-200">PENDIENTE</span>';
+                    else badgeEstado = '<span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-[10px] font-bold tracking-widest border border-emerald-200">ABSUELTO</span>';
+                    
+                    // 🔥 BOTONES ACTUALIZADOS: Ver, Exportar y Eliminar
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-amber-50 transition border-b border-slate-100">
+                            <td class="p-3 font-bold text-slate-800">${rdi.correlativoStr}</td>
+                            <td class="p-3 text-slate-600">${rdi.fechaEmision}</td>
+                            <td class="p-3"><span class="bg-slate-100 text-slate-600 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest border border-slate-200">${rdi.especialidad}</span></td>
+                            <td class="p-3 text-slate-700 font-medium truncate max-w-xs" title="${rdi.asunto}">${rdi.asunto}</td>
+                            <td class="p-3 text-center">${badgeEstado}</td>
+                            <td class="p-3 text-center flex justify-center gap-2">
+                                <button onclick="window.verRDI('${rdi.correlativoStr}')" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-amber-500 hover:text-white transition shadow-sm" title="Ver / Responder"><i class="fa-solid fa-eye"></i></button>
+                                <button onclick="window.exportarRDIExcel('${rdi.correlativoStr}')" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-emerald-600 hover:text-white transition shadow-sm" title="Exportar a Excel"><i class="fa-solid fa-file-excel"></i></button>
+                                <button onclick="window.eliminarYRenumerarRDI('${rdi.correlativoStr}')" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-red-600 hover:text-white transition shadow-sm" title="Eliminar RDI"><i class="fa-solid fa-trash-can"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            });
+        };
+
+        // 🔥 MOTOR INTELIGENTE DE ELIMINACIÓN Y RENUMERACIÓN EN CASCADA
+        window.eliminarYRenumerarRDI = async function(correlativoStrAEliminar) {
+            const confirmacion = confirm(`⚠️ ALERTA: ¿Estás totalmente seguro de ELIMINAR el requerimiento ${correlativoStrAEliminar}?\n\nEsta acción no se puede deshacer. El sistema borrará este registro y renumerará automáticamente todos los RDIs que le siguen para tapar el hueco.`);
+            if (!confirmacion) return;
+
+            const proyecto = window.proyectoActualGlobal;
+            if (!proyecto) return;
+
+            const rdiAEliminar = window.rdiListaGlobal.find(r => r.correlativoStr === correlativoStrAEliminar);
+            if (!rdiAEliminar) return;
+
+            const targetInt = rdiAEliminar.correlativoInt;
+            
+            // Separar y ordenar los RDIs que están "por encima" del que vamos a borrar
+            const rdisSiguientes = window.rdiListaGlobal
+                .filter(r => r.correlativoInt > targetInt)
+                .sort((a, b) => a.correlativoInt - b.correlativoInt);
+
+            try {
+                // 1. Destruir el RDI principal
+                await window.fsDeleteDoc(window.fsDoc(window.firebaseDb, `proyectos/${proyecto}/rdis/${correlativoStrAEliminar}`));
+
+                // 2. Renumerar el resto en cascada
+                for (let rdi of rdisSiguientes) {
+                    const oldStr = rdi.correlativoStr;
+                    const newInt = rdi.correlativoInt - 1;
+                    const newStr = `RDI-${String(newInt).padStart(3, '0')}`;
+                    
+                    // Copiamos la data del RDI, pero le cambiamos sus IDs internos
+                    let newData = { ...rdi, correlativoInt: newInt, correlativoStr: newStr };
+                    
+                    // Creamos el nuevo documento con la numeración corregida
+                    await window.fsSetDoc(window.fsDoc(window.firebaseDb, `proyectos/${proyecto}/rdis/${newStr}`), newData);
+                    
+                    // Borramos el documento viejo que quedó con la numeración desfasada
+                    await window.fsDeleteDoc(window.fsDoc(window.firebaseDb, `proyectos/${proyecto}/rdis/${oldStr}`));
+                }
+                
+                alert("✅ El RDI fue eliminado y toda la matriz se renumeró correctamente.");
+            } catch (e) {
+                console.error("Error al renumerar:", e);
+                alert("❌ Ocurrió un error en la nube al intentar renumerar la matriz.");
+            }
+        };
+
+        // 2. ABRIR MODAL PARA "CREAR" NUEVO RDI
+        window.abrirModalEdicionRDI = function() {
+            window.rdiModoEdicion = false;
+            document.getElementById('tituloModalRDI').textContent = 'NUEVO RDI';
+            
+            document.getElementById('rdiFechaEmision').valueAsDate = new Date();
+            document.getElementById('rdiAsunto').value = '';
+            document.getElementById('rdiDescripcion').value = '';
+            document.getElementById('rdiPlano').value = '';
+            document.getElementById('rdiReceptor').value = '';
+            
+            if (window.firebaseAuth && window.firebaseAuth.currentUser) {
+                document.getElementById('rdiEmisor').value = window.firebaseAuth.currentUser.displayName || window.firebaseAuth.currentUser.email.split('@')[0];
+            }
+
+            // Ocultar sección de respuestas porque es nuevo
+            document.getElementById('seccionRespuestaRDI').classList.add('hidden');
+
+            window.rdiImagenesTemp = [];
+            window.rdiImagenesGuardadas = [];
+            document.getElementById('rdiGaleriaMiniaturas').innerHTML = '';
+            document.getElementById('rdiGaleriaMiniaturas').classList.add('hidden');
+
+            const nextInt = window.rdiListaGlobal.length > 0 ? Math.max(...window.rdiListaGlobal.map(r => r.correlativoInt)) + 1 : 1;
+            document.getElementById('rdiCorrelativo').value = `RDI-${String(nextInt).padStart(3, '0')}`;
+            document.getElementById('rdiCorrelativo').setAttribute('data-int', nextInt);
+
+            document.getElementById('modalEdicionRDI').classList.remove('hidden');
+        };
+
+        // 🔥 3. ABRIR MODAL PARA "VER / RESPONDER" RDI EXISTENTE
+        window.verRDI = function(correlativo) {
+            const rdi = window.rdiListaGlobal.find(r => r.correlativoStr === correlativo);
+            if (!rdi) return;
+
+            window.rdiModoEdicion = true;
+            document.getElementById('tituloModalRDI').textContent = `EDITAR / RESPONDER ${correlativo}`;
+
+            // Llenar datos de Creación
+            document.getElementById('rdiCorrelativo').value = rdi.correlativoStr;
+            document.getElementById('rdiCorrelativo').setAttribute('data-int', rdi.correlativoInt);
+            document.getElementById('rdiFechaEmision').value = rdi.fechaEmision || '';
+            document.getElementById('rdiEspecialidad').value = rdi.especialidad || 'ESTRUCTURAS';
+            document.getElementById('rdiPlano').value = rdi.planoRef || '';
+            document.getElementById('rdiEmisor').value = rdi.emisor || '';
+            document.getElementById('rdiReceptor').value = rdi.receptor || '';
+            document.getElementById('rdiPrioridad').value = rdi.prioridad || 'MEDIA';
+            document.getElementById('rdiAsunto').value = rdi.asunto || '';
+            document.getElementById('rdiDescripcion').value = rdi.descripcion || '';
+
+            // Mostrar y Llenar datos de Respuesta
+            document.getElementById('seccionRespuestaRDI').classList.remove('hidden');
+            document.getElementById('rdiRespuestaTexto').value = rdi.respuesta || '';
+            document.getElementById('rdiIncCosto').checked = rdi.incidenciaCosto || false;
+            document.getElementById('rdiIncPlazo').checked = rdi.incidenciaPlazo || false;
+            document.getElementById('rdiIncOtros').checked = !!rdi.incidenciaOtros;
+            document.getElementById('rdiIncOtrosTexto').value = rdi.incidenciaOtros || '';
+            
+            // Detectar resolución guardada o establecer pendiente
+            if(rdi.resolucion) document.getElementById('rdiResolucion').value = rdi.resolucion;
+            else document.getElementById('rdiResolucion').value = 'PENDIENTE';
+
+            // Cargar imágenes guardadas
+            window.rdiImagenesTemp = [];
+            window.rdiImagenesGuardadas = rdi.imagenesConsulta || [];
+            
+            const galeria = document.getElementById('rdiGaleriaMiniaturas');
+            galeria.innerHTML = '';
+            
+            if (window.rdiImagenesGuardadas.length > 0) {
+                galeria.classList.remove('hidden');
+                window.rdiImagenesGuardadas.forEach(img => {
+                    galeria.innerHTML += `
+                        <div class="relative w-36 rounded shadow-sm border border-slate-200 overflow-hidden flex flex-col bg-white">
+                            <div class="h-24 w-full relative">
+                                <img src="${img.url}" class="w-full h-full object-cover">
+                            </div>
+                            <div class="p-1.5 bg-slate-100 border-t border-slate-200 text-[10px] font-black text-slate-600 text-center uppercase truncate" title="${img.caption}">
+                                <i class="fa-solid fa-cloud text-amber-500 mr-1"></i> ${img.caption}
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                galeria.classList.add('hidden');
+            }
+
+            document.getElementById('modalEdicionRDI').classList.remove('hidden');
+        };
+
+        // 4. DETECTAR CTRL+V (PANTALLAZOS) CON ENUMERACIÓN AUTOMÁTICA
+        document.addEventListener('paste', function(e) {
+            const modal = document.getElementById('modalEdicionRDI');
+            if (!modal || modal.classList.contains('hidden')) return;
+
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            for (let index in items) {
+                const item = items[index];
+                if (item.kind === 'file' && item.type.includes('image/')) {
+                    const blob = item.getAsFile();
+                    agregarMiniaturaRDI(blob);
+                }
+            }
+        });
+
+        function agregarMiniaturaRDI(file) {
+            window.rdiImagenesTemp.push(file);
+            
+            // Calculamos qué número de figura es, sumando las que ya existían en la nube
+            const numFig = window.rdiImagenesGuardadas.length + window.rdiImagenesTemp.length;
+            const figStr = String(numFig).padStart(2, '0');
+            const arrayIndex = window.rdiImagenesTemp.length - 1; // Su posición en el array temporal
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const galeria = document.getElementById('rdiGaleriaMiniaturas');
+                galeria.classList.remove('hidden');
+                
+                galeria.innerHTML += `
+                    <div class="relative w-36 rounded shadow-sm border border-slate-200 overflow-hidden flex flex-col bg-white ring-2 ring-amber-400">
+                        <div class="h-24 w-full relative">
+                            <img src="${e.target.result}" class="w-full h-full object-cover">
+                            <div class="absolute top-1 right-1 bg-amber-500 text-white text-[9px] px-1.5 py-0.5 rounded font-bold">NUEVA</div>
+                        </div>
+                        <div class="flex-1 p-1 bg-amber-50 flex flex-col justify-center border-t border-slate-200">
+                            <span class="text-[9px] font-black text-amber-700 text-center uppercase">FIGURA ${figStr}</span>
+                            <input type="text" id="rdiCaptionInput_${arrayIndex}" placeholder="Ej: Plano Muro..." class="w-full bg-white text-[9px] border border-amber-200 rounded px-1 py-1 mt-1 text-center focus:outline-none focus:ring-1 focus:ring-amber-500">
+                        </div>
+                    </div>
+                `;
+            }
+            reader.readAsDataURL(file);
+        }
+
+        // 5. GUARDAR DATOS, RESPUESTAS E IMÁGENES
+        document.getElementById('btnGuardarRDI')?.addEventListener('click', async function() {
+            const btn = this;
+            const proyecto = window.proyectoActualGlobal;
+            if (!proyecto) return;
+
+            const asunto = document.getElementById('rdiAsunto').value.trim();
+            const descripcion = document.getElementById('rdiDescripcion').value.trim();
+            if (!asunto || !descripcion) return alert("⚠️ Llena el Asunto y la Descripción de la consulta.");
+
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Subiendo...';
+            btn.disabled = true;
+
+            try {
+                const correlativoStr = document.getElementById('rdiCorrelativo').value;
+                const correlativoInt = parseInt(document.getElementById('rdiCorrelativo').getAttribute('data-int'));
+                
+                // Mantenemos las fotos que ya existían
+                let arrayImagenesFinal = [...window.rdiImagenesGuardadas];
+
+                // A) Subir nuevas imágenes y guardar sus títulos (Figura 01, etc.)
+                if (window.rdiImagenesTemp.length > 0) {
+                    for (let i = 0; i < window.rdiImagenesTemp.length; i++) {
+                        const file = window.rdiImagenesTemp[i];
+                        const captionInput = document.getElementById(`rdiCaptionInput_${i}`);
+                        const captionText = captionInput ? captionInput.value.trim() : '';
+                        
+                        // Calculamos su número final para el título
+                        const numFig = window.rdiImagenesGuardadas.length + (i + 1);
+                        const numStr = String(numFig).padStart(2, '0');
+                        const tituloFinal = captionText ? `FIGURA ${numStr} - ${captionText}` : `FIGURA ${numStr}`;
+
+                        const refRuta = window.fsRef(window.firebaseStorage, `proyectos/${proyecto}/rdis/${correlativoStr}_FIG_${numStr}.png`);
+                        await window.fsUploadBytes(refRuta, file);
+                        const url = await window.fsGetDownloadURL(refRuta);
+                        
+                        arrayImagenesFinal.push({ url: url, caption: tituloFinal });
+                    }
+                }
+
+                // B) Capturar campos de Respuesta
+                const resolucion = document.getElementById('rdiResolucion') ? document.getElementById('rdiResolucion').value : 'PENDIENTE';
+                let estadoFinal = 'PENDIENTE';
+                let modifPlano = 'NO';
+
+                if (resolucion === 'CUMPLE' || resolucion === 'NO CUMPLE' || resolucion === 'GENERA MODIFICACION PLANO' || resolucion === 'GENERA NUEVA RFI') {
+                    estadoFinal = 'ABSUELTO';
+                }
+                if (resolucion === 'GENERA MODIFICACION PLANO') {
+                    modifPlano = 'SI';
+                }
+
+                // C) Armar el Documento de Firebase
+                const rdiData = {
+                    correlativoStr: correlativoStr,
+                    correlativoInt: correlativoInt,
+                    fechaEmision: document.getElementById('rdiFechaEmision').value,
+                    especialidad: document.getElementById('rdiEspecialidad').value,
+                    planoRef: document.getElementById('rdiPlano').value,
+                    emisor: document.getElementById('rdiEmisor').value,
+                    receptor: document.getElementById('rdiReceptor').value,
+                    prioridad: document.getElementById('rdiPrioridad').value,
+                    asunto: asunto,
+                    descripcion: descripcion,
+                    imagenesConsulta: arrayImagenesFinal,
+                    
+                    // Datos de Respuesta
+                    respuesta: document.getElementById('rdiRespuestaTexto') ? document.getElementById('rdiRespuestaTexto').value : '',
+                    resolucion: resolucion,
+                    estado: estadoFinal,
+                    generaModificacionPlano: modifPlano,
+                    incidenciaCosto: document.getElementById('rdiIncCosto') ? document.getElementById('rdiIncCosto').checked : false,
+                    incidenciaPlazo: document.getElementById('rdiIncPlazo') ? document.getElementById('rdiIncPlazo').checked : false,
+                    incidenciaOtros: document.getElementById('rdiIncOtros') && document.getElementById('rdiIncOtros').checked ? document.getElementById('rdiIncOtrosTexto').value : ''
+                };
+
+                const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyecto}/rdis/${correlativoStr}`);
+                await window.fsSetDoc(docRef, rdiData, { merge: true });
+
+                alert(`✅ RDI Guardado Correctamente.`);
+                document.getElementById('modalEdicionRDI').classList.add('hidden');
+
+            } catch (error) {
+                console.error(error);
+                alert("❌ Ocurrió un error al guardar el RDI.");
+            } finally {
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            }
+        });
+        // ==========================================
+        // EXPORTACIÓN MÁGICA DEL FORMATO OFICIAL A EXCELJS (MEJORADO)
+        // ==========================================
+        window.exportarRDIExcel = async function(correlativo) {
+            const rdi = window.rdiListaGlobal.find(r => r.correlativoStr === correlativo);
+            if (!rdi) return alert("RDI no encontrado en memoria.");
+
+            const applyStyle = (cell, bg, fontColor, isBold, wrap = false, alignH = 'left', alignV = 'middle', borderStyle = 'thin') => {
+                if(bg) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
+                cell.font = { color: { argb: fontColor }, bold: isBold, size: 10, name: 'Arial' };
+                cell.alignment = { horizontal: alignH, vertical: alignV, wrapText: wrap };
+                cell.border = { top: {style:borderStyle}, left: {style:borderStyle}, bottom: {style:borderStyle}, right: {style:borderStyle} };
+            };
+
+            const downloadImageAsBase64 = async (url) => {
+                try {
+                    const response = await fetch(url);
+                    const blob = await response.blob();
+                    return new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.readAsDataURL(blob);
+                    });
+                } catch(e) { return null; }
+            };
+
+            try {
+                const btnOriginales = document.querySelectorAll(`button[title="Exportar a Excel"]`);
+                btnOriginales.forEach(b => b.classList.add('animate-pulse', 'bg-amber-400'));
+
+                // Descargar configuración corporativa
+                let configRDI = { nombreEmpresa: 'SISTEMA INTEGRADO DE GESTIÓN', logoUrl: null };
+                try {
+                    const confSnap = await window.fsGetDoc(window.fsDoc(window.firebaseDb, "configuracion", "rdi"));
+                    if(confSnap.exists()) configRDI = { ...configRDI, ...confSnap.data() };
+                } catch(e){}
+
+                const wb = new ExcelJS.Workbook();
+                const ws = wb.addWorksheet('FORMATO RDI', { views: [{ showGridLines: false }] });
+                
+                // Configurar anchos de columna perfeccionados
+                ws.columns = [
+                    { key: 'A', width: 18 }, { key: 'B', width: 12 }, { key: 'C', width: 12 }, { key: 'D', width: 12 },
+                    { key: 'E', width: 14 }, { key: 'F', width: 14 }, { key: 'G', width: 14 }, { key: 'H', width: 14 }
+                ];
+                
+                // Forzar altura de la fila 1 para el logo
+                ws.getRow(1).height = 40;
+                ws.getRow(2).height = 25;
+
+                // 1. CABECERAS
+                ws.mergeCells('A1:C2'); // Espacio para el logo
+                applyStyle(ws.getCell('A1'), 'FFFFFFFF', 'FF000000', false, false, 'center', 'middle', 'medium');
+                
+                if (configRDI.logoUrl) {
+                    const logoBase64 = await downloadImageAsBase64(configRDI.logoUrl);
+                    if (logoBase64) {
+                        const logoId = wb.addImage({ base64: logoBase64, extension: 'png' });
+                        ws.addImage(logoId, { tl: { col: 0.2, row: 0.2 }, br: { col: 2.8, row: 1.8 } });
+                    }
+                }
+
+                ws.mergeCells('D1:H1');
+                ws.getCell('D1').value = configRDI.nombreEmpresa || 'SISTEMA INTEGRADO DE GESTIÓN';
+                applyStyle(ws.getCell('D1'), 'FF064E3B', 'FFFFFFFF', true, false, 'center', 'middle', 'medium');
+
+                ws.mergeCells('D2:H2');
+                ws.getCell('D2').value = 'REQUERIMIENTO DE INFORMACION';
+                applyStyle(ws.getCell('D2'), 'FFFFFFFF', 'FF000000', true, false, 'center', 'middle', 'medium');
+
+                ws.mergeCells('A3:H3');
+                ws.getCell('A3').value = 'DATOS GENERALES';
+                applyStyle(ws.getCell('A3'), 'FF000000', 'FFFFFFFF', true, false, 'left', 'middle', 'medium');
+
+                // 2. DATOS GENERALES
+                ws.mergeCells('A4:D4'); ws.getCell('A4').value = `PROYECTO: ${window.proyectoActualGlobal}`;
+                ws.mergeCells('E4:F4'); ws.getCell('E4').value = `N° CORRELATIVO:`;
+                ws.mergeCells('G4:H4'); ws.getCell('G4').value = rdi.correlativoInt;
+                applyStyle(ws.getCell('A4'), null, 'FF000000', true);
+                applyStyle(ws.getCell('E4'), null, 'FF000000', true);
+                applyStyle(ws.getCell('G4'), null, 'FF000000', true, false, 'center');
+
+                ws.mergeCells('A5:D5'); ws.getCell('A5').value = `CLIENTE: (Autocompletar)`;
+                ws.mergeCells('E5:H5'); ws.getCell('E5').value = `CONTRATISTA: (Autocompletar)`;
+                applyStyle(ws.getCell('A5'), null, 'FF000000', true);
+                applyStyle(ws.getCell('E5'), null, 'FF000000', true);
+
+                ws.mergeCells('A6:D6'); ws.getCell('A6').value = `SUPERVISOR: (Autocompletar)`;
+                ws.mergeCells('E6:F6'); ws.getCell('E6').value = `FECHA:`;
+                ws.mergeCells('G6:H6'); ws.getCell('G6').value = rdi.fechaEmision;
+                applyStyle(ws.getCell('A6'), null, 'FF000000', true);
+                applyStyle(ws.getCell('E6'), null, 'FF000000', true);
+                applyStyle(ws.getCell('G6'), null, 'FF000000', false, false, 'center');
+
+                ws.mergeCells('A7:D7'); ws.getCell('A7').value = `PLANO: ${rdi.planoRef || '-'}`;
+                ws.mergeCells('E7:F7'); ws.getCell('E7').value = `ESPECIALIDAD:`;
+                ws.mergeCells('G7:H7'); ws.getCell('G7').value = rdi.especialidad;
+                applyStyle(ws.getCell('A7'), null, 'FF000000', true);
+                applyStyle(ws.getCell('E7'), null, 'FF000000', true);
+                applyStyle(ws.getCell('G7'), null, 'FF000000', false, false, 'center');
+
+                ws.mergeCells('A8:D8'); ws.getCell('A8').value = `EMISOR: ${rdi.emisor}`;
+                ws.mergeCells('E8:H8'); ws.getCell('E8').value = `RECEPTOR: ${rdi.receptor}`;
+                applyStyle(ws.getCell('A8'), null, 'FF000000', true);
+                applyStyle(ws.getCell('E8'), null, 'FF000000', true);
+
+                ws.getRow(9).height = 30;
+                ws.mergeCells('A9:D9'); ws.getCell('A9').value = `Firma:`;
+                ws.mergeCells('E9:H9'); ws.getCell('E9').value = `Firma:`;
+                applyStyle(ws.getCell('A9'), null, 'FF000000', true, false, 'left', 'top');
+                applyStyle(ws.getCell('E9'), null, 'FF000000', true, false, 'left', 'top');
+
+                // 3. ASUNTO Y DESCRIPCIÓN
+                ws.mergeCells('A11:H11'); ws.getCell('A11').value = `ASUNTO: ${rdi.asunto}`;
+                applyStyle(ws.getCell('A11'), null, 'FF000000', true, false, 'left', 'middle', 'medium');
+
+                ws.mergeCells('A12:F12'); ws.getCell('A12').value = `REQUERIMIENTO SOLICITADO`;
+                ws.mergeCells('G12:H12'); ws.getCell('G12').value = `PRIORIDAD`;
+                applyStyle(ws.getCell('A12'), 'FF000000', 'FFFFFFFF', true, false, 'center');
+                applyStyle(ws.getCell('G12'), 'FF000000', 'FFFFFFFF', true, false, 'center');
+
+                ws.mergeCells('A13:F20'); ws.getCell('A13').value = rdi.descripcion;
+                applyStyle(ws.getCell('A13'), null, 'FF000000', false, true, 'left', 'top');
+
+                ws.mergeCells('G13:H13'); ws.getCell('G13').value = `FECHA REQUERIDA RESP.`;
+                applyStyle(ws.getCell('G13'), null, 'FF000000', true, true, 'center');
+                ws.mergeCells('G14:H14'); ws.getCell('G14').value = `(Autocompletar)`;
+                applyStyle(ws.getCell('G14'), null, 'FF000000', false, false, 'center');
+
+                // Checkboxes de Prioridad visuales
+                ws.mergeCells('G16:H16'); ws.getCell('G16').value = `[ ${rdi.prioridad==='ALTA'?'X':' '} ] ALTA`;
+                applyStyle(ws.getCell('G16'), 'FFDC2626', 'FFFFFFFF', true, false, 'center');
+                ws.mergeCells('G17:H17'); ws.getCell('G17').value = `[ ${rdi.prioridad==='MEDIA'?'X':' '} ] MEDIA`;
+                applyStyle(ws.getCell('G17'), 'FFFACC15', 'FF000000', true, false, 'center');
+                ws.mergeCells('G18:H18'); ws.getCell('G18').value = `[ ${rdi.prioridad==='BAJA'?'X':' '} ] BAJA`;
+                applyStyle(ws.getCell('G18'), 'FF16A34A', 'FFFFFFFF', true, false, 'center');
+                
+                // Bordes externos del cuadro de prioridad
+                ['G15','H15','G19','H19','G20','H20'].forEach(c => { ws.getCell(c).border = { left:{style:'thin'}, right:{style:'thin'} }; });
+                ws.getCell('G20').border = { left:{style:'thin'}, right:{style:'thin'}, bottom:{style:'thin'} };
+                ws.getCell('H20').border = { left:{style:'thin'}, right:{style:'thin'}, bottom:{style:'thin'} };
+
+                // 4. INCRUSTACIÓN DE IMÁGENES
+                let currentRow = 22;
+                if (rdi.imagenesConsulta && rdi.imagenesConsulta.length > 0) {
+                    for (let img of rdi.imagenesConsulta) {
+                        ws.mergeCells(`A${currentRow}:H${currentRow}`);
+                        ws.getCell(`A${currentRow}`).value = img.caption;
+                        applyStyle(ws.getCell(`A${currentRow}`), null, 'FF000000', true, false, 'left', 'middle', 'medium');
+                        currentRow++;
+
+                        const rowEnd = currentRow + 15; 
+                        ws.mergeCells(`A${currentRow}:H${rowEnd}`);
+                        applyStyle(ws.getCell(`A${currentRow}`), null, 'FF000000', false);
+                        
+                        const base64Data = await downloadImageAsBase64(img.url);
+                        if (base64Data) {
+                            const imageId = wb.addImage({ base64: base64Data, extension: 'png' });
+                            ws.addImage(imageId, { tl: { col: 0.2, row: currentRow - 1 + 0.2 }, br: { col: 7.8, row: rowEnd - 0.2 } });
+                        }
+                        currentRow = rowEnd + 2; 
+                    }
+                }
+
+                // 5. SECCIÓN DE RESPUESTA
+                ws.mergeCells(`A${currentRow}:H${currentRow}`);
+                ws.getCell(`A${currentRow}`).value = `RESPUESTA AL REQUERIMIENTO DE INFORMACIÓN`;
+                applyStyle(ws.getCell(`A${currentRow}`), 'FF000000', 'FFFFFFFF', true, false, 'center', 'middle', 'medium');
+                currentRow++;
+
+                ws.mergeCells(`A${currentRow}:H${currentRow+5}`);
+                ws.getCell(`A${currentRow}`).value = rdi.respuesta || '(Sin respuesta aún)';
+                applyStyle(ws.getCell(`A${currentRow}`), null, 'FF000000', false, true, 'left', 'top');
+                currentRow += 6;
+
+                ws.mergeCells(`A${currentRow}:H${currentRow}`);
+                ws.getCell(`A${currentRow}`).value = `EMISOR DE LA RESPUESTA:`;
+                applyStyle(ws.getCell(`A${currentRow}`), 'FF000000', 'FFFFFFFF', true, false, 'left', 'middle', 'medium');
+                currentRow++;
+
+                ws.getRow(currentRow).height = 25;
+                ws.mergeCells(`A${currentRow}:C${currentRow}`); ws.getCell(`A${currentRow}`).value = `NOMBRE: (Autocompletar)`;
+                ws.mergeCells(`D${currentRow}:E${currentRow}`); ws.getCell(`D${currentRow}`).value = `FECHA: (Autocompletar)`;
+                ws.mergeCells(`F${currentRow}:H${currentRow}`); ws.getCell(`F${currentRow}`).value = `FIRMA:`;
+                applyStyle(ws.getCell(`A${currentRow}`), null, 'FF000000', false);
+                applyStyle(ws.getCell(`D${currentRow}`), null, 'FF000000', false);
+                applyStyle(ws.getCell(`F${currentRow}`), null, 'FF000000', false);
+                currentRow++;
+
+                ws.mergeCells(`A${currentRow}:H${currentRow}`);
+                ws.getCell(`A${currentRow}`).value = `ANALISIS DE RESPUESTA`;
+                applyStyle(ws.getCell(`A${currentRow}`), 'FF000000', 'FFFFFFFF', true, false, 'center', 'middle', 'medium');
+                currentRow++;
+
+                ws.mergeCells(`A${currentRow}:H${currentRow}`);
+                ws.getCell(`A${currentRow}`).value = `INCIDENCIA:   [ ${rdi.incidenciaCosto?'X':' '} ] COSTO     [ ${rdi.incidenciaPlazo?'X':' '} ] PLAZO     [ ${rdi.incidenciaOtros?'X':' '} ] OTROS: ${rdi.incidenciaOtros||''}`;
+                applyStyle(ws.getCell(`A${currentRow}`), null, 'FF000000', true);
+                currentRow++;
+
+                ws.mergeCells(`A${currentRow}:H${currentRow}`);
+                ws.getCell(`A${currentRow}`).value = `RESOLUCIÓN:   [ ${rdi.resolucion==='CUMPLE'?'X':' '} ] CUMPLE     [ ${rdi.resolucion==='NO CUMPLE'?'X':' '} ] NO CUMPLE     [ ${rdi.resolucion==='GENERA NUEVA RFI'?'X':' '} ] NUEVA RFI     [ ${rdi.resolucion==='GENERA MODIFICACION PLANO'?'X':' '} ] MODIF. PLANO`;
+                applyStyle(ws.getCell(`A${currentRow}`), null, 'FF000000', true);
+
+                const buffer = await wb.xlsx.writeBuffer();
+                saveAs(new Blob([buffer]), `${correlativo}_${window.proyectoActualGlobal}.xlsx`);
+
+                btnOriginales.forEach(b => b.classList.remove('animate-pulse', 'bg-amber-400'));
+            } catch (error) {
+                console.error("Error al exportar a Excel: ", error);
+                alert("❌ Ocurrió un error al armar el Excel. Revisa tu conexión.");
             }
         };
     </script>
