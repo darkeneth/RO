@@ -8117,12 +8117,10 @@ window.iniciarNuevoReporte = function() {
                 const wb = new ExcelJS.Workbook();
                 await wb.xlsx.load(arrayBuffer);
 
+                // 🔥 SANITIZACIÓN 1: Limpiar la plantilla S10 (Elimina la Fila 0 corrupta de origen)
                 wb.worksheets.forEach(sheet => {
-                    if (sheet._rows) {
-                        sheet._rows[0] = undefined; 
-                        for (let i = 1; i < sheet._rows.length; i++) {
-                            if (sheet._rows[i]) sheet._rows[i].number = i;
-                        }
+                    if (sheet._rows && sheet._rows[0]) {
+                        delete sheet._rows[0];
                     }
                 });
 
@@ -8205,14 +8203,15 @@ window.iniciarNuevoReporte = function() {
                             if (proyectoLobby) targetRow.getCell(5).value = proyectoLobby;
                             for (let c = 7; c <= 27; c++) { targetRow.getCell(c).value = null; }
                         } else {
-                            targetRow = ws.insertRow(currentRowIdx, []);
+                            const filaValidaIdx = Math.max(8, currentRowIdx);
+                            targetRow = ws.insertRow(filaValidaIdx, []);
                             targetRow.height = sourceRow.height;
+                            
                             for (let c = 1; c <= 27; c++) {
                                 let oldStyle = sourceRow.getCell(c).style;
                                 if (oldStyle) targetRow.getCell(c).style = JSON.parse(JSON.stringify(oldStyle));
                                 targetRow.getCell(c).value = null; 
                             }
-                            try { ws.unmergeCells(currentRowIdx, 1, currentRowIdx, 2); } catch(e) {}
                             
                             targetRow.getCell(1).value = valorLineaFinal;            
                             targetRow.getCell(2).value = null;                       
@@ -8236,6 +8235,20 @@ window.iniciarNuevoReporte = function() {
                             if (dvConcepto) targetRow.getCell(startCol + 1).dataValidation = JSON.parse(JSON.stringify(dvConcepto));
                         });
                     });
+                });
+
+                // 🔥 SANITIZACIÓN 2 (EL BLINDAJE FINAL): Repara la numeración interna y destruye filas fantasmas creadas por insertRow
+                wb.worksheets.forEach(sheet => {
+                    if (sheet._rows) {
+                        if (sheet._rows[0]) delete sheet._rows[0]; 
+                        for (let i = 1; i < sheet._rows.length; i++) {
+                            let r = sheet._rows[i];
+                            if (r) {
+                                try { r.number = i; } 
+                                catch(e) { delete sheet._rows[i]; } // Si la fila está corrupta, la exterminamos
+                            }
+                        }
+                    }
                 });
 
                 const buffer = await wb.xlsx.writeBuffer();
@@ -8676,62 +8689,67 @@ window.iniciarNuevoReporte = function() {
             document.querySelectorAll('#modalActividades').forEach(m => m.classList.remove('hidden'));
         };
 
+        // ==========================================
+        // 1. MEJORAS EN EL MODAL DE ACTIVIDADES (BUSCADOR DATALIST)
+        // ==========================================
+        window.mostrarModalActividades = function(actividadesPendientes) {
+            const contenedor = document.getElementById('listaActividadesPendientes');
+            contenedor.innerHTML = '';
+
+            // Crear datalist global para partidas si no existe (Buscador Nativo HTML)
+            let dl = document.getElementById('dl-partidas-s10');
+            if (!dl) {
+                dl = document.createElement('datalist');
+                dl.id = 'dl-partidas-s10';
+                document.body.appendChild(dl);
+            }
+            let dlHTML = '';
+            if (window.catalogoPartidasS10) {
+                window.catalogoPartidasS10.forEach(p => { dlHTML += `<option value="${p}">`; });
+            }
+            dl.innerHTML = dlHTML;
+
+            let html = '';
+            actividadesPendientes.forEach(act => {
+                html += `
+                <div class="bg-white p-4 rounded-xl border border-slate-200 mb-4 shadow-sm">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">ACTIVIDAD DEL EXCEL (CAPATAZ):</label>
+                    <div class="text-indigo-700 font-extrabold text-sm mb-3"><i class="fa-solid fa-file-contract mr-2"></i>${act}</div>
+                    <input type="text" list="dl-partidas-s10" class="w-full border border-slate-300 rounded p-2 text-xs text-slate-700 font-bold focus:ring-2 focus:ring-indigo-500 map-actividad-input" data-original="${act}" placeholder="Escribe para buscar partida S10 (Ej: TRAZO)...">
+                </div>`;
+            });
+            contenedor.innerHTML = html;
+            document.getElementById('modalActividades').classList.remove('hidden');
+        };
+
         window.guardarMapeoActividades = async function() {
-            // Leemos todos los inputs usando la nueva clase, ignorando IDs duplicados
-            const inputs = document.querySelectorAll('.mapeo-actividad-input');
-            if (!window.traduccionPartidasTareo) window.traduccionPartidasTareo = {};
-            
-            let faltantes = 0;
-
-            inputs.forEach(input => {
-                const actividadCapataz = input.getAttribute('data-actividad-capataz');
-                if (input.value && input.value.trim() !== "") {
-                    window.traduccionPartidasTareo[actividadCapataz] = input.value;
-                } else {
-                    delete window.traduccionPartidasTareo[actividadCapataz];
-                    faltantes++;
-                }
+            const inputs = document.querySelectorAll('.map-actividad-input');
+            let hayVacios = false;
+            inputs.forEach(inp => {
+                let val = inp.value.trim();
+                if (!val) hayVacios = true;
+                else window.traduccionPartidasTareo[inp.getAttribute('data-original')] = val;
             });
 
-            // Evitamos que guarde varias veces por los duplicados dividiéndolo por 2 (ya que hay 2 modales)
-            faltantes = Math.floor(faltantes / document.querySelectorAll('#modalActividades').length);
+            if (hayVacios && !confirm("⚠️ Hay actividades en blanco. Serán ignoradas. ¿Continuar?")) return;
 
-            const btns = document.querySelectorAll('#modalActividades button');
-            btns.forEach(btn => {
-                if (btn.innerText.includes('GUARDAR')) {
-                    btn.setAttribute('data-original', btn.innerHTML);
-                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> GUARDANDO...';
-                    btn.disabled = true;
-                }
-            });
-            
+            const btn = document.querySelector('#modalActividades button[onclick="window.guardarMapeoActividades()"]');
+            const txt = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
+            btn.disabled = true;
+
             try {
-                const proyectoLobby = window.proyectoActualGlobal || "General";
-                const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Maestro`);
-                await window.fsSetDoc(docRef, { diccionarioActividadesStr: JSON.stringify(window.traduccionPartidasTareo) }, { merge: true });
-                
-                // Actualizar los botones de la pantalla en vivo
-                const btnPanels = document.querySelectorAll('button[onclick*="abrirModalActividades"]');
-                btnPanels.forEach(btnPanel => {
-                    if (faltantes === 0) {
-                        btnPanel.className = "bg-slate-700 hover:bg-slate-600 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 transition cursor-pointer shadow-sm border border-slate-600";
-                        btnPanel.innerHTML = '<i class="fa-solid fa-check text-emerald-400"></i> TAREAS (OK)';
-                    } else {
-                        btnPanel.className = "bg-indigo-900 hover:bg-indigo-800 text-white font-bold text-[10px] uppercase tracking-widest py-3 px-2 rounded-lg flex items-center justify-center gap-2 transition cursor-pointer shadow-sm";
-                        btnPanel.innerHTML = `<i class="fa-solid fa-list-check"></i> TAREAS (${faltantes})`;
-                    }
-                });
-                
-                document.querySelectorAll('#modalActividades').forEach(m => m.classList.add('hidden'));
-            } catch (e) { 
-                alert("⚠️ Error al guardar en Firebase."); 
-            } finally { 
-                btns.forEach(btn => {
-                    if (btn.hasAttribute('data-original')) {
-                        btn.innerHTML = btn.getAttribute('data-original');
-                        btn.disabled = false;
-                    }
-                });
+                let proyectoLobby = window.proyectoSeleccionadoGlobal || window.proyectoActualGlobal || "General";
+                const maestroRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Maestro`);
+                await window.fsSetDoc(maestroRef, { diccionarioActividadesStr: JSON.stringify(window.traduccionPartidasTareo) }, { merge: true });
+
+                document.getElementById('modalActividades').classList.add('hidden');
+                alert("✅ Actividades guardadas en la nube. Vuelve a dar clic en 'Procesar' para actualizar la tabla.");
+            } catch (e) {
+                console.error(e);
+                alert("❌ Error al guardar actividades en la nube.");
+            } finally {
+                btn.innerHTML = txt; btn.disabled = false;
             }
         };
 
@@ -8760,56 +8778,136 @@ window.iniciarNuevoReporte = function() {
             document.getElementById('modalConvenios').classList.remove('hidden');
         };
 
-        // 2. Agregar fila a la cuadrícula
-        window.agregarFilaConvenio = function(dni = "", horas = [0,0,0,0,0,0]) {
+        // ==========================================
+        // 2. MEJORAS EN CONVENIOS (NUBE, BUSCADOR Y MEMORIA)
+        // ==========================================
+        window.abrirModalConvenios = async function() {
             const tbody = document.getElementById('listaConvenios');
-            const tr = document.createElement('tr');
-            tr.className = 'fila-convenio hover:bg-white transition bg-slate-50';
-            
-            let comboHtml = `<select class="sel-trabajador-convenio w-full bg-white border border-slate-300 text-slate-700 text-[10px] rounded p-1 font-bold">`;
-            comboHtml += window.opcionesTrabajadoresConvenio;
-            comboHtml += `</select>`;
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-6"><i class="fa-solid fa-spinner fa-spin text-fuchsia-500 text-2xl"></i><br>Cargando memoria de la nube...</td></tr>';
+            document.getElementById('modalConvenios').classList.remove('hidden');
 
-            let tdHtml = `<td class="p-2">${comboHtml}</td>`;
-            for(let i=0; i<6; i++) {
-                tdHtml += `<td class="p-2 text-center"><input type="number" step="0.5" min="0" max="24" value="${horas[i]}" class="val-horas-convenio w-12 text-center bg-white border border-slate-300 rounded p-1 text-fuchsia-700 font-bold focus:ring-1 focus:ring-fuchsia-500 outline-none"></td>`;
+            let proyectoLobby = window.proyectoSeleccionadoGlobal || document.getElementById('proyectoSelect')?.value || window.proyectoActualGlobal;
+            
+            try {
+                // Descarga obligatoria desde la nube al abrir
+                const maestroRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Maestro`);
+                const snap = await window.fsGetDoc(maestroRef);
+                if (snap.exists() && snap.data().diccionarioConveniosStr) {
+                    window.mapeoConveniosTareo = JSON.parse(snap.data().diccionarioConveniosStr);
+                } else {
+                    if(!window.mapeoConveniosTareo) window.mapeoConveniosTareo = {};
+                }
+            } catch(e) {
+                if(!window.mapeoConveniosTareo) window.mapeoConveniosTareo = {};
             }
-            tdHtml += `<td class="p-2 text-center"><button onclick="this.closest('tr').remove()" class="text-slate-400 hover:text-red-500 cursor-pointer"><i class="fa-solid fa-trash"></i></button></td>`;
-            
-            tr.innerHTML = tdHtml;
-            tbody.appendChild(tr);
 
-            if (dni) tr.querySelector('.sel-trabajador-convenio').value = dni;
+            tbody.innerHTML = '';
+            
+            // Crear datalist global para trabajadores (Buscador)
+            let dl = document.getElementById('dl-trabajadores');
+            if(!dl) {
+                dl = document.createElement('datalist');
+                dl.id = 'dl-trabajadores';
+                document.body.appendChild(dl);
+            }
+            let dlHTML = '';
+            if (window.diccionarioPadronS10) {
+                window.diccionarioPadronS10.forEach(t => {
+                    dlHTML += `<option value="${t.dni}"> ${t.nombreOficial}</option>`;
+                });
+            }
+            dl.innerHTML = dlHTML;
+
+            if (window.mapeoConveniosTareo && Object.keys(window.mapeoConveniosTareo).length > 0) {
+                Object.keys(window.mapeoConveniosTareo).forEach(dni => {
+                    window.agregarFilaConvenio(dni, window.mapeoConveniosTareo[dni]);
+                });
+            } else {
+                window.agregarFilaConvenio(); // Fila vacía inicial
+            }
         };
 
-        // 3. Guardar en memoria y en la nube
+        window.agregarFilaConvenio = function(dniSeleccionado = '', valoresDias = [0,0,0,0,0,0]) {
+            const tbody = document.getElementById('listaConvenios');
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-fuchsia-50 transition border-b border-slate-200";
+            
+            let nombreTrabajador = 'Escribe un DNI...';
+            if (dniSeleccionado && window.diccionarioPadronS10) {
+                let t = window.diccionarioPadronS10.find(x => x.dni === dniSeleccionado);
+                if(t) nombreTrabajador = t.nombreOficial;
+            }
+
+            let inputsDias = '';
+            for(let i = 0; i < 6; i++) {
+                let val = valoresDias[i] || 0;
+                inputsDias += `<td class="p-1 border-r border-slate-200"><input type="number" step="0.5" min="0" value="${val}" class="w-full text-center border-none p-1 text-xs focus:ring-1 focus:ring-fuchsia-500 val-dia-convenio bg-transparent font-bold ${val > 0 ? 'text-fuchsia-700' : 'text-slate-500'}"></td>`;
+            }
+
+            tr.innerHTML = `
+                <td class="p-2 border-r border-slate-200 flex flex-col">
+                    <input type="text" list="dl-trabajadores" value="${dniSeleccionado}" placeholder="Buscar DNI..." class="w-full border border-slate-300 p-1.5 text-xs focus:ring-1 focus:ring-fuchsia-500 sel-dni-convenio rounded font-bold text-slate-800 mb-1">
+                    <span class="text-[9px] font-bold text-slate-400 truncate uppercase name-lbl">${nombreTrabajador}</span>
+                </td>
+                ${inputsDias}
+                <td class="p-1 text-center">
+                    <button onclick="this.closest('tr').remove()" class="text-slate-400 hover:text-red-500 transition cursor-pointer" title="Eliminar fila"><i class="fa-solid fa-trash-can"></i></button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+            
+            // Autocompletar nombre al seleccionar DNI
+            tr.querySelector('.sel-dni-convenio').addEventListener('change', function(e) {
+                let val = e.target.value;
+                let span = tr.querySelector('.name-lbl');
+                if (window.diccionarioPadronS10) {
+                    let t = window.diccionarioPadronS10.find(x => x.dni === val);
+                    if(t) span.textContent = t.nombreOficial;
+                    else span.textContent = 'TRABAJADOR NO ENCONTRADO';
+                }
+            });
+        };
+
         window.guardarMapeoConvenios = async function() {
-            window.conveniosTareo = {};
-            document.querySelectorAll('.fila-convenio').forEach(tr => {
-                const dni = tr.querySelector('.sel-trabajador-convenio').value;
-                if (dni) {
-                    const inputs = tr.querySelectorAll('.val-horas-convenio');
-                    window.conveniosTareo[dni] = Array.from(inputs).map(inp => parseFloat(inp.value) || 0);
+            const tbody = document.getElementById('listaConvenios');
+            const filas = tbody.querySelectorAll('tr');
+            const nuevoMapeo = {};
+
+            filas.forEach(tr => {
+                const dniInput = tr.querySelector('.sel-dni-convenio');
+                if (!dniInput) return;
+                const dni = dniInput.value.trim();
+                if (!dni) return; 
+                
+                const inputs = tr.querySelectorAll('.val-dia-convenio');
+                const dias = Array.from(inputs).map(inp => parseFloat(inp.value) || 0);
+                
+                if (dias.some(val => val > 0)) {
+                    nuevoMapeo[dni] = dias;
                 }
             });
 
+            window.mapeoConveniosTareo = nuevoMapeo;
+
             const btn = document.querySelector('#modalConvenios button[onclick="window.guardarMapeoConvenios()"]');
-            const txt = btn.innerHTML;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> GUARDANDO...';
+            const txtOriginal = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
             btn.disabled = true;
 
             try {
-                const proyectoLobby = window.proyectoActualGlobal || "General";
-                const semana = window.semanaActualTareo || "00";
-                const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Semana_${semana}`);
-                await window.fsSetDoc(docRef, { convenios: window.conveniosTareo }, { merge: true });
+                let proyectoLobby = window.proyectoSeleccionadoGlobal || window.proyectoActualGlobal || "General";
+                const maestroRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Maestro`);
+                await window.fsSetDoc(maestroRef, { diccionarioConveniosStr: JSON.stringify(nuevoMapeo) }, { merge: true });
 
-                alert("✅ Convenios guardados exitosamente.");
+                alert("✅ Convenios guardados en la nube.\n\n⚠️ IMPORTANTE: Se aplicarán directamente en la exportación a S10.");
                 document.getElementById('modalConvenios').classList.add('hidden');
-            } catch (e) {
-                console.error(e); alert("⚠️ Error al guardar en Firebase.");
+
+            } catch (error) {
+                console.error("Error guardando convenios:", error);
+                alert("❌ Error al guardar convenios en la nube.");
             } finally {
-                btn.innerHTML = txt; btn.disabled = false;
+                btn.innerHTML = txtOriginal;
+                btn.disabled = false;
             }
         };
 
@@ -8892,16 +8990,6 @@ window.iniciarNuevoReporte = function() {
                     const arrayBuffer = await archivoPadronS10.arrayBuffer();
                     const wb = new ExcelJS.Workbook();
                     await wb.xlsx.load(arrayBuffer);
-
-                    // SANADOR DE FILAS S10
-                    wb.worksheets.forEach(sheet => {
-                        if (sheet._rows) {
-                            sheet._rows[0] = undefined; 
-                            for (let i = 1; i < sheet._rows.length; i++) {
-                                if (sheet._rows[i]) sheet._rows[i].number = i;
-                            }
-                        }
-                    });
 
                     const ws = wb.worksheets[0]; 
                     let proyectoLobby = window.proyectoSeleccionadoGlobal || document.getElementById('proyectoSelect').value || "";
@@ -9059,197 +9147,6 @@ window.iniciarNuevoReporte = function() {
                 }
             });
         }, 1500); 
-
-        // ==========================================
-        // EXPORTADOR FINAL (100% CONECTADO A LA NUBE Y ANTI-ERRORES)
-        // ==========================================
-        window.ejecutarExportacionNube = async function() {
-            if (typeof datosListosParaExportar === 'undefined' || datosListosParaExportar.length === 0) return;
-
-            const btn = document.getElementById('btnExportacionNube');
-            const originalHTML = btn.innerHTML;
-            btn.disabled = true;
-
-            try {
-                // 🔥 1. CAPTURAR EL NOMBRE OFICIAL DEL PROYECTO S10
-                let proyectoLobby = window.proyectoSeleccionadoGlobal;
-                
-                // Si la página se recargó y la variable se borró, la rescatamos del Modal directamente
-                if (!proyectoLobby) {
-                    const modalSelect = document.getElementById('selectorModalProyecto');
-                    if (modalSelect && modalSelect.value) {
-                        proyectoLobby = modalSelect.value;
-                    }
-                }
-                
-                // Si AÚN no hay nombre, lanzamos alerta para evitar exportar mal
-                if (!proyectoLobby) {
-                    alert("⚠️ FALTA VINCULAR EL PROYECTO OFICIAL S10.\n\nPor favor, haz clic en el botón azul 'PROYECTO', selecciona tu obra en la lista y guárdalo antes de exportar.");
-                    btn.innerHTML = originalHTML;
-                    btn.disabled = false;
-                    return;
-                }
-
-                let arrayBuffer;
-                let nombreFinalExcel = "Tareo_Exportado";
-
-                // 🔥 LÓGICA INFALIBLE DE LECTURA (RAM vs NUBE)
-                if (archivoPadronS10) {
-                    // 1. Está creando un tareo en este momento (Lee RAM)
-                    arrayBuffer = await archivoPadronS10.arrayBuffer();
-                    nombreFinalExcel = archivoPadronS10.name;
-                } else if (window.currentPadronUrl) {
-                    // 2. Viene del Historial (Lee desde Firebase automáticamente)
-                    btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-down fa-bounce mr-2"></i> Descargando Padrón...';
-                    const response = await fetch(window.currentPadronUrl);
-                    if (!response.ok) throw new Error("No se pudo descargar el archivo de la nube.");
-                    arrayBuffer = await response.arrayBuffer();
-                    nombreFinalExcel = window.currentPadronName || `Plantilla_S10_Semana_${window.semanaActualTareo}`;
-                } else {
-                    throw new Error("El archivo no está en la nube. Debes crear y guardar un Tareo nuevo primero para que se suba el Padrón base.");
-                }
-
-                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Inyectando a S10...';
-
-                // --- INYECTAR DATOS CON EXCELJS ---
-                const wb = new ExcelJS.Workbook();
-                await wb.xlsx.load(arrayBuffer);
-
-                wb.worksheets.forEach(sheet => {
-                    if (sheet._rows) {
-                        sheet._rows[0] = undefined; 
-                        for (let i = 1; i < sheet._rows.length; i++) {
-                            if (sheet._rows[i]) sheet._rows[i].number = i;
-                        }
-                    }
-                });
-
-                const ws = wb.worksheets[0]; 
-                let masterRow = ws.getRow(8);
-                let dvProyecto = masterRow.getCell(5).dataValidation; 
-                let dvPartida = masterRow.getCell(7).dataValidation;  
-                let dvConcepto = masterRow.getCell(8).dataValidation; 
-
-                const tbody = document.getElementById('tablaVistaPreviaTareo');
-                const filasTr = Array.from(tbody.querySelectorAll('tr')).filter(tr => !tr.classList.contains('sticky')); 
-                
-                let dataPorObrero = [];
-                datosListosParaExportar.forEach((rowObj, index) => {
-                    const tr = filasTr[index];
-                    if(!tr) return;
-                    
-                    let lineaVisual = tr.querySelectorAll('td')[1].innerText.trim();
-                    const selectsConcepto = tr.querySelectorAll('.selector-concepto-fila');
-                    const selectsPartida = tr.querySelectorAll('.selector-partida-fila');
-                    const inputsHoras = tr.querySelectorAll('.input-horas-fila');
-                    
-                    let selectIdx = 0;
-                    let rowData = { dni: String(rowObj.dni).trim(), linea: lineaVisual, nombre: rowObj.nombre, dias: [] };
-
-                    rowObj.dias.forEach((diaData, dIdx) => {
-                        if (diaData !== null && diaData.horas > 0) {
-                            const concepto = selectsConcepto[selectIdx] ? selectsConcepto[selectIdx].value : "";
-                            const partida = selectsPartida[selectIdx] ? selectsPartida[selectIdx].value : diaData.partida;
-                            const horas = inputsHoras[selectIdx] ? parseFloat(inputsHoras[selectIdx].value) || 0 : diaData.horas;
-                            rowData.dias[dIdx] = { partida, concepto, horas };
-                            selectIdx++;
-                        } else {
-                            rowData.dias[dIdx] = null;
-                        }
-                    });
-                    dataPorObrero.push(rowData);
-                });
-
-                let mapaFilasExcel = {};
-                ws.eachRow({ includeEmpty: false }, function(row, rowNumber) {
-                    if (rowNumber >= 8) {
-                        let cellDNI = row.getCell(3).value; 
-                        if (cellDNI && String(cellDNI).trim().length >= 4) {
-                            mapaFilasExcel[String(cellDNI).trim()] = rowNumber;
-                        }
-                    }
-                });
-
-                let trabajadoresAgrupados = {};
-                dataPorObrero.forEach(wd => {
-                    if (!trabajadoresAgrupados[wd.dni]) trabajadoresAgrupados[wd.dni] = [];
-                    trabajadoresAgrupados[wd.dni].push(wd);
-                });
-
-                let dnisOrdenados = Object.keys(trabajadoresAgrupados).sort((a, b) => {
-                    return (mapaFilasExcel[b] || 0) - (mapaFilasExcel[a] || 0);
-                });
-
-                const columnasInicioDia = [7, 10, 13, 16, 19, 22, 25]; 
-
-                dnisOrdenados.forEach(dni => {
-                    let excelRowIdx = mapaFilasExcel[dni];
-                    if (!excelRowIdx) return;
-
-                    let filasDelTrabajador = trabajadoresAgrupados[dni];
-                    let sourceRow = ws.getRow(excelRowIdx);
-                    
-                    filasDelTrabajador.forEach((wd, i) => {
-                        let targetRow;
-                        let currentRowIdx = excelRowIdx + i;
-                        let lineaFija = wd.linea;
-                        let valorLineaFinal = (lineaFija && !isNaN(lineaFija)) ? Number(lineaFija) : lineaFija;
-
-                        if (i === 0) {
-                            targetRow = sourceRow;
-                            targetRow.getCell(1).value = valorLineaFinal;
-                            targetRow.getCell(5).value = proyectoLobby; // 🔥 Forzamos la escritura del nombre oficial
-                            for (let c = 7; c <= 27; c++) { targetRow.getCell(c).value = null; }
-                        } else {
-                            targetRow = ws.insertRow(currentRowIdx, []);
-                            targetRow.height = sourceRow.height;
-                            for (let c = 1; c <= 27; c++) {
-                                let oldStyle = sourceRow.getCell(c).style;
-                                if (oldStyle) targetRow.getCell(c).style = JSON.parse(JSON.stringify(oldStyle));
-                                targetRow.getCell(c).value = null; 
-                            }
-                            try { ws.unmergeCells(currentRowIdx, 1, currentRowIdx, 2); } catch(e) {}
-                            
-                            targetRow.getCell(1).value = valorLineaFinal;            
-                            targetRow.getCell(2).value = null;                       
-                            targetRow.getCell(3).value = sourceRow.getCell(3).value; 
-                            targetRow.getCell(4).value = sourceRow.getCell(4).value; 
-                            targetRow.getCell(5).value = proyectoLobby; // 🔥 Forzamos la escritura del nombre oficial
-                            targetRow.getCell(6).value = sourceRow.getCell(6).value; 
-                            targetRow.getCell(4).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDDEBF7' } };
-                        }
-
-                        if (dvProyecto) targetRow.getCell(5).dataValidation = JSON.parse(JSON.stringify(dvProyecto));
-
-                        columnasInicioDia.forEach((startCol, diaIndex) => {
-                            let diaInfo = wd.dias[diaIndex];
-                            if (diaInfo) {
-                                targetRow.getCell(startCol).value = diaInfo.partida;     
-                                targetRow.getCell(startCol + 1).value = diaInfo.concepto; 
-                                targetRow.getCell(startCol + 2).value = diaInfo.horas;    
-                            }
-                            if (dvPartida) targetRow.getCell(startCol).dataValidation = JSON.parse(JSON.stringify(dvPartida));
-                            if (dvConcepto) targetRow.getCell(startCol + 1).dataValidation = JSON.parse(JSON.stringify(dvConcepto));
-                        });
-                    });
-                });
-
-                const buffer = await wb.xlsx.writeBuffer();
-                
-                // 🔥 LIMPIEZA DE EXTENSIÓN PARA EVITAR ERRORES AL ABRIR EN EXCEL
-                let nombreLimpio = nombreFinalExcel.replace(/\.xls[mx]?$/i, '');
-                saveAs(new Blob([buffer]), nombreLimpio + ".xlsx");
-                
-                alert("✅ ¡Exportación S10 completada! Los datos se inyectaron automáticamente desde la nube.");
-
-            } catch (err) {
-                console.error("Error en la inyección:", err);
-                alert("❌ Error: " + err.message);
-            } finally {
-                btn.innerHTML = originalHTML;
-                btn.disabled = false;
-            }
-        };
     </script>
 
 <script>
@@ -9803,6 +9700,676 @@ window.iniciarNuevoReporte = function() {
                 alert("❌ Ocurrió un error al armar el Excel. Revisa tu conexión.");
             }
         };
+    </script>
+    <script>
+        // ==========================================
+        // EXPORTACIÓN A S10 - RECONSTRUCCIÓN EXACTA + NOMBRE DE PROYECTO LARGO (S10)
+        // ==========================================
+        window.ejecutarExportacionNube = async function() {
+            const btn = document.getElementById('btnExportacionNube');
+            const originalHTML = btn.innerHTML;
+
+            try {
+                // 🔥 1. AUTO-DESCARGA DESDE FIREBASE SI NO ESTÁ EN RAM
+                if (!archivoPadronS10) {
+                    if (window.currentPadronUrl) {
+                        btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-down fa-bounce"></i> Descargando Matriz...';
+                        try {
+                            const response = await fetch(window.currentPadronUrl);
+                            const blob = await response.blob();
+                            archivoPadronS10 = new File([blob], window.currentPadronName || "Matriz_S10.xlsx");
+                        } catch(e) {
+                            alert("❌ Error de red al intentar descargar la Matriz S10 desde Firebase.");
+                            btn.innerHTML = originalHTML;
+                            btn.disabled = false;
+                            return;
+                        }
+                    } else {
+                        alert("⚠️ No hay matriz S10 en la memoria ni en la nube.\n👉 Cierra esta vista previa, carga el archivo original en el 'Paso 1' y vuelve a intentar.");
+                        btn.innerHTML = originalHTML;
+                        btn.disabled = false;
+                        return;
+                    }
+                }
+
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando S10 Exacto...';
+                btn.disabled = true;
+
+                // 🔥 2. OBTENER EL NOMBRE LARGO EXACTO DEL PROYECTO S10 DESDE LA NUBE
+                let proyectoCortoLobby = window.proyectoActualGlobal || document.getElementById('proyectoSelect')?.value || "";
+                let nombreLargoProyectoS10 = proyectoCortoLobby; // Fallback
+                
+                if (proyectoCortoLobby) {
+                    try {
+                        const maestroRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoCortoLobby}/configuracionTareos/Maestro`);
+                        const maestroSnap = await window.fsGetDoc(maestroRef);
+                        if (maestroSnap.exists() && maestroSnap.data().proyectoS10Vinculado) {
+                            nombreLargoProyectoS10 = maestroSnap.data().proyectoS10Vinculado;
+                        }
+                    } catch (e) {
+                        console.warn("No se pudo obtener el nombre largo del proyecto S10 de Firebase:", e);
+                    }
+                }
+
+                // 3. ESCANEAR TEXTOS CON SHEETJS
+                const arrayBuffer = await archivoPadronS10.arrayBuffer();
+                const sheetJsWb = XLSX.read(arrayBuffer, { type: 'array' });
+                const wsOriginalName = sheetJsWb.SheetNames[0];
+                const rawAOA = XLSX.utils.sheet_to_json(sheetJsWb.Sheets[wsOriginalName], { header: 1, defval: "" });
+
+                let datosOriginalesObreros = {};
+                for (let i = 7; i < rawAOA.length; i++) {
+                    let row = rawAOA[i];
+                    if (!row) continue;
+                    let dni = String(row[2] || '').trim(); // DNI en Columna C
+                    if (dni.length >= 4 && !datosOriginalesObreros[dni]) {
+                        datosOriginalesObreros[dni] = {
+                            nombre: row[3] || '',
+                            proy: row[4] || '', 
+                            porcentaje: row[5] || ''
+                        };
+                    }
+                }
+
+                // 4. CREAR UN EXCEL NUEVO CON EXCELJS
+                const wb = new ExcelJS.Workbook();
+                const ws = wb.addWorksheet(wsOriginalName);
+
+                // Configurar anchos de columna idénticos a S10
+                ws.getColumn(1).width = 6;   // A: Linea
+                ws.getColumn(2).width = 5;   // B: Visible para combinar
+                ws.getColumn(2).hidden = true; 
+                ws.getColumn(3).width = 12;  // C: DNI
+                ws.getColumn(4).width = 40;  // D: Nombre
+                ws.getColumn(5).width = 25;  // E: Proyecto
+                ws.getColumn(6).width = 8;   // F: %
+                for (let c = 7; c <= 27; c += 3) {
+                    ws.getColumn(c).width = 22;     
+                    ws.getColumn(c + 1).width = 22; 
+                    ws.getColumn(c + 2).width = 8;  
+                }
+
+                // 5. REPLICAR CABECERA SUPERIOR (Filas 1 a 5)
+                for (let i = 0; i < 5; i++) {
+                    let r = ws.addRow(rawAOA[i] || []);
+                    r.font = { name: 'Arial', size: 9, bold: true };
+                }
+
+                // Combinar A y B en las primeras 5 filas
+                for (let i = 1; i <= 5; i++) {
+                    ws.mergeCells(i, 1, i, 2); 
+                }
+                
+                ws.getCell('J2').font = { name: 'Arial', size: 12, bold: true }; 
+
+                // 6. DIBUJAR CABECERAS AMARILLAS S10 (Filas 6 y 7)
+                const diasS10 = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo"];
+                const r6 = ws.getRow(6);
+                const r7 = ws.getRow(7);
+
+                r6.getCell(1).value = "Linea"; 
+                r6.getCell(3).value = "DNI"; 
+                r6.getCell(4).value = "Nombre"; 
+                r6.getCell(5).value = "Proyecto"; 
+                r6.getCell(6).value = "%";
+                
+                let colIdx = 7;
+                diasS10.forEach(dia => {
+                    r6.getCell(colIdx).value = dia;
+                    ws.mergeCells(6, colIdx, 6, colIdx + 2); 
+                    r7.getCell(colIdx).value = "Partida de Control";
+                    r7.getCell(colIdx + 1).value = "Concepto";
+                    r7.getCell(colIdx + 2).value = "Horas";
+                    colIdx += 3;
+                });
+
+                ws.mergeCells(6, 1, 7, 2); 
+                [3, 4, 5, 6].forEach(col => ws.mergeCells(6, col, 7, col));
+
+                [r6, r7].forEach(row => {
+                    row.height = 18;
+                    for (let c = 1; c <= 27; c++) {
+                        let cell = row.getCell(c);
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF99' } }; 
+                        cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+                        cell.font = { name: 'Arial', size: 8, bold: true };
+                        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                    }
+                });
+
+                // 7. EXTRAER TAREO DE LA PANTALLA (E INYECTAR CONVENIOS DE LA MEMORIA)
+                const tbody = document.getElementById('tablaVistaPreviaTareo');
+                const filasTr = Array.from(tbody.querySelectorAll('tr')).filter(tr => !tr.classList.contains('sticky')); 
+
+                let trabajadoresAgrupados = {};
+                
+                filasTr.forEach((tr) => {
+                    const tds = tr.querySelectorAll('td');
+                    if (tds.length < 27) return; 
+                    
+                    let linea = tds[1]?.innerText.trim();
+                    let dni = tds[2]?.innerText.trim();
+                    if (!dni) return;
+                    
+                    if (!trabajadoresAgrupados[dni]) trabajadoresAgrupados[dni] = [];
+
+                    let diasData = [];
+                    const baseIndex = 6; 
+                    
+                    // 🔥 LA MATEMÁTICA: Rescatar horas de convenio de la memoria para este DNI
+                    let conveniosDNI = (window.mapeoConveniosTareo && window.mapeoConveniosTareo[dni]) ? window.mapeoConveniosTareo[dni] : [0,0,0,0,0,0];
+
+                    for(let i = 0; i < 7; i++) {
+                        let idxPartida = baseIndex + (i * 3);
+                        let idxConcepto = baseIndex + (i * 3) + 1;
+                        let idxHoras = baseIndex + (i * 3) + 2;
+
+                        let tdP = tds[idxPartida];
+                        let tdC = tds[idxConcepto];
+                        let tdH = tds[idxHoras];
+
+                        let partida = tdP ? (tdP.querySelector('.selector-partida-fila')?.value || tdP.innerText.trim()) : "";
+                        let concepto = tdC ? (tdC.querySelector('.selector-concepto-fila')?.value || tdC.innerText.trim()) : "";
+                        let horasStr = tdH ? (tdH.querySelector('.input-horas-fila')?.value || tdH.innerText.trim()) : "0";
+                        
+                        let horasBase = parseFloat(horasStr) || 0;
+
+                        // 🔥 SUMAR CONVENIO (Solo de Lunes a Sábado, índices 0 al 5)
+                        let horasConvenio = (i < 6) ? (parseFloat(conveniosDNI[i]) || 0) : 0;
+                        let horasTotalesReales = horasBase + horasConvenio;
+
+                        if (horasTotalesReales > 0) diasData[i] = { partida, concepto, horas: horasTotalesReales };
+                        else diasData[i] = null;
+                    }
+                    trabajadoresAgrupados[dni].push({ linea, dias: diasData });
+                });
+
+                // 8. INYECTAR DATOS 
+                let currentRow = 8;
+                const columnasInicioDia = [7, 10, 13, 16, 19, 22, 25];
+                let dnisOrdenados = Object.keys(trabajadoresAgrupados).sort();
+
+                dnisOrdenados.forEach(dni => {
+                    let filasTareo = trabajadoresAgrupados[dni];
+                    let originalData = datosOriginalesObreros[dni] || { nombre: '', proy: '', porcentaje: '' };
+
+                    filasTareo.forEach((wd, indexFilaDoble) => {
+                        let rowData = new Array(27).fill(null);
+                        
+                        rowData[0] = (wd.linea && !isNaN(wd.linea)) ? Number(wd.linea) : wd.linea;
+                        rowData[2] = dni;
+                        rowData[3] = originalData.nombre;
+                        // 🔥 REEMPLAZO EXACTO DEL PROYECTO: Usa el original o inyecta el largo descargado de Firebase
+                        rowData[4] = originalData.proy || nombreLargoProyectoS10;
+                        rowData[5] = originalData.porcentaje;
+
+                        columnasInicioDia.forEach((startCol, diaIndex) => {
+                            let diaInfo = wd.dias[diaIndex];
+                            if (diaInfo) {
+                                rowData[startCol - 1] = diaInfo.partida;
+                                rowData[startCol] = diaInfo.concepto;
+                                rowData[startCol + 1] = diaInfo.horas;
+                            }
+                        });
+                        
+                        let excelRow = ws.addRow(rowData);
+                        
+                        // Combinar A y B
+                        ws.mergeCells(currentRow, 1, currentRow, 2);
+
+                        for (let c = 1; c <= 27; c++) {
+                            let cell = excelRow.getCell(c);
+                            cell.font = { name: 'Arial', size: 8 };
+                            cell.border = { top: {style:'thin', color:{argb:'FF000000'}}, bottom: {style:'thin', color:{argb:'FF000000'}}, left: {style:'thin', color:{argb:'FF000000'}}, right: {style:'thin', color:{argb:'FF000000'}} };
+                            cell.alignment = { vertical: 'middle' };
+                            if (c > 6) cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                            
+                            if (indexFilaDoble > 0 && (c === 3 || c === 4)) {
+                                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDDEBF7' } }; 
+                            }
+                        }
+                        currentRow++;
+                    });
+                });
+
+                // 9. AGREGAR FILAS VACÍAS CON BORDES
+                for (let i = 0; i < 5; i++) {
+                    let emptyRow = ws.getRow(currentRow);
+                    ws.mergeCells(currentRow, 1, currentRow, 2); 
+                    for (let c = 1; c <= 27; c++) {
+                        let cell = emptyRow.getCell(c);
+                        cell.border = { top: {style:'thin'}, bottom: {style:'thin'}, left: {style:'thin'}, right: {style:'thin'} };
+                    }
+                    currentRow++;
+                }
+
+                // 10. DIBUJAR FIRMAS INFERIORES
+                currentRow += 3;
+                
+                ws.getCell(`D${currentRow}`).value = '_______________________________________';
+                ws.getCell(`J${currentRow}`).value = '_______________________________________';
+                ws.getCell(`D${currentRow}`).alignment = { horizontal: 'center' };
+                ws.getCell(`J${currentRow}`).alignment = { horizontal: 'center' };
+                
+                currentRow++;
+                ws.getCell(`D${currentRow}`).value = 'TAREADOR';
+                ws.getCell(`J${currentRow}`).value = 'SUPERVISOR';
+                ws.getCell(`D${currentRow}`).font = { name: 'Arial', size: 9, bold: true };
+                ws.getCell(`J${currentRow}`).font = { name: 'Arial', size: 9, bold: true };
+                ws.getCell(`D${currentRow}`).alignment = { horizontal: 'center' };
+                ws.getCell(`J${currentRow}`).alignment = { horizontal: 'center' };
+                
+                currentRow++;
+                ws.getCell(`J${currentRow}`).value = ':Firma2:';
+                ws.getCell(`J${currentRow}`).font = { name: 'Arial', size: 9 };
+                ws.getCell(`J${currentRow}`).alignment = { horizontal: 'center' };
+
+                // 11. DESCARGA INFALIBLE (.xlsx)
+                const buffer = await wb.xlsx.writeBuffer();
+                let nombreBase = (window.currentPadronName || archivoPadronS10?.name || "Tareo_S10").substring(0, (window.currentPadronName || archivoPadronS10?.name || "Tareo_S10").lastIndexOf('.'));
+                if (!nombreBase) nombreBase = window.currentPadronName || archivoPadronS10?.name || "Tareo_S10";
+                let nombreFinalExcel = nombreBase + ".xlsx"; 
+                
+                try {
+                    saveAs(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), nombreFinalExcel);
+                } catch(e) {
+                    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = nombreFinalExcel;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                }
+
+                alert("✅ ¡Tareo exportado exitosamente!");
+
+            } catch (err) {
+                console.error("Error al exportar:", err);
+                alert("❌ Hubo un error al exportar: " + err.message);
+            } finally {
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            }
+        };
+
+        // ==========================================
+        // GESTIÓN DE CONVENIOS (MEMORIA FIREBASE)
+        // ==========================================
+
+        // 1. Abrir modal y cargar datos de la memoria
+        window.abrirModalConvenios = function() {
+            const tbody = document.getElementById('listaConvenios');
+            tbody.innerHTML = '';
+            
+            // Si hay memoria cargada desde Firebase, pintamos esas filas
+            if (window.mapeoConveniosTareo && Object.keys(window.mapeoConveniosTareo).length > 0) {
+                Object.keys(window.mapeoConveniosTareo).forEach(dni => {
+                    const dias = window.mapeoConveniosTareo[dni];
+                    window.agregarFilaConvenio(dni, dias);
+                });
+            } else {
+                // Si está vacío, agregamos una fila en blanco por defecto
+                window.agregarFilaConvenio();
+            }
+            
+            document.getElementById('modalConvenios').classList.remove('hidden');
+        };
+
+        // 2. Agregar una fila (vacía o con datos)
+        window.agregarFilaConvenio = function(dniSeleccionado = '', valoresDias = [0,0,0,0,0,0]) {
+            const tbody = document.getElementById('listaConvenios');
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-slate-100 transition";
+            
+            // Construir el select de trabajadores (usando el padrón S10 cargado)
+            let opciones = '<option value="">-- Seleccione Trabajador --</option>';
+            if (window.diccionarioPadronS10 && window.diccionarioPadronS10.length > 0) {
+                window.diccionarioPadronS10.forEach(t => {
+                    const selected = t.dni === dniSeleccionado ? 'selected' : '';
+                    opciones += `<option value="${t.dni}" ${selected}>${t.dni} - ${t.nombreOficial}</option>`;
+                });
+            } else if (dniSeleccionado) {
+                // Fallback de seguridad por si abre el modal antes de procesar el S10
+                opciones += `<option value="${dniSeleccionado}" selected>${dniSeleccionado}</option>`;
+            }
+
+            // Construir inputs para los 6 días laborables (Lunes a Sábado)
+            let inputsDias = '';
+            for(let i = 0; i < 6; i++) {
+                let val = valoresDias[i] || 0;
+                inputsDias += `<td class="p-1 border border-slate-200"><input type="number" step="0.5" min="0" value="${val}" class="w-full text-center border-none p-1 text-xs focus:ring-1 focus:ring-fuchsia-500 val-dia-convenio bg-transparent"></td>`;
+            }
+
+            tr.innerHTML = `
+                <td class="p-1 border border-slate-200">
+                    <select class="w-full border-none p-1 text-[10px] focus:ring-1 focus:ring-fuchsia-500 sel-dni-convenio bg-transparent cursor-pointer font-bold text-slate-700">
+                        ${opciones}
+                    </select>
+                </td>
+                ${inputsDias}
+                <td class="p-1 border border-slate-200 text-center">
+                    <button onclick="this.closest('tr').remove()" class="text-slate-400 hover:text-red-500 transition cursor-pointer" title="Eliminar fila"><i class="fa-solid fa-trash-can"></i></button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        };
+
+        // 3. Guardar cambios en la memoria local y en la nube
+        window.guardarMapeoConvenios = async function() {
+            const tbody = document.getElementById('listaConvenios');
+            const filas = tbody.querySelectorAll('tr');
+            const nuevoMapeo = {};
+
+            // Recolectar datos del DOM
+            filas.forEach(tr => {
+                const dni = tr.querySelector('.sel-dni-convenio').value;
+                if (!dni) return; // Ignorar filas sin trabajador seleccionado
+                
+                const inputs = tr.querySelectorAll('.val-dia-convenio');
+                const dias = Array.from(inputs).map(inp => parseFloat(inp.value) || 0);
+                
+                // Guardar el trabajador SOLO si tiene al menos un día con horas > 0
+                if (dias.some(val => val > 0)) {
+                    nuevoMapeo[dni] = dias;
+                }
+            });
+
+            // Actualizar memoria RAM
+            window.mapeoConveniosTareo = nuevoMapeo;
+
+            // Animación del botón
+            const btn = document.querySelector('#modalConvenios button[onclick="window.guardarMapeoConvenios()"]');
+            const txtOriginal = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
+            btn.disabled = true;
+
+            try {
+                // Identificar el proyecto actual
+                let proyectoLobby = window.proyectoSeleccionadoGlobal || document.getElementById('proyectoSelect')?.value || window.proyectoActualGlobal || "General";
+                
+                // Guardar en Firebase (Configuración Maestra del Proyecto)
+                const maestroRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoLobby}/configuracionTareos/Maestro`);
+                await window.fsSetDoc(maestroRef, {
+                    diccionarioConveniosStr: JSON.stringify(nuevoMapeo)
+                }, { merge: true });
+
+                alert("✅ Convenios guardados exitosamente. El sistema recordará estas horas extra para este proyecto.");
+                document.getElementById('modalConvenios').classList.add('hidden');
+
+            } catch (error) {
+                console.error("Error guardando convenios:", error);
+                alert("❌ Error al guardar convenios en la nube de Firebase.");
+            } finally {
+                btn.innerHTML = txtOriginal;
+                btn.disabled = false;
+            }
+        };
+    </script>
+    <script>
+        // ==========================================
+        // 1. MODAL ACTIVIDADES CON BUSCADOR INTELIGENTE (CORREGIDO)
+        // ==========================================
+        window.mostrarModalActividades = function(actividadesPendientes) {
+            const contenedor = document.getElementById('listaActividadesPendientes');
+            contenedor.innerHTML = '';
+
+            // Juntamos TODAS las partidas detectadas para que no falte ninguna en la lista
+            let todasLasPartidas = new Set();
+            if (window.catalogoPartidasS10) window.catalogoPartidasS10.forEach(p => todasLasPartidas.add(p));
+            if (typeof partidaListKeys !== 'undefined') partidaListKeys.forEach(p => { if (p !== 'ALL' && p !== 'OTRAS PARTIDAS') todasLasPartidas.add(p); });
+
+            // Creamos el buscador nativo (Datalist)
+            let dl = document.getElementById('dl-partidas-s10');
+            if (!dl) {
+                dl = document.createElement('datalist');
+                dl.id = 'dl-partidas-s10';
+                document.body.appendChild(dl);
+            }
+            let dlHTML = '';
+            Array.from(todasLasPartidas).sort().forEach(p => { dlHTML += `<option value="${p}">`; });
+            dl.innerHTML = dlHTML;
+
+            let html = '';
+            actividadesPendientes.forEach(act => {
+                html += `
+                <div class="bg-white p-4 rounded-xl border border-slate-200 mb-4 shadow-sm">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">ACTIVIDAD DEL EXCEL (CAPATAZ):</label>
+                    <div class="text-indigo-700 font-extrabold text-sm mb-3"><i class="fa-solid fa-file-contract mr-2"></i>${act}</div>
+                    <!-- 🔥 CORRECCIÓN: onclick="this.value=''" borra el texto al hacer clic para que despliegue TODA la lista -->
+                    <input type="text" list="dl-partidas-s10" onclick="this.value=''" class="w-full border border-slate-300 rounded p-2 text-xs text-slate-700 font-bold focus:ring-2 focus:ring-indigo-500 map-actividad-input" data-original="${act}" placeholder="🔍 Clic aquí y escribe para buscar partida...">
+                </div>`;
+            });
+            contenedor.innerHTML = html;
+            document.getElementById('modalActividades').classList.remove('hidden');
+        };
+
+        window.guardarMapeoActividades = async function() {
+            const inputs = document.querySelectorAll('.map-actividad-input');
+            inputs.forEach(inp => {
+                let val = inp.value.trim();
+                if (val) window.traduccionPartidasTareo[inp.getAttribute('data-original')] = val;
+            });
+
+            const btn = document.querySelector('#modalActividades button[onclick="window.guardarMapeoActividades()"]');
+            const txt = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
+            btn.disabled = true;
+
+            try {
+                let proy = window.proyectoActualGlobal || document.getElementById('proyectoSelect')?.value;
+                const maestroRef = window.fsDoc(window.firebaseDb, `proyectos/${proy}/configuracionTareos/Maestro`);
+                await window.fsSetDoc(maestroRef, { diccionarioActividadesStr: JSON.stringify(window.traduccionPartidasTareo) }, { merge: true });
+
+                document.getElementById('modalActividades').classList.add('hidden');
+                alert("✅ Actividades mapeadas y guardadas en la nube.\n👉 Vuelve a dar clic en 'Procesar y Cruzar Datos' para refrescar la tabla.");
+            } catch (e) {
+                alert("❌ Error al guardar en Firebase.");
+            } finally {
+                btn.innerHTML = txt; btn.disabled = false;
+            }
+        };
+
+        // ==========================================
+        // 2. MODAL CONVENIOS (GUARDADO EN NUBE Y BUSCADOR)
+        // ==========================================
+        window.abrirModalConvenios = async function() {
+            const tbody = document.getElementById('listaConvenios');
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-6"><i class="fa-solid fa-spinner fa-spin text-fuchsia-500 text-2xl"></i><br>Cargando de la nube...</td></tr>';
+            document.getElementById('modalConvenios').classList.remove('hidden');
+
+            try {
+                let proy = window.proyectoActualGlobal || document.getElementById('proyectoSelect')?.value;
+                const maestroRef = window.fsDoc(window.firebaseDb, `proyectos/${proy}/configuracionTareos/Maestro`);
+                const snap = await window.fsGetDoc(maestroRef);
+                if (snap.exists() && snap.data().diccionarioConveniosStr) {
+                    window.mapeoConveniosTareo = JSON.parse(snap.data().diccionarioConveniosStr);
+                } else {
+                    window.mapeoConveniosTareo = {};
+                }
+            } catch(e) { window.mapeoConveniosTareo = {}; }
+
+            tbody.innerHTML = '';
+            
+            // Datalist para buscar trabajadores por nombre o DNI
+            let dl = document.getElementById('dl-trabajadores');
+            if(!dl) { dl = document.createElement('datalist'); dl.id = 'dl-trabajadores'; document.body.appendChild(dl); }
+            let dlHTML = '';
+            if (window.diccionarioPadronS10) {
+                window.diccionarioPadronS10.forEach(t => { dlHTML += `<option value="${t.dni} - ${t.nombreOficial}">`; });
+            }
+            dl.innerHTML = dlHTML;
+
+            if (Object.keys(window.mapeoConveniosTareo).length > 0) {
+                Object.keys(window.mapeoConveniosTareo).forEach(dni => {
+                    let nombreFull = dni;
+                    if(window.diccionarioPadronS10) {
+                        let info = window.diccionarioPadronS10.find(x => x.dni === dni);
+                        if(info) nombreFull = `${dni} - ${info.nombreOficial}`;
+                    }
+                    window.agregarFilaConvenio(nombreFull, window.mapeoConveniosTareo[dni]);
+                });
+            } else {
+                window.agregarFilaConvenio(); 
+            }
+        };
+
+        window.agregarFilaConvenio = function(valorSeleccionado = '', valoresDias = [0,0,0,0,0,0]) {
+            const tbody = document.getElementById('listaConvenios');
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-fuchsia-50 transition border-b border-slate-200";
+
+            let inputsDias = '';
+            for(let i = 0; i < 6; i++) {
+                let val = valoresDias[i] || 0;
+                inputsDias += `<td class="p-1 border-r border-slate-200"><input type="number" step="0.5" min="0" value="${val}" class="w-full text-center border-none p-1 text-xs focus:ring-1 focus:ring-fuchsia-500 val-dia-convenio bg-transparent font-bold ${val > 0 ? 'text-fuchsia-700' : 'text-slate-500'}"></td>`;
+            }
+
+            tr.innerHTML = `
+                <td class="p-2 border-r border-slate-200">
+                    <!-- 🔥 CORRECCIÓN: Buscador con autocompletado nativo -->
+                    <input type="text" list="dl-trabajadores" onclick="this.value=''" value="${valorSeleccionado}" placeholder="🔍 Buscar DNI o Nombre..." class="w-full border border-slate-300 p-1.5 text-xs focus:ring-1 focus:ring-fuchsia-500 sel-dni-convenio rounded font-bold text-slate-800">
+                </td>
+                ${inputsDias}
+                <td class="p-1 text-center"><button onclick="this.closest('tr').remove()" class="text-red-400 hover:text-red-600"><i class="fa-solid fa-trash-can"></i></button></td>
+            `;
+            tbody.appendChild(tr);
+        };
+
+        window.guardarMapeoConvenios = async function() {
+            const tbody = document.getElementById('listaConvenios');
+            const filas = tbody.querySelectorAll('tr');
+            const nuevoMapeo = {};
+
+            filas.forEach(tr => {
+                const inputVal = tr.querySelector('.sel-dni-convenio').value.trim();
+                if (!inputVal) return; 
+                const dni = inputVal.split(' - ')[0].trim(); // Extrae solo el DNI limpio
+                
+                const inputs = tr.querySelectorAll('.val-dia-convenio');
+                const dias = Array.from(inputs).map(inp => parseFloat(inp.value) || 0);
+                if (dias.some(val => val > 0)) nuevoMapeo[dni] = dias;
+            });
+
+            window.mapeoConveniosTareo = nuevoMapeo;
+
+            const btn = document.querySelector('#modalConvenios button[onclick="window.guardarMapeoConvenios()"]');
+            const txt = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
+            btn.disabled = true;
+
+            try {
+                let proy = window.proyectoActualGlobal || document.getElementById('proyectoSelect')?.value;
+                const maestroRef = window.fsDoc(window.firebaseDb, `proyectos/${proy}/configuracionTareos/Maestro`);
+                await window.fsSetDoc(maestroRef, { diccionarioConveniosStr: JSON.stringify(nuevoMapeo) }, { merge: true });
+
+                alert("✅ Convenios guardados en la nube.");
+                document.getElementById('modalConvenios').classList.add('hidden');
+                
+                // Aplicar visualmente al cerrar el modal
+                window.aplicarConveniosATabla();
+            } catch (error) {
+                alert("❌ Error al guardar convenios en Firebase.");
+            } finally {
+                btn.innerHTML = txt; btn.disabled = false;
+            }
+        };
+
+        // ==========================================
+        // 3. INYECTOR MATEMÁTICO (SUMA HORAS A LA TABLA Y AL EXPORTABLE)
+        // ==========================================
+        window.aplicarConveniosATabla = function() {
+            const tbody = document.getElementById('tablaVistaPreviaTareo');
+            if (!tbody) return;
+            const filasTr = Array.from(tbody.querySelectorAll('tr')).filter(tr => !tr.classList.contains('sticky')); 
+
+            // A. Resetear la tabla a su estado original para evitar que se sumen infinitamente
+            filasTr.forEach(tr => {
+                const tds = tr.querySelectorAll('td');
+                if (tds.length < 25) return;
+                [8, 11, 14, 17, 20, 23].forEach(idx => {
+                    let tdH = tds[idx];
+                    if(tdH && tdH.hasAttribute('data-base-val')) {
+                        let isInput = tdH.querySelector('input');
+                        if (isInput) {
+                            isInput.value = tdH.getAttribute('data-base-val');
+                            isInput.classList.remove('text-fuchsia-700', 'font-black');
+                        } else {
+                            tdH.innerHTML = tdH.getAttribute('data-base-html');
+                        }
+                        tdH.removeAttribute('data-base-val');
+                        tdH.removeAttribute('data-base-html');
+                        tdH.classList.remove('bg-fuchsia-100');
+                    }
+                });
+            });
+
+            if (!window.mapeoConveniosTareo) return;
+
+            // B. Sumar matemáticamente (Base + Convenio)
+            let obrerosAfectados = new Set();
+            filasTr.forEach(tr => {
+                const tds = tr.querySelectorAll('td');
+                if (tds.length < 25) return;
+                
+                let dni = tds[2]?.innerText.trim();
+                if(!dni || !window.mapeoConveniosTareo[dni] || obrerosAfectados.has(dni)) return;
+
+                obrerosAfectados.add(dni);
+                let convenios = window.mapeoConveniosTareo[dni];
+                let indicesHoras = [8, 11, 14, 17, 20, 23]; // Coordenadas exactas de horas L-S
+
+                indicesHoras.forEach((idx, i) => {
+                    let horasExtra = parseFloat(convenios[i]) || 0;
+                    if (horasExtra > 0) {
+                        let tdH = tds[idx];
+                        if (tdH) {
+                            let inputEl = tdH.querySelector('input');
+                            
+                            // 🔥 Rescatamos la base real (ya sea de un input o de texto plano)
+                            let baseVal = inputEl ? (parseFloat(inputEl.value) || 0) : (parseFloat(tdH.innerText) || 0);
+
+                            // Guardamos el original para cuando se reinicie
+                            if (!tdH.hasAttribute('data-base-val')) {
+                                tdH.setAttribute('data-base-val', baseVal);
+                                if (!inputEl) tdH.setAttribute('data-base-html', tdH.innerHTML);
+                            }
+
+                            let suma = baseVal + horasExtra;
+
+                            // Inyectamos la suma total
+                            if (inputEl) {
+                                inputEl.value = suma;
+                                inputEl.classList.add('text-fuchsia-700', 'font-black');
+                                inputEl.title = `Incluye ${horasExtra}h de Convenio Extra`;
+                            } else {
+                                tdH.innerHTML = `<span class="text-fuchsia-700 font-black text-sm" title="+ ${horasExtra}h de Convenio Extra">${suma}</span>`;
+                            }
+                            tdH.classList.add('bg-fuchsia-100');
+                        }
+                    }
+                });
+            });
+        };
+
+        // 👁️ VIGILANTE AUTOMÁTICO: Detecta por sí solo cuando procesas el Tareo para inyectar la suma
+        const observerTablaTareo = new MutationObserver((mutations) => {
+            let processed = false;
+            mutations.forEach(mut => {
+                if (mut.addedNodes.length > 0 && mut.addedNodes[0].nodeName === 'TR' && !processed) {
+                    processed = true;
+                    setTimeout(() => { window.aplicarConveniosATabla(); }, 300);
+                }
+            });
+        });
+        
+        // Encender el vigilante
+        setTimeout(() => {
+            const tb = document.getElementById('tablaVistaPreviaTareo');
+            if(tb) observerTablaTareo.observe(tb, { childList: true });
+        }, 2000);
     </script>
 </body>
 </html>
