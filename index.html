@@ -275,24 +275,58 @@
                     <h3 class="text-base font-bold text-slate-800 mb-2 border-b border-slate-100 pb-2 flex items-center gap-2">
                         <i class="fa-solid fa-file-excel text-emerald-600"></i> Configuración del Formato RDI
                     </h3>
-                    <p class="text-sm text-slate-500 mb-6">Personaliza el logo y los datos maestros que aparecerán en la cabecera al exportar tus RDIs.</p>
+                    <p class="text-sm text-slate-500 mb-6">Selecciona un proyecto para personalizar sus datos maestros, logo y tiempos de respuesta específicos.</p>
                     
-                    <div class="flex flex-col md:flex-row gap-6 bg-slate-50 p-6 rounded-xl border border-slate-200">
-                        <div class="flex-1 flex flex-col gap-4">
-                            <div>
+                    <!-- SELECTOR DE PROYECTO INFALIBLE -->
+                    <div class="mb-6 bg-indigo-50 p-4 rounded-xl border border-indigo-100 flex flex-col md:flex-row items-start md:items-center gap-4">
+                        <label class="font-bold text-indigo-800 text-sm whitespace-nowrap"><i class="fa-solid fa-building mr-1"></i> Proyecto a configurar:</label>
+                        <select id="configRdiProyectoSelect" onchange="window.cargarConfigRDI_Proyecto(this.value)" class="w-full md:w-1/2 border border-indigo-200 p-2 rounded-lg font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-sm">
+                            <option value="">-- Selecciona un proyecto --</option>
+                        </select>
+                    </div>
+
+                    <div id="panelFormatoRdiControles" class="flex flex-col md:flex-row gap-6 bg-slate-50 p-6 rounded-xl border border-slate-200 mb-6 opacity-50 pointer-events-none transition-opacity">
+                        <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="md:col-span-2">
                                 <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Nombre Oficial del Sistema / Empresa</label>
                                 <input type="text" id="configRdiEmpresa" placeholder="Ej: SISTEMA INTEGRADO DE GESTIÓN" class="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm font-bold shadow-inner">
                             </div>
                             <div>
-                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Logo de la Empresa (Aparecerá en el Excel)</label>
-                                <input type="file" id="configRdiLogo" accept="image/png, image/jpeg" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:font-bold file:bg-emerald-100 file:text-emerald-700 hover:file:bg-emerald-200 cursor-pointer bg-white border border-slate-300 rounded-lg">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Cliente</label>
+                                <input type="text" id="configRdiCliente" placeholder="Ej: AIP 11 SAC" class="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm font-bold shadow-inner">
                             </div>
-                            <div class="pt-2">
-                                <button onclick="window.guardarConfiguracionRDI()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-lg shadow-md transition cursor-pointer flex items-center justify-center gap-2">
-                                    <i class="fa-solid fa-floppy-disk"></i> Guardar Formato
-                                </button>
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Contratista</label>
+                                <input type="text" id="configRdiContratista" placeholder="Ej: INMOBILIARIA ALEMANIA" class="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm font-bold shadow-inner">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Supervisión</label>
+                                <input type="text" id="configRdiSupervision" placeholder="Ej: ING. JORGE CHAUCA" class="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm font-bold shadow-inner">
+                            </div>
+                            <div class="md:col-span-2 border-t border-slate-200 mt-2 pt-4">
+                                <label class="text-[10px] font-bold text-slate-800 uppercase tracking-widest mb-2 block"><i class="fa-regular fa-clock"></i> Tiempos de Respuesta (Días)</label>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <div><span class="text-xs font-bold text-red-600 block mb-1">ALTA</span><input type="number" id="configRdiDiasAlta" value="1" min="0" class="w-full border border-slate-300 p-2 rounded text-center font-mono focus:outline-none focus:ring-1 focus:ring-red-500"></div>
+                                    <div><span class="text-xs font-bold text-amber-500 block mb-1">MEDIA</span><input type="number" id="configRdiDiasMedia" value="3" min="0" class="w-full border border-slate-300 p-2 rounded text-center font-mono focus:outline-none focus:ring-1 focus:ring-amber-500"></div>
+                                    <div><span class="text-xs font-bold text-emerald-600 block mb-1">BAJA</span><input type="number" id="configRdiDiasBaja" value="5" min="0" class="w-full border border-slate-300 p-2 rounded text-center font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500"></div>
+                                </div>
                             </div>
                         </div>
+                        <div class="w-full md:w-64 flex flex-col gap-4">
+                            <div class="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-xl bg-white p-4 h-48">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Logo del Proyecto</span>
+                                <img id="previewLogoRDI" src="" class="max-w-full max-h-24 object-contain hidden" alt="Logo RDI">
+                                <i id="placeholderLogoRDI" class="fa-solid fa-image text-4xl text-slate-300"></i>
+                            </div>
+                            <input type="file" id="configRdiLogo" accept="image/png, image/jpeg" class="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:font-bold file:bg-emerald-100 file:text-emerald-700 hover:file:bg-emerald-200 cursor-pointer bg-white border border-slate-300 rounded-lg">
+                        </div>
+                    </div>
+                    <div class="flex justify-end">
+                        <button onclick="window.guardarConfiguracionRDI()" id="btnGuardarConfigRdi" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 py-3 rounded-xl shadow-md transition cursor-pointer flex items-center justify-center gap-2 opacity-50 pointer-events-none">
+                            <i class="fa-solid fa-floppy-disk"></i> Guardar Formato
+                        </button>
+                    </div>
+                </div>
                         <div class="w-full md:w-64 flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-xl bg-white p-4">
                             <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Logo Actual</span>
                             <img id="previewLogoRDI" src="" class="max-w-full max-h-24 object-contain hidden" alt="Logo RDI">
@@ -629,7 +663,14 @@
                                 </div>
                                 <div>
                                     <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Emisor (Pregunta)</label>
-                                    <input type="text" id="rdiEmisor" placeholder="Tu nombre / Cargo" class="w-full bg-white border border-slate-300 text-slate-700 text-sm rounded focus:ring-amber-500 focus:border-amber-500 p-2 font-bold outline-none">
+                                    <div class="flex">
+                                        <select id="rdiTituloEmisor" class="bg-slate-100 border border-slate-300 border-r-0 text-slate-700 text-sm rounded-l focus:outline-none p-2 font-bold cursor-pointer">
+                                            <option value="ING.">ING.</option>
+                                            <option value="ARQ.">ARQ.</option>
+                                            <option value="">--</option>
+                                        </select>
+                                        <input type="text" id="rdiEmisor" placeholder="Tu nombre" class="w-full bg-white border border-slate-300 text-slate-700 text-sm rounded-r focus:ring-amber-500 focus:border-amber-500 p-2 font-bold outline-none uppercase">
+                                    </div>
                                 </div>
                                 <div>
                                     <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Receptor (Responde)</label>
@@ -658,7 +699,12 @@
                                     <input type="text" id="rdiAsunto" placeholder="Resumen corto del problema..." class="w-full bg-white border border-slate-300 text-slate-700 text-sm rounded focus:ring-amber-500 p-2 font-bold outline-none">
                                 </div>
                                 <div>
-                                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Descripción Detallada (Consulta)</label>
+                                    <div class="flex justify-between items-center mb-1">
+                                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Descripción Detallada (Consulta)</label>
+                                        <button id="btnDictadoRDI" onclick="window.toggleDictadoRDI()" type="button" class="text-[10px] font-bold text-slate-500 hover:text-red-500 hover:bg-red-50 transition px-2 py-1 bg-slate-100 border border-slate-200 rounded flex items-center gap-1 cursor-pointer shadow-sm">
+                                            <i class="fa-solid fa-microphone"></i> Iniciar Dictado
+                                        </button>
+                                    </div>
                                     <textarea id="rdiDescripcion" rows="4" placeholder="Ej: Tal como se observa en la FIGURA 01, la viga cruza la cisterna..." class="w-full bg-white border border-slate-300 text-slate-700 text-sm rounded focus:ring-amber-500 p-3 outline-none resize-none"></textarea>
                                 </div>
                                 
@@ -712,6 +758,9 @@
                         <button onclick="document.getElementById('modalEdicionRDI').classList.add('hidden')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs uppercase tracking-widest py-3 px-6 rounded-xl transition cursor-pointer">
                             Cancelar
                         </button>
+                        <button onclick="window.descargarExcelRDI_Actual()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-widest py-3 px-6 rounded-xl shadow transition cursor-pointer flex items-center gap-2">
+                            <i class="fa-solid fa-file-excel"></i> Exportar a Excel
+                        </button>
                         <button id="btnGuardarRDI" class="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs uppercase tracking-widest py-3 px-6 rounded-xl shadow transition cursor-pointer flex items-center gap-2">
                             <i class="fa-solid fa-cloud-arrow-up"></i> Guardar RDI en Nube
                         </button>
@@ -738,6 +787,58 @@
                     <div class="p-5 border-t border-slate-200 bg-white">
                         <button onclick="window.guardarMapeoTrabajadores()" class="w-full bg-slate-800 hover:bg-teal-600 text-white font-bold py-3 rounded-xl transition uppercase tracking-widest text-sm">
                             <i class="fa-solid fa-floppy-disk mr-2"></i> Guardar Memoria de Trabajadores
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- MODAL: EDITOR DE IMÁGENES RDI (ANOTACIONES) -->
+            <!-- ========================================== -->
+            <div id="modalEditorImagen" class="hidden fixed inset-0 bg-slate-900/95 z-[70] flex items-center justify-center p-4" tabindex="0">
+                <div class="bg-white rounded-[24px] w-full max-w-4xl flex flex-col overflow-hidden shadow-2xl">
+                    <div class="bg-slate-800 p-4 flex justify-between items-center text-white">
+                        <h3 class="font-extrabold tracking-widest uppercase flex items-center gap-2">
+                            <i class="fa-solid fa-paintbrush"></i> Editor de Sustentos Visuales
+                        </h3>
+                        <button onclick="window.cerrarEditorImagen()" class="hover:text-red-400 transition text-xl cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    
+                    <div class="bg-slate-100 p-3 flex flex-wrap gap-3 border-b border-slate-200 justify-center items-center">
+                        <input type="color" id="editorColorPicker" value="#FF0000" class="w-8 h-8 rounded cursor-pointer border border-slate-300" title="Color de herramienta">
+                        
+                        <button onclick="window.setHerramienta('rect')" class="bg-white border border-slate-300 text-slate-700 px-3 py-1.5 rounded shadow-sm hover:bg-slate-50 font-bold text-xs focus:ring-2 focus:ring-slate-500 cursor-pointer">
+                            <i class="fa-regular fa-square text-red-600"></i> Recuadro
+                        </button>
+                        <button onclick="window.setHerramienta('arrow')" class="bg-white border border-slate-300 text-slate-700 px-3 py-1.5 rounded shadow-sm hover:bg-slate-50 font-bold text-xs focus:ring-2 focus:ring-slate-500 cursor-pointer">
+                            <i class="fa-solid fa-arrow-right text-red-600"></i> Flecha
+                        </button>
+                        <button onclick="window.setHerramienta('text')" class="bg-white border border-slate-300 text-slate-700 px-3 py-1.5 rounded shadow-sm hover:bg-slate-50 font-bold text-xs focus:ring-2 focus:ring-slate-500 cursor-pointer">
+                            <i class="fa-solid fa-font text-red-600"></i> Texto
+                        </button>
+                        <!-- 🔥 NUEVA HERRAMIENTA: MOVER -->
+                        <button onclick="window.setHerramienta('move')" class="bg-blue-50 border border-blue-200 text-blue-700 px-3 py-1.5 rounded shadow-sm hover:bg-blue-100 font-bold text-xs focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                            <i class="fa-solid fa-arrows-up-down-left-right"></i> Mover
+                        </button>
+
+                        <div class="w-px h-6 bg-slate-300 mx-2"></div>
+                        
+                        <button onclick="window.deshacerPasoCanvas()" class="bg-slate-200 border border-slate-300 text-slate-700 px-3 py-1.5 rounded shadow-sm hover:bg-slate-300 font-bold text-xs cursor-pointer">
+                            <i class="fa-solid fa-rotate-left"></i> Deshacer
+                        </button>
+                        <button onclick="window.limpiarAnotaciones()" class="bg-red-50 border border-red-200 text-red-600 px-3 py-1.5 rounded shadow-sm hover:bg-red-100 font-bold text-xs cursor-pointer">
+                            <i class="fa-solid fa-trash-can"></i> Borrar Todo
+                        </button>
+                    </div>
+
+                    <div class="p-4 bg-slate-50 flex-1 overflow-auto flex justify-center items-center relative min-h-[400px]">
+                        <canvas id="canvasEditor" class="max-w-full shadow-md border border-slate-300 cursor-crosshair"></canvas>
+                    </div>
+
+                    <div class="p-4 border-t border-slate-200 bg-white flex justify-end gap-3">
+                        <button onclick="window.cerrarEditorImagen()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs uppercase tracking-widest py-3 px-6 rounded-xl transition cursor-pointer">Cancelar</button>
+                        <button onclick="window.guardarImagenEditada()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-widest py-3 px-6 rounded-xl shadow transition flex items-center gap-2 cursor-pointer">
+                            <i class="fa-solid fa-floppy-disk"></i> Guardar Cambios
                         </button>
                     </div>
                 </div>
@@ -5527,6 +5628,49 @@ window.iniciarNuevoReporte = function() {
                 btn.disabled = false;
             }
         };
+        // Función para Eliminar Proyecto
+        window.eliminarProyecto = async function(nombreProyecto) {
+            if (!confirm(`⚠️ PELIGRO: ¿Estás totalmente seguro de ELIMINAR el proyecto "${nombreProyecto}"?\n\nEsto borrará el proyecto de la lista principal para todos los usuarios. Esta acción no se puede deshacer.`)) {
+                return;
+            }
+            try {
+                // Borramos el documento de la colección de proyectos en Firebase
+                const docRef = window.fsDoc(window.firebaseDb, "proyectos", nombreProyecto);
+                await window.fsDeleteDoc(docRef);
+                
+                alert(`🗑️ El proyecto "${nombreProyecto}" ha sido eliminado de la plataforma.`);
+                // La pantalla se actualizará sola gracias al vigilante en tiempo real (onSnapshot)
+            } catch (error) {
+                console.error("Error al eliminar proyecto:", error);
+                alert("❌ Ocurrió un error al intentar eliminar el proyecto. Revisa tus permisos.");
+            }
+        };
+
+        // Función para Actualizar la Foto de un Proyecto Existente
+        window.actualizarLogoProyecto = async function(nombreProyecto, inputElement) {
+            if (!inputElement.files || inputElement.files.length === 0) return;
+            
+            const archivo = inputElement.files[0];
+            alert(`⏳ Subiendo nuevo logo para ${nombreProyecto}... Por favor espera.`);
+            
+            try {
+                // Subir nueva foto al Storage
+                const storageRef = window.fsRef(window.firebaseStorage, `logos/${nombreProyecto}_${Date.now()}_${archivo.name}`);
+                await window.fsUploadBytes(storageRef, archivo);
+                const nuevoLogoUrl = await window.fsGetDownloadURL(storageRef);
+
+                // Actualizar el documento en Firestore
+                const docRef = window.fsDoc(window.firebaseDb, "proyectos", nombreProyecto);
+                await window.fsSetDoc(docRef, { logo: nuevoLogoUrl }, { merge: true });
+                
+                alert(`✅ El logo del proyecto "${nombreProyecto}" se actualizó exitosamente.`);
+            } catch (error) {
+                console.error("Error al actualizar logo:", error);
+                alert("❌ Ocurrió un error al intentar actualizar la imagen.");
+            } finally {
+                inputElement.value = ''; // Reseteamos el input
+            }
+        };
         // ==========================================
         // LÓGICA DE PESTAÑAS Y ADMINISTRACIÓN EN AJUSTES
         // ==========================================
@@ -5549,11 +5693,11 @@ window.iniciarNuevoReporte = function() {
             if (activeTab) activeTab.classList.remove('hidden');
             if (activeBtn) activeBtn.className = "text-center px-4 py-2.5 rounded-full font-bold text-[11px] uppercase tracking-widest border-2 border-slate-900 text-slate-900 transition cursor-pointer shadow-sm";
 
+            // 🔥 CORRECCIÓN: Separamos las llamadas para que cada pestaña ejecute su propia función
             if (tab === 'usuarios') window.cargarUsuariosAdmin();
+            if (tab === 'formatoRdi') window.cargarConfiguracionRDIAdmin(); 
             if (tab === 'auditoria') {
-            if (tab === 'formatoRdi') window.cargarConfiguracionRDIAdmin();
                 window.cargarReglasAuditoriaAdmin();
-                // 🔥 FORZAR ACTUALIZACIÓN DEL DESPLEGABLE AL ABRIR LA PESTAÑA
                 if (typeof window.actualizarDropdownReglasIA === 'function') window.actualizarDropdownReglasIA();
             }
         };
@@ -5564,7 +5708,16 @@ window.iniciarNuevoReporte = function() {
                 const snap = await window.fsGetDoc(docRef);
                 if (snap.exists()) {
                     const data = snap.data();
+                    window.configRDIGlobal = data; // Lo guardamos en memoria para usarlo al exportar
+                    
                     document.getElementById('configRdiEmpresa').value = data.nombreEmpresa || '';
+                    document.getElementById('configRdiCliente').value = data.cliente || '';
+                    document.getElementById('configRdiContratista').value = data.contratista || '';
+                    document.getElementById('configRdiSupervision').value = data.supervision || '';
+                    document.getElementById('configRdiDiasAlta').value = data.diasAlta !== undefined ? data.diasAlta : 1;
+                    document.getElementById('configRdiDiasMedia').value = data.diasMedia !== undefined ? data.diasMedia : 3;
+                    document.getElementById('configRdiDiasBaja').value = data.diasBaja !== undefined ? data.diasBaja : 5;
+                    
                     if (data.logoUrl) {
                         document.getElementById('previewLogoRDI').src = data.logoUrl;
                         document.getElementById('previewLogoRDI').classList.remove('hidden');
@@ -5575,7 +5728,7 @@ window.iniciarNuevoReporte = function() {
         };
 
         window.guardarConfiguracionRDI = async function() {
-            const btn = document.querySelector('#tabFormatoRdi button');
+            const btn = document.querySelector('#tabFormatoRdi button[onclick="window.guardarConfiguracionRDI()"]');
             const txtOriginal = btn.innerHTML;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
             btn.disabled = true;
@@ -5593,17 +5746,24 @@ window.iniciarNuevoReporte = function() {
 
                 const data = {
                     nombreEmpresa: document.getElementById('configRdiEmpresa').value.trim(),
+                    cliente: document.getElementById('configRdiCliente').value.trim(),
+                    contratista: document.getElementById('configRdiContratista').value.trim(),
+                    supervision: document.getElementById('configRdiSupervision').value.trim(),
+                    diasAlta: parseInt(document.getElementById('configRdiDiasAlta').value) || 1,
+                    diasMedia: parseInt(document.getElementById('configRdiDiasMedia').value) || 3,
+                    diasBaja: parseInt(document.getElementById('configRdiDiasBaja').value) || 5,
                     logoUrl: logoUrl !== window.location.href ? logoUrl : null
                 };
 
                 await window.fsSetDoc(window.fsDoc(window.firebaseDb, "configuracion", "rdi"), data, { merge: true });
+                window.configRDIGlobal = data; // Actualizar memoria
                 
                 if (data.logoUrl) {
                     document.getElementById('previewLogoRDI').src = data.logoUrl;
                     document.getElementById('previewLogoRDI').classList.remove('hidden');
                     document.getElementById('placeholderLogoRDI').classList.add('hidden');
                 }
-                alert("✅ Formato RDI actualizado.");
+                alert("✅ Formato RDI actualizado correctamente.");
             } catch(e) { alert("❌ Error al guardar."); console.error(e); } 
             finally { btn.innerHTML = txtOriginal; btn.disabled = false; }
         };
@@ -8690,34 +8850,48 @@ window.iniciarNuevoReporte = function() {
         };
 
         // ==========================================
-        // 1. MEJORAS EN EL MODAL DE ACTIVIDADES (BUSCADOR DATALIST)
+        // 1. MODAL ACTIVIDADES CON SELECT CLÁSICO (LISTA COMPLETA)
         // ==========================================
         window.mostrarModalActividades = function(actividadesPendientes) {
             const contenedor = document.getElementById('listaActividadesPendientes');
             contenedor.innerHTML = '';
 
-            // Crear datalist global para partidas si no existe (Buscador Nativo HTML)
-            let dl = document.getElementById('dl-partidas-s10');
-            if (!dl) {
-                dl = document.createElement('datalist');
-                dl.id = 'dl-partidas-s10';
-                document.body.appendChild(dl);
+            // Juntamos TODAS las partidas detectadas del S10 actual
+            let todasLasPartidas = new Set();
+            if (window.catalogoPartidasS10) window.catalogoPartidasS10.forEach(p => todasLasPartidas.add(p));
+            if (typeof partidaListKeys !== 'undefined') {
+                partidaListKeys.forEach(p => { 
+                    if (p !== 'ALL' && p !== 'OTRAS PARTIDAS') todasLasPartidas.add(p); 
+                });
             }
-            let dlHTML = '';
-            if (window.catalogoPartidasS10) {
-                window.catalogoPartidasS10.forEach(p => { dlHTML += `<option value="${p}">`; });
-            }
-            dl.innerHTML = dlHTML;
+
+            // Construimos las opciones HTML una sola vez para que sea súper rápido
+            let opcionesHTML = '<option value="">-- Selecciona una Partida Destino --</option>';
+            Array.from(todasLasPartidas).sort().forEach(p => { 
+                opcionesHTML += `<option value="${p}">${p}</option>`; 
+            });
 
             let html = '';
             actividadesPendientes.forEach(act => {
+                // Si la actividad ya tenía un mapeo previo en memoria, lo pre-seleccionamos
+                let preSeleccion = (window.traduccionPartidasTareo && window.traduccionPartidasTareo[act]) ? window.traduccionPartidasTareo[act] : "";
+                let selectOptions = opcionesHTML;
+                
+                if (preSeleccion) {
+                    selectOptions = selectOptions.replace(`value="${preSeleccion}"`, `value="${preSeleccion}" selected`);
+                }
+
                 html += `
                 <div class="bg-white p-4 rounded-xl border border-slate-200 mb-4 shadow-sm">
                     <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">ACTIVIDAD DEL EXCEL (CAPATAZ):</label>
                     <div class="text-indigo-700 font-extrabold text-sm mb-3"><i class="fa-solid fa-file-contract mr-2"></i>${act}</div>
-                    <input type="text" list="dl-partidas-s10" class="w-full border border-slate-300 rounded p-2 text-xs text-slate-700 font-bold focus:ring-2 focus:ring-indigo-500 map-actividad-input" data-original="${act}" placeholder="Escribe para buscar partida S10 (Ej: TRAZO)...">
+                    <!-- SELECT CLÁSICO: Mostrará TODA la lista al darle clic -->
+                    <select class="w-full border border-slate-300 rounded p-2 text-xs text-slate-700 font-bold focus:ring-2 focus:ring-indigo-500 map-actividad-input cursor-pointer" data-original="${act}">
+                        ${selectOptions}
+                    </select>
                 </div>`;
             });
+            
             contenedor.innerHTML = html;
             document.getElementById('modalActividades').classList.remove('hidden');
         };
@@ -9703,14 +9877,14 @@ window.iniciarNuevoReporte = function() {
     </script>
     <script>
         // ==========================================
-        // EXPORTACIÓN A S10 - RECONSTRUCCIÓN EXACTA + NOMBRE DE PROYECTO LARGO (S10)
+        // EXPORTACIÓN A S10 - RECONSTRUCCIÓN EXACTA + ORDEN ALFABÉTICO + NOMBRE LARGO
         // ==========================================
         window.ejecutarExportacionNube = async function() {
             const btn = document.getElementById('btnExportacionNube');
             const originalHTML = btn.innerHTML;
 
             try {
-                // 🔥 1. AUTO-DESCARGA DESDE FIREBASE SI NO ESTÁ EN RAM
+                // 1. AUTO-DESCARGA DESDE FIREBASE SI NO ESTÁ EN RAM
                 if (!archivoPadronS10) {
                     if (window.currentPadronUrl) {
                         btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-down fa-bounce"></i> Descargando Matriz...';
@@ -9735,7 +9909,7 @@ window.iniciarNuevoReporte = function() {
                 btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando S10 Exacto...';
                 btn.disabled = true;
 
-                // 🔥 2. OBTENER EL NOMBRE LARGO EXACTO DEL PROYECTO S10 DESDE LA NUBE
+                // 2. OBTENER EL NOMBRE LARGO EXACTO DEL PROYECTO S10 DESDE LA NUBE
                 let proyectoCortoLobby = window.proyectoActualGlobal || document.getElementById('proyectoSelect')?.value || "";
                 let nombreLargoProyectoS10 = proyectoCortoLobby; // Fallback
                 
@@ -9764,7 +9938,7 @@ window.iniciarNuevoReporte = function() {
                     let dni = String(row[2] || '').trim(); // DNI en Columna C
                     if (dni.length >= 4 && !datosOriginalesObreros[dni]) {
                         datosOriginalesObreros[dni] = {
-                            nombre: row[3] || '',
+                            nombre: String(row[3] || '').trim(),
                             proy: row[4] || '', 
                             porcentaje: row[5] || ''
                         };
@@ -9775,7 +9949,6 @@ window.iniciarNuevoReporte = function() {
                 const wb = new ExcelJS.Workbook();
                 const ws = wb.addWorksheet(wsOriginalName);
 
-                // Configurar anchos de columna idénticos a S10
                 ws.getColumn(1).width = 6;   // A: Linea
                 ws.getColumn(2).width = 5;   // B: Visible para combinar
                 ws.getColumn(2).hidden = true; 
@@ -9794,12 +9967,9 @@ window.iniciarNuevoReporte = function() {
                     let r = ws.addRow(rawAOA[i] || []);
                     r.font = { name: 'Arial', size: 9, bold: true };
                 }
-
-                // Combinar A y B en las primeras 5 filas
                 for (let i = 1; i <= 5; i++) {
                     ws.mergeCells(i, 1, i, 2); 
                 }
-                
                 ws.getCell('J2').font = { name: 'Arial', size: 12, bold: true }; 
 
                 // 6. DIBUJAR CABECERAS AMARILLAS S10 (Filas 6 y 7)
@@ -9837,7 +10007,7 @@ window.iniciarNuevoReporte = function() {
                     }
                 });
 
-                // 7. EXTRAER TAREO DE LA PANTALLA (E INYECTAR CONVENIOS DE LA MEMORIA)
+                // 7. EXTRAER TAREO DE LA PANTALLA (Ya viene con la suma matemática del vigilante)
                 const tbody = document.getElementById('tablaVistaPreviaTareo');
                 const filasTr = Array.from(tbody.querySelectorAll('tr')).filter(tr => !tr.classList.contains('sticky')); 
 
@@ -9856,9 +10026,6 @@ window.iniciarNuevoReporte = function() {
                     let diasData = [];
                     const baseIndex = 6; 
                     
-                    // 🔥 LA MATEMÁTICA: Rescatar horas de convenio de la memoria para este DNI
-                    let conveniosDNI = (window.mapeoConveniosTareo && window.mapeoConveniosTareo[dni]) ? window.mapeoConveniosTareo[dni] : [0,0,0,0,0,0];
-
                     for(let i = 0; i < 7; i++) {
                         let idxPartida = baseIndex + (i * 3);
                         let idxConcepto = baseIndex + (i * 3) + 1;
@@ -9871,23 +10038,24 @@ window.iniciarNuevoReporte = function() {
                         let partida = tdP ? (tdP.querySelector('.selector-partida-fila')?.value || tdP.innerText.trim()) : "";
                         let concepto = tdC ? (tdC.querySelector('.selector-concepto-fila')?.value || tdC.innerText.trim()) : "";
                         let horasStr = tdH ? (tdH.querySelector('.input-horas-fila')?.value || tdH.innerText.trim()) : "0";
-                        
-                        let horasBase = parseFloat(horasStr) || 0;
+                        let horas = parseFloat(horasStr) || 0;
 
-                        // 🔥 SUMAR CONVENIO (Solo de Lunes a Sábado, índices 0 al 5)
-                        let horasConvenio = (i < 6) ? (parseFloat(conveniosDNI[i]) || 0) : 0;
-                        let horasTotalesReales = horasBase + horasConvenio;
-
-                        if (horasTotalesReales > 0) diasData[i] = { partida, concepto, horas: horasTotalesReales };
+                        if (horas > 0) diasData[i] = { partida, concepto, horas };
                         else diasData[i] = null;
                     }
                     trabajadoresAgrupados[dni].push({ linea, dias: diasData });
                 });
 
-                // 8. INYECTAR DATOS 
+                // 8. INYECTAR DATOS EN EL EXCEL 
                 let currentRow = 8;
                 const columnasInicioDia = [7, 10, 13, 16, 19, 22, 25];
-                let dnisOrdenados = Object.keys(trabajadoresAgrupados).sort();
+                
+                // 🔥 CORRECCIÓN: ORDENAR ESTRICTAMENTE POR NOMBRE ALFABÉTICO (NO POR DNI)
+                let dnisOrdenados = Object.keys(trabajadoresAgrupados).sort((dniA, dniB) => {
+                    let nombreA = (datosOriginalesObreros[dniA]?.nombre || "").toUpperCase();
+                    let nombreB = (datosOriginalesObreros[dniB]?.nombre || "").toUpperCase();
+                    return nombreA.localeCompare(nombreB);
+                });
 
                 dnisOrdenados.forEach(dni => {
                     let filasTareo = trabajadoresAgrupados[dni];
@@ -9899,7 +10067,6 @@ window.iniciarNuevoReporte = function() {
                         rowData[0] = (wd.linea && !isNaN(wd.linea)) ? Number(wd.linea) : wd.linea;
                         rowData[2] = dni;
                         rowData[3] = originalData.nombre;
-                        // 🔥 REEMPLAZO EXACTO DEL PROYECTO: Usa el original o inyecta el largo descargado de Firebase
                         rowData[4] = originalData.proy || nombreLargoProyectoS10;
                         rowData[5] = originalData.porcentaje;
 
@@ -9914,7 +10081,6 @@ window.iniciarNuevoReporte = function() {
                         
                         let excelRow = ws.addRow(rowData);
                         
-                        // Combinar A y B
                         ws.mergeCells(currentRow, 1, currentRow, 2);
 
                         for (let c = 1; c <= 27; c++) {
@@ -9994,7 +10160,7 @@ window.iniciarNuevoReporte = function() {
                 btn.disabled = false;
             }
         };
-
+        
         // ==========================================
         // GESTIÓN DE CONVENIOS (MEMORIA FIREBASE)
         // ==========================================
@@ -10370,6 +10536,816 @@ window.iniciarNuevoReporte = function() {
             const tb = document.getElementById('tablaVistaPreviaTareo');
             if(tb) observerTablaTareo.observe(tb, { childList: true });
         }, 2000);
+    </script>
+    
+    <!-- ========================================== -->
+    <!-- MOTOR RDI MAESTRO: MATRIZ, EDITOR, NUBE Y EXCEL (MULTI-PROYECTO) -->
+    <!-- ========================================== -->
+    <script>
+        // --- 1. CONFIGURACIÓN RDI (POR PROYECTO) ---
+        window.cargarConfiguracionRDIAdmin = function() {
+            const selectAdmin = document.getElementById('configRdiProyectoSelect');
+            if (!selectAdmin) return;
+            
+            let valorActual = selectAdmin.value; 
+            selectAdmin.innerHTML = '<option value="">-- Selecciona un proyecto --</option>';
+            
+            // Leemos los proyectos de la memoria principal que carga al iniciar sesión
+            if (window.proyectosNube && Object.keys(window.proyectosNube).length > 0) {
+                Object.keys(window.proyectosNube).forEach(p => {
+                    selectAdmin.innerHTML += `<option value="${p}">${p}</option>`;
+                });
+            } else {
+                // Respaldo por si acaso, clona el menú superior
+                const selectSup = document.getElementById('proyectoSelect');
+                if (selectSup && selectSup.options.length > 1) {
+                    Array.from(selectSup.options).forEach(opt => {
+                        if (opt.value) selectAdmin.innerHTML += `<option value="${opt.value}">${opt.text}</option>`;
+                    });
+                }
+            }
+            
+            if (valorActual) selectAdmin.value = valorActual;
+            if (!selectAdmin.value) window.limpiarFormularioConfigRDI();
+        };
+
+        window.limpiarFormularioConfigRDI = function() {
+            document.getElementById('configRdiEmpresa').value = '';
+            document.getElementById('configRdiCliente').value = '';
+            document.getElementById('configRdiContratista').value = '';
+            document.getElementById('configRdiSupervision').value = '';
+            document.getElementById('configRdiDiasAlta').value = 1;
+            document.getElementById('configRdiDiasMedia').value = 3;
+            document.getElementById('configRdiDiasBaja').value = 5;
+            document.getElementById('previewLogoRDI').src = '';
+            document.getElementById('previewLogoRDI').classList.add('hidden');
+            document.getElementById('placeholderLogoRDI').classList.remove('hidden');
+            document.getElementById('configRdiLogo').value = '';
+            
+            document.getElementById('panelFormatoRdiControles').classList.add('opacity-50', 'pointer-events-none');
+            document.getElementById('btnGuardarConfigRdi').classList.add('opacity-50', 'pointer-events-none');
+        };
+
+        window.cargarConfigRDI_Proyecto = async function(proyecto) {
+            if (!proyecto) { window.limpiarFormularioConfigRDI(); return; }
+            
+            document.getElementById('panelFormatoRdiControles').classList.remove('opacity-50', 'pointer-events-none');
+            document.getElementById('btnGuardarConfigRdi').classList.remove('opacity-50', 'pointer-events-none');
+
+            try {
+                const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyecto}/configuracionRDI/formato`);
+                const snap = await window.fsGetDoc(docRef);
+                if (snap.exists()) {
+                    const data = snap.data();
+                    document.getElementById('configRdiEmpresa').value = data.nombreEmpresa || '';
+                    document.getElementById('configRdiCliente').value = data.cliente || '';
+                    document.getElementById('configRdiContratista').value = data.contratista || '';
+                    document.getElementById('configRdiSupervision').value = data.supervision || '';
+                    document.getElementById('configRdiDiasAlta').value = data.diasAlta !== undefined ? data.diasAlta : 1;
+                    document.getElementById('configRdiDiasMedia').value = data.diasMedia !== undefined ? data.diasMedia : 3;
+                    document.getElementById('configRdiDiasBaja').value = data.diasBaja !== undefined ? data.diasBaja : 5;
+                    
+                    if (data.logoUrl) {
+                        document.getElementById('previewLogoRDI').src = data.logoUrl;
+                        document.getElementById('previewLogoRDI').classList.remove('hidden');
+                        document.getElementById('placeholderLogoRDI').classList.add('hidden');
+                    } else {
+                        document.getElementById('previewLogoRDI').classList.add('hidden');
+                        document.getElementById('placeholderLogoRDI').classList.remove('hidden');
+                    }
+                } else {
+                    document.getElementById('configRdiEmpresa').value = '';
+                    document.getElementById('configRdiCliente').value = '';
+                    document.getElementById('configRdiContratista').value = '';
+                    document.getElementById('configRdiSupervision').value = '';
+                    document.getElementById('previewLogoRDI').classList.add('hidden');
+                    document.getElementById('placeholderLogoRDI').classList.remove('hidden');
+                }
+            } catch(e) {}
+        };
+
+        window.guardarConfiguracionRDI = async function() {
+            const proyecto = document.getElementById('configRdiProyectoSelect').value;
+            if (!proyecto) return alert("⚠️ Selecciona un proyecto primero.");
+
+            const btn = document.getElementById('btnGuardarConfigRdi');
+            const txtOrig = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...'; btn.disabled = true;
+
+            try {
+                let logoUrl = document.getElementById('previewLogoRDI').src;
+                const fileInput = document.getElementById('configRdiLogo');
+                if (fileInput.files.length > 0) {
+                    const storageRef = window.fsRef(window.firebaseStorage, `proyectos/${proyecto}/logo_rdi_${Date.now()}.${fileInput.files[0].name.split('.').pop()}`);
+                    await window.fsUploadBytes(storageRef, fileInput.files[0]);
+                    logoUrl = await window.fsGetDownloadURL(storageRef);
+                }
+
+                const data = {
+                    nombreEmpresa: document.getElementById('configRdiEmpresa').value.trim(),
+                    cliente: document.getElementById('configRdiCliente').value.trim(),
+                    contratista: document.getElementById('configRdiContratista').value.trim(),
+                    supervision: document.getElementById('configRdiSupervision').value.trim(),
+                    diasAlta: parseInt(document.getElementById('configRdiDiasAlta').value) || 1,
+                    diasMedia: parseInt(document.getElementById('configRdiDiasMedia').value) || 3,
+                    diasBaja: parseInt(document.getElementById('configRdiDiasBaja').value) || 5,
+                    logoUrl: logoUrl && logoUrl.startsWith('http') ? logoUrl : null
+                };
+
+                await window.fsSetDoc(window.fsDoc(window.firebaseDb, `proyectos/${proyecto}/configuracionRDI/formato`), data, { merge: true });
+                
+                if (data.logoUrl) {
+                    document.getElementById('previewLogoRDI').src = data.logoUrl;
+                    document.getElementById('previewLogoRDI').classList.remove('hidden');
+                    document.getElementById('placeholderLogoRDI').classList.add('hidden');
+                }
+                alert(`✅ Formato RDI guardado para ${proyecto}.`);
+            } catch(e) { alert("❌ Error."); } finally { btn.innerHTML = txtOrig; btn.disabled = false; }
+        };
+
+        // --- 2. MATRIZ RDI Y CRUD ---
+        window.matrizRDIGlobal = [];
+
+        window.cargarMatrizRDI = function(proyecto) {
+            if (!proyecto) return;
+            const rdiRef = window.fsCollection(window.firebaseDb, `proyectos/${proyecto}/rdis`);
+            if (window.unsubRDI) window.unsubRDI();
+            
+            window.unsubRDI = window.fsOnSnapshot(rdiRef, (snapshot) => {
+                window.matrizRDIGlobal = [];
+                let emitidos = 0, pendientes = 0, absueltos = 0, modif = 0;
+
+                snapshot.forEach(doc => {
+                    let data = doc.data(); data.id = doc.id;
+                    if(!data.correlativo || data.correlativo === 'undefined') data.correlativo = doc.id;
+                    window.matrizRDIGlobal.push(data);
+
+                    emitidos++;
+                    let estado = data.resolucion || 'PENDIENTE';
+                    if (estado === 'PENDIENTE') pendientes++;
+                    else if (estado === 'CUMPLE') absueltos++;
+                    else if (estado === 'GENERA MODIFICACION PLANO') modif++;
+                });
+
+                if(document.getElementById('dashRdiTotal')) document.getElementById('dashRdiTotal').textContent = emitidos;
+                if(document.getElementById('dashRdiPendientes')) document.getElementById('dashRdiPendientes').textContent = pendientes;
+                if(document.getElementById('dashRdiAbsueltos')) document.getElementById('dashRdiAbsueltos').textContent = absueltos;
+                if(document.getElementById('dashRdiPlanos')) document.getElementById('dashRdiPlanos').textContent = modif;
+
+                window.renderizarMatrizRDI();
+            });
+        };
+
+        window.renderizarMatrizRDI = function() {
+            const tbody = document.getElementById('cuerpoMatrizRDI');
+            if (!tbody) return; tbody.innerHTML = '';
+            if (window.matrizRDIGlobal.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-400 italic">No hay RDIs creados en este proyecto aún.</td></tr>'; return; }
+            window.matrizRDIGlobal.sort((a, b) => (parseInt(a.correlativo) || 0) - (parseInt(b.correlativo) || 0));
+
+            window.matrizRDIGlobal.forEach(rdi => {
+                let badgeClass = 'bg-slate-100 text-slate-600';
+                let estadoTexto = rdi.resolucion || 'PENDIENTE';
+                if (estadoTexto === 'PENDIENTE') badgeClass = 'bg-red-100 text-red-700';
+                if (estadoTexto === 'CUMPLE') badgeClass = 'bg-emerald-100 text-emerald-700';
+                if (estadoTexto === 'GENERA MODIFICACION PLANO') badgeClass = 'bg-amber-100 text-amber-700';
+
+                let numRDI = String(rdi.correlativo).padStart(3, '0');
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                        <td class="p-3 font-bold text-slate-800">RDI-${numRDI}</td>
+                        <td class="p-3 text-xs">${rdi.fechaEmision || rdi.fecha || ''}</td>
+                        <td class="p-3"><span class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-[10px] font-bold">${rdi.especialidad || ''}</span></td>
+                        <td class="p-3 font-medium text-xs">${rdi.asunto || ''}</td>
+                        <td class="p-3 text-center"><span class="${badgeClass} px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider">${estadoTexto}</span></td>
+                        <td class="p-3 text-center">
+                            <div class="flex items-center justify-center gap-2">
+                                <button onclick="window.abrirModalEdicionRDI('${rdi.id}')" class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 hover:bg-blue-100 hover:text-blue-600 transition" title="Ver / Editar"><i class="fa-solid fa-eye"></i></button>
+                                <button onclick="window.descargarExcelRDI_ID('${rdi.id}', this)" class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-600 hover:text-white transition" title="Exportar Excel"><i class="fa-solid fa-file-excel"></i></button>
+                                <button onclick="window.eliminarRDI('${rdi.id}')" class="w-8 h-8 rounded-full bg-red-50 text-red-500 hover:bg-red-600 hover:text-white transition" title="Eliminar"><i class="fa-solid fa-trash-can"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+        };
+
+        window.abrirModalEdicionRDI = async function(id = null) {
+            const modal = document.getElementById('modalEdicionRDI');
+            const galeria = document.getElementById('rdiGaleriaMiniaturas');
+            if(galeria) { galeria.innerHTML = ''; galeria.classList.add('hidden'); }
+            
+            document.getElementById('rdiRespuestaTexto').value = ''; document.getElementById('rdiResolucion').value = 'PENDIENTE';
+            document.getElementById('rdiIncCosto').checked = false; document.getElementById('rdiIncPlazo').checked = false;
+            document.getElementById('rdiIncOtros').checked = false; document.getElementById('rdiIncOtrosTexto').value = '';
+            
+            if (id && typeof id === 'string') {
+                let rdi = window.matrizRDIGlobal.find(r => r.id === id);
+                if (rdi) {
+                    document.getElementById('tituloModalRDI').innerHTML = `EDITAR RDI-${String(rdi.correlativo).padStart(3, '0')}`;
+                    document.getElementById('rdiCorrelativo').value = rdi.correlativo;
+                    document.getElementById('rdiFechaEmision').value = rdi.fechaEmision || rdi.fecha || '';
+                    document.getElementById('rdiEspecialidad').value = rdi.especialidad || 'ESTRUCTURAS';
+                    document.getElementById('rdiPlano').value = rdi.plano || '';
+                    
+                    // Separar título de nombre si existe
+                    let emisorFull = rdi.emisor || '';
+                    if (emisorFull.startsWith('ING. ')) { document.getElementById('rdiTituloEmisor').value = 'ING.'; document.getElementById('rdiEmisor').value = emisorFull.replace('ING. ', ''); }
+                    else if (emisorFull.startsWith('ARQ. ')) { document.getElementById('rdiTituloEmisor').value = 'ARQ.'; document.getElementById('rdiEmisor').value = emisorFull.replace('ARQ. ', ''); }
+                    else { document.getElementById('rdiTituloEmisor').value = ''; document.getElementById('rdiEmisor').value = emisorFull; }
+
+                    document.getElementById('rdiReceptor').value = rdi.receptor || '';
+                    document.getElementById('rdiAsunto').value = rdi.asunto || '';
+                    document.getElementById('rdiDescripcion').value = rdi.descripcion || '';
+                    document.getElementById('rdiPrioridad').value = rdi.prioridad || 'MEDIA';
+                    
+                    document.getElementById('rdiRespuestaTexto').value = rdi.respuestaTexto || ''; document.getElementById('rdiResolucion').value = rdi.resolucion || 'PENDIENTE';
+                    document.getElementById('rdiIncCosto').checked = rdi.incidenciaCosto || false; document.getElementById('rdiIncPlazo').checked = rdi.incidenciaPlazo || false;
+                    document.getElementById('rdiIncOtros').checked = rdi.incidenciaOtros || false; document.getElementById('rdiIncOtrosTexto').value = rdi.incidenciaOtrosTexto || '';
+
+                    if (rdi.imagenesUrls && rdi.imagenesUrls.length > 0) rdi.imagenesUrls.filter(u => u && u.length > 50).forEach(url => window.agregarMiniaturaRDI(url));
+                    document.getElementById('seccionRespuestaRDI').classList.remove('hidden');
+                }
+            } else {
+                let nextId = 1;
+                if (window.matrizRDIGlobal && window.matrizRDIGlobal.length > 0) {
+                    let max = 0; window.matrizRDIGlobal.forEach(r => { let num = parseInt(r.correlativo); if (!isNaN(num) && num > max) max = num; }); nextId = max + 1;
+                }
+                document.getElementById('tituloModalRDI').innerHTML = 'NUEVO RDI';
+                document.getElementById('rdiCorrelativo').value = nextId; document.getElementById('rdiFechaEmision').value = new Date().toISOString().split('T')[0];
+                document.getElementById('rdiEspecialidad').value = 'ESTRUCTURAS'; document.getElementById('rdiPlano').value = ''; 
+                
+                // 🔥 AUTO-RELLENADO DE DATOS (GOOGLE Y FIREBASE)
+                let proyActivo = window.proyectoActualGlobal || document.getElementById('proyectoSelect')?.value || '';
+                let supervisorAuto = '';
+                if (proyActivo) {
+                    try {
+                        const configSnap = await window.fsGetDoc(window.fsDoc(window.firebaseDb, `proyectos/${proyActivo}/configuracionRDI/formato`));
+                        if (configSnap.exists() && configSnap.data().supervision) supervisorAuto = configSnap.data().supervision;
+                    } catch(e) {}
+                }
+                
+                let userGoogle = window.firebaseAuth?.currentUser;
+                let nombreAuto = userGoogle ? (userGoogle.displayName || userGoogle.email.split('@')[0]) : '';
+                
+                document.getElementById('rdiTituloEmisor').value = 'ING.'; // Por defecto
+                document.getElementById('rdiEmisor').value = nombreAuto.toUpperCase();
+                document.getElementById('rdiReceptor').value = supervisorAuto; 
+                
+                document.getElementById('rdiAsunto').value = ''; document.getElementById('rdiDescripcion').value = '';
+                document.getElementById('rdiPrioridad').value = 'MEDIA'; document.getElementById('seccionRespuestaRDI').classList.add('hidden');
+            }
+            modal.classList.remove('hidden');
+        };
+
+        window.eliminarRDI = async function(id) {
+            if(!confirm("⚠️ ¿Estás seguro de eliminar este RDI?")) return;
+            try { let proy = window.proyectoActualGlobal; await window.fsDeleteDoc(window.fsDoc(window.firebaseDb, `proyectos/${proy}/rdis/${id}`)); alert("🗑️ RDI eliminado."); } catch(e) { alert("❌ Error."); }
+        };
+
+        // --- 3. GUARDAR EN NUBE (STORAGE DE IMÁGENES) ---
+        window.guardarRDI_Nube_Seguro = async function() {
+            const btn = document.getElementById('btnGuardarRDI');
+            const txtOrig = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...'; btn.disabled = true;
+
+            try {
+                let proyecto = window.proyectoActualGlobal || document.getElementById('proyectoSelect')?.value;
+                let correlativo = document.getElementById('rdiCorrelativo')?.value.trim();
+                if (!proyecto || !correlativo) return alert("❌ Error: Falta el Proyecto o N°.");
+
+                let tituloEmisor = document.getElementById('rdiTituloEmisor')?.value || '';
+                let nombreEmisor = document.getElementById('rdiEmisor')?.value.trim() || '';
+                let emisorCompleto = (tituloEmisor + ' ' + nombreEmisor).trim();
+
+                const rdiData = {
+                    correlativo: correlativo, fechaEmision: document.getElementById('rdiFechaEmision')?.value || '', especialidad: document.getElementById('rdiEspecialidad')?.value || '',
+                    plano: document.getElementById('rdiPlano')?.value || '', emisor: emisorCompleto, receptor: document.getElementById('rdiReceptor')?.value || '',
+                    asunto: document.getElementById('rdiAsunto')?.value || '', descripcion: document.getElementById('rdiDescripcion')?.value || '', prioridad: document.getElementById('rdiPrioridad')?.value || 'MEDIA',
+                    respuestaTexto: document.getElementById('rdiRespuestaTexto')?.value || '', resolucion: document.getElementById('rdiResolucion')?.value || 'PENDIENTE',
+                    incidenciaCosto: document.getElementById('rdiIncCosto')?.checked || false, incidenciaPlazo: document.getElementById('rdiIncPlazo')?.checked || false, incidenciaOtros: document.getElementById('rdiIncOtros')?.checked || false, incidenciaOtrosTexto: document.getElementById('rdiIncOtrosTexto')?.value || '',
+                    imagenesUrls: [] 
+                };
+
+                const imgs = document.querySelectorAll('#rdiGaleriaMiniaturas .miniatura-rdi');
+                for (let i = 0; i < imgs.length; i++) {
+                    let src = imgs[i].src;
+                    if (!src || src.length < 100 || src === window.location.href) continue;
+                    if (src.startsWith('http')) { rdiData.imagenesUrls.push(src); } 
+                    else {
+                        let res = await fetch(src); let blob = await res.blob();
+                        let storageRef = window.fsRef(window.firebaseStorage, `proyectos/${proyecto}/rdis/${correlativo}_img_${i}_${Date.now()}.png`);
+                        await window.fsUploadBytes(storageRef, blob);
+                        rdiData.imagenesUrls.push(await window.fsGetDownloadURL(storageRef));
+                    }
+                }
+
+                await window.fsSetDoc(window.fsDoc(window.firebaseDb, `proyectos/${proyecto}/rdis/${correlativo}`), rdiData, { merge: true });
+                document.getElementById('modalEdicionRDI').classList.add('hidden');
+            } catch (e) { alert("❌ Ocurrió un error."); } finally { btn.innerHTML = txtOrig; btn.disabled = false; }
+        };
+
+        setTimeout(() => {
+            const btnOld = document.getElementById('btnGuardarRDI');
+            if (btnOld) {
+                const btnNew = btnOld.cloneNode(true); btnOld.parentNode.replaceChild(btnNew, btnOld);
+                btnNew.addEventListener('click', window.guardarRDI_Nube_Seguro);
+            }
+        }, 2000);
+
+        // --- 4. CÁPSULA: EDITOR VECTORIAL, PEGADO SEGURO Y DICTADO POR VOZ ---
+        if (window._pasteListenerRDI) document.removeEventListener('paste', window._pasteListenerRDI);
+        
+        document.addEventListener('paste', window._pasteListenerRDI = function(e) {
+            const modalRDI = document.getElementById('modalEdicionRDI');
+            if (modalRDI && !modalRDI.classList.contains('hidden')) {
+                const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+                let imagenPegada = false; // Bloqueador para aceptar solo 1 imagen por intento
+
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.indexOf('image/') !== -1 && !imagenPegada) {
+                        const blob = items[i].getAsFile(); 
+                        
+                        // 🔥 BARRERA DEFINITIVA: Si el archivo pesa menos de 1 KB, es un fantasma del portapapeles. ¡Lo ignoramos!
+                        if (!blob || blob.size < 1024) continue; 
+                        
+                        e.preventDefault(); 
+                        imagenPegada = true; 
+
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            let res = event.target.result;
+                            // 🔥 BARRERA 2: Exigimos que el Base64 sea lo suficientemente largo para ser una imagen real
+                            if (res && res.length > 5000) {
+                                window.agregarMiniaturaRDI(res);
+                            }
+                        };
+                        reader.readAsDataURL(blob);
+                    }
+                }
+            }
+        });
+
+        window.agregarMiniaturaRDI = function(srcUrl) {
+            const galeria = document.getElementById('rdiGaleriaMiniaturas');
+            if(galeria) galeria.classList.remove('hidden');
+            const div = document.createElement('div');
+            div.className = "relative group cursor-pointer border-2 border-transparent hover:border-amber-500 rounded-lg overflow-hidden shadow-sm";
+            div.innerHTML = `
+                <img src="${srcUrl}" class="h-32 w-auto object-contain bg-white miniatura-rdi" onclick="window.abrirEditorImagen(this.src, this)" title="Clic para editar">
+                <div class="absolute inset-0 bg-black/40 hidden group-hover:flex items-center justify-center pointer-events-none transition"><i class="fa-solid fa-paintbrush text-white text-3xl"></i></div>
+                <button onclick="event.stopPropagation(); this.parentElement.remove()" class="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white rounded-full w-7 h-7 flex items-center justify-center opacity-0 group-hover:opacity-100 transition z-10 cursor-pointer shadow-md"><i class="fa-solid fa-xmark text-sm"></i></button>
+            `;
+            galeria.appendChild(div);
+        };
+
+        // 🔥 MOTOR DE DICTADO POR VOZ (TIEMPO REAL)
+        let motorReconocimientoVoz;
+        window.isDictating = false;
+
+        window.toggleDictadoRDI = function() {
+            const btn = document.getElementById('btnDictadoRDI');
+            const textarea = document.getElementById('rdiDescripcion');
+            
+            if (window.isDictating) {
+                if (motorReconocimientoVoz) motorReconocimientoVoz.stop();
+                return;
+            }
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert("⚠️ Tu navegador no soporta el dictado por voz. Usa Google Chrome o Microsoft Edge.");
+                return;
+            }
+
+            motorReconocimientoVoz = new SpeechRecognition();
+            motorReconocimientoVoz.lang = 'es-PE'; 
+            motorReconocimientoVoz.interimResults = true; // 🔥 CRUCIAL: Permite leer en tiempo real
+            motorReconocimientoVoz.continuous = true;
+
+            let textoEstable = textarea.value; // Memoria del texto que ya estaba escrito
+
+            motorReconocimientoVoz.onstart = function() {
+                window.isDictating = true;
+                btn.innerHTML = '<i class="fa-solid fa-microphone-lines fa-fade text-red-600"></i> Escuchando...';
+                btn.classList.add('bg-red-100', 'border-red-300');
+                textoEstable = textarea.value;
+            };
+
+            motorReconocimientoVoz.onresult = function(event) {
+                let transcripcionInterina = '';
+                let transcripcionFinal = '';
+
+                // Separar lo que ya entendió bien, de lo que aún está analizando
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        transcripcionFinal += event.results[i][0].transcript;
+                    } else {
+                        transcripcionInterina += event.results[i][0].transcript;
+                    }
+                }
+                
+                // Si consolidó una frase, la suma a la memoria
+                if (transcripcionFinal) {
+                    textoEstable = (textoEstable ? textoEstable + ' ' : '') + transcripcionFinal.trim();
+                }
+
+                // Escribe en tiempo real: La memoria estable + lo que está procesando
+                textarea.value = (textoEstable + ' ' + transcripcionInterina).trim();
+                textarea.scrollTop = textarea.scrollHeight; // Auto-scroll hacia abajo
+            };
+
+            motorReconocimientoVoz.onerror = function(event) {
+                console.warn("Interrupción: ", event.error);
+                window.detenerDictado();
+            };
+
+            motorReconocimientoVoz.onend = function() { window.detenerDictado(); };
+            motorReconocimientoVoz.start();
+        };
+
+        window.detenerDictado = function() {
+            window.isDictating = false;
+            const btn = document.getElementById('btnDictadoRDI');
+            if(btn) {
+                btn.innerHTML = '<i class="fa-solid fa-microphone"></i> Iniciar Dictado';
+                btn.classList.remove('bg-red-100', 'border-red-300');
+            }
+        };
+
+        // El Editor Vectorial (Canvas) se mantiene intacto para mover flechas
+        (function() {
+            let canvasEd = null, ctxEd = null, imgOriginal = new Image();
+            let herramientaActual = 'rect', isDrawing = false, isDragging = false;
+            let startX, startY, miniaturaRef = null, elementosCanvas = [], elementoArrastrado = null;
+            imgOriginal.crossOrigin = "Anonymous"; 
+
+            window.setHerramienta = function(h) { herramientaActual = h; if(canvasEd) canvasEd.style.cursor = h === 'move' ? 'move' : 'crosshair'; };
+            document.addEventListener('keydown', function(e) { if (e.key === 'Escape') { const modalEd = document.getElementById('modalEditorImagen'); if (modalEd && !modalEd.classList.contains('hidden')) window.cerrarEditorImagen(); } });
+            window.deshacerPasoCanvas = function() { if (elementosCanvas.length > 0) { elementosCanvas.pop(); renderizarLienzo(); } };
+            window.limpiarAnotaciones = function() { elementosCanvas = []; renderizarLienzo(); };
+
+            function renderizarLienzo() {
+                if(!ctxEd) return; ctxEd.clearRect(0, 0, canvasEd.width, canvasEd.height); ctxEd.drawImage(imgOriginal, 0, 0);
+                elementosCanvas.forEach(el => {
+                    ctxEd.strokeStyle = el.color; ctxEd.fillStyle = el.color; ctxEd.lineWidth = el.grosor;
+                    if (el.tipo === 'rect') { ctxEd.beginPath(); ctxEd.rect(el.x1, el.y1, el.x2 - el.x1, el.y2 - el.y1); ctxEd.stroke(); } 
+                    else if (el.tipo === 'arrow') {
+                        const headlen = 20; const angle = Math.atan2(el.y2 - el.y1, el.x2 - el.x1);
+                        ctxEd.beginPath(); ctxEd.moveTo(el.x1, el.y1); ctxEd.lineTo(el.x2, el.y2); ctxEd.stroke();
+                        ctxEd.beginPath(); ctxEd.moveTo(el.x2, el.y2); ctxEd.lineTo(el.x2 - headlen * Math.cos(angle - Math.PI / 6), el.y2 - headlen * Math.sin(angle - Math.PI / 6)); ctxEd.lineTo(el.x2 - headlen * Math.cos(angle + Math.PI / 6), el.y2 - headlen * Math.sin(angle + Math.PI / 6)); ctxEd.fill();
+                    } else if (el.tipo === 'text') { ctxEd.font = `bold ${Math.max(20, canvasEd.width * 0.025)}px Arial`; ctxEd.fillText(el.texto, el.x1, el.y1); }
+                });
+            }
+
+            function hitTest(x, y) {
+                for(let i = elementosCanvas.length - 1; i >= 0; i--) {
+                    let el = elementosCanvas[i];
+                    let mX = Math.min(el.x1, el.x2 || el.x1), mxX = Math.max(el.x1, el.x2 || el.x1);
+                    let mY = Math.min(el.y1, el.y2 || el.y1), mxY = Math.max(el.y1, el.y2 || el.y1);
+                    if (el.tipo === 'text') { mxX += 150; mxY += 10; mY -= 30; } 
+                    if (x >= mX - 20 && x <= mxX + 20 && y >= mY - 20 && y <= mxY + 20) return el;
+                }
+                return null;
+            }
+
+            window.abrirEditorImagen = function(imgSrc, imgEl) {
+                miniaturaRef = imgEl; canvasEd = document.getElementById('canvasEditor'); ctxEd = canvasEd.getContext('2d');
+                elementosCanvas = []; window.setHerramienta('rect');
+                imgOriginal = new Image(); 
+                imgOriginal.src = imgSrc;
+                imgOriginal.onload = () => {
+                    canvasEd.width = imgOriginal.width; canvasEd.height = imgOriginal.height; renderizarLienzo();
+                    document.getElementById('modalEditorImagen').classList.remove('hidden'); document.getElementById('modalEditorImagen').focus();
+                };
+                let dragStartX, dragStartY;
+                canvasEd.onmousedown = (e) => {
+                    const rect = canvasEd.getBoundingClientRect(); const curX = (e.clientX - rect.left) * (canvasEd.width / rect.width); const curY = (e.clientY - rect.top) * (canvasEd.height / rect.height);
+                    const colorEscogido = document.getElementById('editorColorPicker').value;
+                    if (herramientaActual === 'move') {
+                        elementoArrastrado = hitTest(curX, curY);
+                        if (elementoArrastrado) { isDragging = true; dragStartX = curX; dragStartY = curY; }
+                    } else if (herramientaActual === 'text') {
+                        let texto = prompt("Ingresa el texto a colocar:");
+                        if (texto) { elementosCanvas.push({ tipo: 'text', x1: curX, y1: curY, color: colorEscogido, texto: texto, grosor: 0 }); renderizarLienzo(); }
+                    } else {
+                        isDrawing = true; startX = curX; startY = curY;
+                        elementoArrastrado = { tipo: herramientaActual, x1: curX, y1: curY, x2: curX, y2: curY, color: colorEscogido, grosor: Math.max(3, canvasEd.width * 0.005) };
+                        elementosCanvas.push(elementoArrastrado);
+                    }
+                };
+                canvasEd.onmousemove = (e) => {
+                    const rect = canvasEd.getBoundingClientRect(); const curX = (e.clientX - rect.left) * (canvasEd.width / rect.width); const curY = (e.clientY - rect.top) * (canvasEd.height / rect.height);
+                    if (isDrawing && elementoArrastrado) { elementoArrastrado.x2 = curX; elementoArrastrado.y2 = curY; renderizarLienzo(); } 
+                    else if (isDragging && elementoArrastrado) {
+                        let dx = curX - dragStartX; let dy = curY - dragStartY;
+                        elementoArrastrado.x1 += dx; elementoArrastrado.y1 += dy;
+                        if (elementoArrastrado.x2 !== undefined) { elementoArrastrado.x2 += dx; elementoArrastrado.y2 += dy; }
+                        dragStartX = curX; dragStartY = curY; renderizarLienzo();
+                    }
+                };
+                canvasEd.onmouseup = () => { isDrawing = false; isDragging = false; elementoArrastrado = null; };
+                canvasEd.onmouseleave = () => { isDrawing = false; isDragging = false; };
+            };
+            window.cerrarEditorImagen = function() { document.getElementById('modalEditorImagen').classList.add('hidden'); };
+            
+            window.guardarImagenEditada = function() { 
+                if (miniaturaRef && canvasEd) { try { let nuevaB64 = canvasEd.toDataURL('image/jpeg', 0.9); if (nuevaB64.length > 100) miniaturaRef.src = nuevaB64; } catch(e) {} } 
+                window.cerrarEditorImagen(); 
+            };
+        })();
+
+        // --- 5. MEGA-EXPORTADOR A EXCEL S10 (REDDISEÑO DE PRECISIÓN MILIMÉTRICA) ---
+        window.procesarExcelRDI = async function(rdiData) {
+            let config = window.configRDIGlobal || {};
+            try {
+                if (rdiData.proyecto) {
+                    const configSnap = await window.fsGetDoc(window.fsDoc(window.firebaseDb, `proyectos/${rdiData.proyecto}/configuracionRDI/formato`));
+                    if (configSnap.exists()) config = configSnap.data();
+                }
+            } catch(e) {}
+
+            const wb = new ExcelJS.Workbook(); 
+            let numRDIFormateado = String(rdiData.correlativo).padStart(3, '0');
+            const ws = wb.addWorksheet(`RDI N°${numRDIFormateado}`, { views: [{ showGridLines: false }] });
+
+            for (let i = 1; i <= 35; i++) ws.getColumn(i).width = 3.5;
+            ws.getColumn(1).width = 2; ws.getColumn(2).width = 4; 
+            ws.eachRow(row => { row.font = { name: 'Arial', size: 9 }; });
+
+            function drawBoxBorder(startCol, startRow, endCol, endRow) {
+                for (let r = startRow; r <= endRow; r++) {
+                    for (let c = startCol; c <= endCol; c++) {
+                        let cell = ws.getCell(r, c);
+                        let border = { ...cell.border };
+                        if (r === startRow) border.top = { style: 'medium' };
+                        if (r === endRow) border.bottom = { style: 'medium' };
+                        if (c === startCol) border.left = { style: 'medium' };
+                        if (c === endCol) border.right = { style: 'medium' };
+                        cell.border = border;
+                    }
+                }
+            }
+
+            // Cabecera Principal
+            ws.mergeCells('B1:F4'); ws.getCell('B1').border = { top: {style:'thin'}, bottom: {style:'thin'}, left: {style:'thin'}, right: {style:'thin'} };
+            ws.mergeCells('G1:AI2'); let t1 = ws.getCell('G1'); t1.value = config.nombreEmpresa || "SISTEMA INTEGRADO DE GESTIÓN";
+            t1.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 }; t1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF000000' } }; t1.alignment = { horizontal: 'center', vertical: 'middle' };
+            ws.mergeCells('G3:AI4'); let t2 = ws.getCell('G3'); t2.value = "REQUERIMIENTO DE INFORMACION";
+            t2.font = { bold: true, size: 11 }; t2.alignment = { horizontal: 'center', vertical: 'middle' }; t2.border = { top: {style:'thin'}, bottom: {style:'thin'}, left: {style:'thin'}, right: {style:'thin'} };
+
+            ws.mergeCells('B5:AI5'); let dg = ws.getCell('B5'); dg.value = "DATOS GENERALES"; dg.font = { bold: true, color: { argb: 'FFFFFFFF' } }; dg.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF000000' } };
+
+            // 🔥 ALINEACIÓN A LA IZQUIERDA PARA DATOS GENERALES
+            const estiloT = { font: { bold: true }, border: { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} }, alignment: { vertical: 'middle', horizontal: 'left', indent: 1 } };
+            const estiloV = { border: { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} }, alignment: { vertical: 'middle', horizontal: 'left', indent: 1 } };
+
+            ws.mergeCells('B6:F6'); let l1 = ws.getCell('B6'); l1.value = " PROYECTO:"; Object.assign(l1, estiloT);
+            ws.mergeCells('G6:S6'); let v1 = ws.getCell('G6'); v1.value = " " + rdiData.proyecto; Object.assign(v1, estiloV);
+            ws.mergeCells('T6:Y6'); let l2 = ws.getCell('T6'); l2.value = " N° CORRELATIVO:"; Object.assign(l2, estiloT);
+            ws.mergeCells('Z6:AI6'); let v2 = ws.getCell('Z6'); v2.value = ` RDI-${numRDIFormateado}`; Object.assign(v2, estiloV);
+
+            ws.mergeCells('B7:F7'); let l3 = ws.getCell('B7'); l3.value = " CLIENTE:"; Object.assign(l3, estiloT);
+            ws.mergeCells('G7:S7'); let v3 = ws.getCell('G7'); v3.value = " " + (config.cliente || rdiData.cliente || ''); Object.assign(v3, estiloV);
+            ws.mergeCells('T7:Y7'); let l4 = ws.getCell('T7'); l4.value = " FECHA:"; Object.assign(l4, estiloT);
+            ws.mergeCells('Z7:AI7'); let v4 = ws.getCell('Z7'); v4.value = " " + rdiData.fecha; Object.assign(v4, estiloV);
+
+            ws.mergeCells('B8:F8'); let l7 = ws.getCell('B8'); l7.value = " PLANO:"; Object.assign(l7, estiloT);
+            ws.mergeCells('G8:S8'); let v7 = ws.getCell('G8'); v7.value = " " + rdiData.plano; Object.assign(v7, estiloV);
+            ws.mergeCells('T8:Y8'); let l8 = ws.getCell('T8'); l8.value = " ESPECIALIDAD:"; Object.assign(l8, estiloT);
+            ws.mergeCells('Z8:AI8'); let v8 = ws.getCell('Z8'); v8.value = " " + rdiData.especialidad; Object.assign(v8, estiloV);
+
+            ws.mergeCells('B9:F9'); let l9 = ws.getCell('B9'); l9.value = " EMISOR:"; Object.assign(l9, estiloT);
+            ws.mergeCells('G9:S9'); let v9 = ws.getCell('G9'); v9.value = " " + rdiData.emisor; Object.assign(v9, estiloV);
+            ws.mergeCells('T9:Y9'); let l10 = ws.getCell('T9'); l10.value = " RECEPTOR:"; Object.assign(l10, estiloT);
+            ws.mergeCells('Z9:AI9'); let v10 = ws.getCell('Z9'); v10.value = " " + rdiData.receptor; Object.assign(v10, estiloV);
+
+            ws.getRow(10).height = 25;
+            ws.mergeCells('B10:F10'); let aT = ws.getCell('B10'); aT.value = " ASUNTO:"; Object.assign(aT, estiloT);
+            ws.mergeCells('G10:AI10'); let aV = ws.getCell('G10'); aV.value = " " + rdiData.asunto; Object.assign(aV, estiloV);
+
+            ws.mergeCells('B11:AB12'); let req = ws.getCell('B11'); req.value = "REQUERIMIENTO SOLICITADO"; req.font = { bold: true, color: { argb: 'FFFFFFFF' } }; req.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF000000' } }; req.alignment = { horizontal: 'center', vertical: 'middle' };
+            ws.mergeCells('AC11:AI12'); let pTitulo = ws.getCell('AC11'); pTitulo.value = "PRIORIDAD"; pTitulo.font = { bold: true, color: { argb: 'FFFFFFFF' } }; pTitulo.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF000000' } }; pTitulo.alignment = { horizontal: 'center', vertical: 'middle' };
+
+            ws.mergeCells('B13:AB13'); ws.getCell('B13').value = " DESCRIPCIÓN:"; ws.getCell('B13').font = { bold: true }; ws.getCell('B13').alignment = { vertical: 'middle', horizontal: 'left' };
+            
+            let lineasTexto = (rdiData.descripcion.match(/\n/g) || []).length + 1;
+            let lineasWrap = Math.ceil(rdiData.descripcion.length / 80);
+            let descRows = Math.max(3, lineasTexto + lineasWrap); 
+            let descEndRow = 13 + descRows;
+            
+            ws.mergeCells(`B14:AB${descEndRow}`); let desc = ws.getCell('B14'); desc.value = " " + rdiData.descripcion; desc.alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
+
+            // Caja Derecha: Prioridad
+            ws.mergeCells('AC13:AI14'); let fReqT = ws.getCell('AC13'); fReqT.value = "FECHA REQUERIDA DE\nRESPUESTA"; fReqT.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; fReqT.font = { bold: true }; fReqT.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+            ws.mergeCells('AC15:AI16'); let fReqD = ws.getCell('AC15'); fReqD.value = rdiData.fechaRequerida; fReqD.alignment = { horizontal: 'center', vertical: 'middle' }; fReqD.font = { bold: true, size: 10 }; fReqD.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+
+            ws.mergeCells('AC17:AI17'); ws.getCell('AC17').border = { left:{style:'thin'}, right:{style:'thin'} };
+
+            let isA = rdiData.prioridad === 'ALTA'; let isM = rdiData.prioridad === 'MEDIA'; let isB = rdiData.prioridad === 'BAJA';
+            
+            ws.getRow(18).height = 20; ws.getRow(19).height = 20; ws.getRow(20).height = 20;
+            
+            ws.getCell('AD18').value = isA ? "X" : ""; ws.getCell('AD18').alignment = {horizontal:'center', vertical:'middle'}; ws.getCell('AD18').font = {bold:true}; ws.getCell('AD18').border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+            ws.mergeCells('AE18:AH18'); let pA = ws.getCell('AE18'); pA.value = "ALTA"; pA.font = { bold: true, color: {argb: 'FFFFFFFF'} }; pA.alignment = {horizontal:'center', vertical:'middle'}; pA.fill = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFF0000'}}; pA.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+            
+            ws.getCell('AD19').value = isM ? "X" : ""; ws.getCell('AD19').alignment = {horizontal:'center', vertical:'middle'}; ws.getCell('AD19').font = {bold:true}; ws.getCell('AD19').border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+            ws.mergeCells('AE19:AH19'); let pM = ws.getCell('AE19'); pM.value = "MEDIA"; pM.font = { bold: true, color: {argb: 'FF000000'} }; pM.alignment = {horizontal:'center', vertical:'middle'}; pM.fill = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFACC15'}}; pM.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+            
+            ws.getCell('AD20').value = isB ? "X" : ""; ws.getCell('AD20').alignment = {horizontal:'center', vertical:'middle'}; ws.getCell('AD20').font = {bold:true}; ws.getCell('AD20').border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+            ws.mergeCells('AE20:AH20'); let pB = ws.getCell('AE20'); pB.value = "BAJA"; pB.font = { bold: true, color: {argb: 'FFFFFFFF'} }; pB.alignment = {horizontal:'center', vertical:'middle'}; pB.fill = {type:'pattern',pattern:'solid',fgColor:{argb:'FF00B050'}}; pB.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+
+            ['B13'].forEach(c => ws.getCell(c).border = { top: {style:'thin'}, bottom: {style:'thin'}, left: {style:'thin'}, right: {style:'thin'} });
+
+            let rC = descEndRow + 1;
+            let imagenesValidas = rdiData.imagenes.filter(img => img && img.length > 100);
+
+            if (imagenesValidas.length > 0) {
+                for (let i = 0; i < imagenesValidas.length; i++) {
+                    ws.mergeCells(`B${rC}:AB${rC}`);
+                    ws.getCell(`B${rC}`).value = ` FIGURA 0${i+1} - Sustento Visual`;
+                    ws.getCell(`B${rC}`).font = { bold: true, italic: true, color: { argb: 'FF475569' } }; 
+                    rC++;
+                    
+                    let imgEnd = rC + 18; 
+                    ws.mergeCells(`B${rC}:AB${imgEnd}`); 
+                    
+                    try {
+                        let rawSrc = imagenesValidas[i];
+                        let pureB64 = ''; let ext = 'png';
+                        if (rawSrc.startsWith('http')) {
+                            let res = await fetch(rawSrc); let blob = await res.blob();
+                            pureB64 = await new Promise(resolve => { let reader = new FileReader(); reader.onloadend = () => resolve(reader.result.split(',')[1]); reader.readAsDataURL(blob); });
+                        } else {
+                            pureB64 = rawSrc.includes(',') ? rawSrc.split(',')[1] : rawSrc;
+                            ext = rawSrc.substring(rawSrc.indexOf('/')+1, rawSrc.indexOf(';')); if(ext === 'jpeg') ext = 'png';
+                        }
+                        
+                        const imgId = wb.addImage({ base64: pureB64, extension: ext });
+                        ws.addImage(imgId, { tl: { col: 3.5, row: rC - 1 + 0.2 }, br: { col: 25.5, row: imgEnd - 0.2 }, editAs: 'oneCell' });
+                    } catch(e) {}
+                    rC = imgEnd + 1; 
+                }
+            } else {
+                ws.mergeCells(`B${rC}:AB${rC+3}`); rC += 4;
+            }
+
+            let finalRow = rC - 1;
+            if (finalRow < 20) finalRow = 20; 
+            
+            if (finalRow > 20) ws.mergeCells(`AC21:AI${finalRow}`);
+
+            drawBoxBorder(2, 11, 28, finalRow);   
+            drawBoxBorder(29, 11, 35, finalRow);  
+
+            // BLOQUE INFERIOR
+            let rF = finalRow + 2;
+            ws.mergeCells(`B${rF}:AI${rF}`); let respTitle = ws.getCell(`B${rF}`); respTitle.value = "RESPUESTA AL REQUERIMIENTO DE INFORMACIÓN";
+            respTitle.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 }; respTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF000000' } }; respTitle.alignment = { horizontal: 'center', vertical: 'middle' }; rF++;
+
+            ws.mergeCells(`B${rF}:AI${rF+4}`); let respBox = ws.getCell(`B${rF}`); respBox.value = "";
+            respBox.border = { top: {style:'thin'}, bottom: {style:'thin'}, left: {style:'thin'}, right: {style:'thin'} }; rF += 5;
+
+            ws.mergeCells(`B${rF}:AI${rF}`); let emiResp = ws.getCell(`B${rF}`); emiResp.value = " EMISOR DE LA RESPUESTA:"; emiResp.font = { bold: true }; emiResp.alignment = { horizontal: 'left' }; rF++;
+            
+            ws.mergeCells(`B${rF}:I${rF}`); ws.getCell(`B${rF}`).value = " NOMBRE:"; ws.getCell(`B${rF}`).alignment = { horizontal: 'left' };
+            ws.mergeCells(`J${rF}:T${rF}`); ws.getCell(`J${rF}`).value = " FECHA:"; ws.getCell(`J${rF}`).alignment = { horizontal: 'left' };
+            ws.mergeCells(`U${rF}:AI${rF}`); ws.getCell(`U${rF}`).value = " FIRMA:"; ws.getCell(`U${rF}`).alignment = { horizontal: 'left' }; rF++;
+
+            ws.mergeCells(`B${rF}:AI${rF}`); let analTitle = ws.getCell(`B${rF}`); analTitle.value = "ANÁLISIS DE RESPUESTA";
+            analTitle.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 }; analTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF000000' } }; analTitle.alignment = { horizontal: 'center', vertical: 'middle' }; rF++;
+
+            ws.mergeCells(`B${rF}:AI${rF}`); ws.getCell(`B${rF}`).value = " INCIDENCIA:"; ws.getCell(`B${rF}`).font = { bold: true }; ws.getCell(`B${rF}`).alignment = { horizontal: 'left' }; rF++;
+            
+            ws.getCell(`D${rF}`).value = ""; ws.getCell(`D${rF}`).border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} }; ws.getCell(`E${rF}`).value = " COSTO";
+            ws.getCell(`J${rF}`).value = ""; ws.getCell(`J${rF}`).border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} }; ws.getCell(`K${rF}`).value = " PLAZO";
+            ws.getCell(`P${rF}`).value = ""; ws.getCell(`P${rF}`).border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} }; ws.getCell(`Q${rF}`).value = " OTROS";
+            ws.mergeCells(`T${rF}:AH${rF}`); ws.getCell(`T${rF}`).value = "..........................................................................."; rF+=2; 
+
+            ws.mergeCells(`B${rF}:AI${rF}`); ws.getCell(`B${rF}`).value = " RESPUESTA:"; ws.getCell(`B${rF}`).font = { bold: true }; ws.getCell(`B${rF}`).alignment = { horizontal: 'left' }; rF++;
+            
+            ws.getCell(`E${rF}`).value = ""; ws.getCell(`E${rF}`).border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} }; ws.getCell(`F${rF}`).value = " CUMPLE";
+            ws.getCell(`K${rF}`).value = ""; ws.getCell(`K${rF}`).border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} }; ws.getCell(`L${rF}`).value = " NO CUMPLE";
+            ws.getCell(`P${rF}`).value = ""; ws.getCell(`P${rF}`).border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} }; ws.mergeCells(`Q${rF}:V${rF}`); ws.getCell(`Q${rF}`).value = " GENERA NUEVA RFI";
+            ws.getCell(`W${rF}`).value = ""; ws.getCell(`W${rF}`).border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} }; ws.mergeCells(`X${rF}:AI${rF}`); ws.getCell(`X${rF}`).value = " GENERA MODIFICACION DE PLANO";
+            
+            rF++; 
+            ws.mergeCells(`B${rF}:AI${rF}`); ws.getCell(`B${rF}`).value = ""; 
+            
+            drawBoxBorder(2, finalRow + 2, 35, rF);
+
+            // Nombre de Archivo y Logo
+            let especialidadLimpia = (rdiData.especialidad || 'SIN ESPECIALIDAD').replace(/[\\/:*?"<>|]/g, '_').trim().toUpperCase();
+            let asuntoLimpio = (rdiData.asunto || 'Sin Asunto').replace(/[\\/:*?"<>|]/g, '_').trim().toUpperCase();
+            let nombreArchivo = `RDI N°${numRDIFormateado}° - ${especialidadLimpia} - ${asuntoLimpio}.xlsx`;
+
+            if (config.logoUrl) {
+                try {
+                    const logoRes = await fetch(config.logoUrl); const logoBlob = await logoRes.blob(); const logoReader = new FileReader();
+                    logoReader.onload = function() {
+                        try {
+                            let b64Logo = logoReader.result; let pureB64Logo = b64Logo.includes(',') ? b64Logo.split(',')[1] : b64Logo;
+                            const logoId = wb.addImage({ base64: pureB64Logo, extension: 'png' });
+                            
+                            // 🔥 TAMAÑO EXACTO Y CENTRADO REAJUSTADO HACIA LA IZQUIERDA
+                            ws.addImage(logoId, { 
+                                tl: { col: 1.1, row: 0.5 }, // Coordenadas ajustadas para alinear perfectamente al centro
+                                ext: { width: 110, height: 37 }, 
+                                editAs: 'oneCell' 
+                            });
+                            wb.xlsx.writeBuffer().then(buffer => saveAs(new Blob([buffer]), nombreArchivo));
+                        } catch(e) {}
+                    };
+                    logoReader.readAsDataURL(logoBlob); return; 
+                } catch(e) {}
+            }
+
+            const buffer = await wb.xlsx.writeBuffer();
+            saveAs(new Blob([buffer]), nombreArchivo);
+        };
+        
+        // LLAMADA DESDE EL BOTÓN DE EXPORTAR DEL MODAL
+        window.descargarExcelRDI_Actual = async function() {
+            const btn = document.querySelector('button[onclick="window.descargarExcelRDI_Actual()"]');
+            if(btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando...';
+            
+            let proyectoActivo = window.proyectoActualGlobal || document.getElementById('proyectoSelect')?.value || '';
+            let config = {};
+            if (proyectoActivo) {
+                try {
+                    const configSnap = await window.fsGetDoc(window.fsDoc(window.firebaseDb, `proyectos/${proyectoActivo}/configuracionRDI/formato`));
+                    if (configSnap.exists()) config = configSnap.data();
+                } catch(e) {}
+            }
+
+            let prio = document.getElementById('rdiPrioridad')?.value || 'MEDIA';
+            let strFechaEmision = document.getElementById('rdiFechaEmision')?.value || new Date().toISOString().split('T')[0];
+            let diasSumar = 3; 
+            if (prio === 'ALTA') diasSumar = config.diasAlta !== undefined ? parseInt(config.diasAlta) : 1;
+            if (prio === 'MEDIA') diasSumar = config.diasMedia !== undefined ? parseInt(config.diasMedia) : 3;
+            if (prio === 'BAJA') diasSumar = config.diasBaja !== undefined ? parseInt(config.diasBaja) : 5;
+
+            let partes = strFechaEmision.split('-'); let objFecha = new Date(partes[0], partes[1] - 1, partes[2]); objFecha.setDate(objFecha.getDate() + diasSumar);
+            let fechaRespuestaCalculada = `${String(objFecha.getDate()).padStart(2, '0')}/${String(objFecha.getMonth() + 1).padStart(2, '0')}/${objFecha.getFullYear()}`;
+
+            let tituloEmisor = document.getElementById('rdiTituloEmisor')?.value || '';
+            let nombreEmisor = document.getElementById('rdiEmisor')?.value.trim() || '';
+            let emisorCompleto = (tituloEmisor + ' ' + nombreEmisor).trim();
+
+            let rdiData = {
+                proyecto: proyectoActivo,
+                correlativo: document.getElementById('rdiCorrelativo')?.value || '',
+                fecha: strFechaEmision, plano: document.getElementById('rdiPlano')?.value || '', especialidad: document.getElementById('rdiEspecialidad')?.value || '',
+                emisor: emisorCompleto, receptor: document.getElementById('rdiReceptor')?.value || '',
+                asunto: document.getElementById('rdiAsunto')?.value || '', descripcion: document.getElementById('rdiDescripcion')?.value || '',
+                prioridad: prio, fechaRequerida: fechaRespuestaCalculada,
+                cliente: config.cliente || '', contratista: config.contratista || '', supervision: config.supervision || '', imagenes: []
+            };
+            document.querySelectorAll('#rdiGaleriaMiniaturas .miniatura-rdi').forEach(img => rdiData.imagenes.push(img.src));
+            
+            window.procesarExcelRDI(rdiData).then(() => {
+                if(btn) btn.innerHTML = '<i class="fa-solid fa-file-excel"></i> Exportar a Excel';
+            });
+        };
+
+        // LLAMADA DESDE EL BOTÓN VERDE DE LA MATRIZ EXTERNA
+        window.descargarExcelRDI_ID = async function(id, btnEl) {
+            let rdi = window.matrizRDIGlobal.find(r => r.id === id);
+            if(!rdi) return alert("RDI no encontrado.");
+            
+            const txtOrig = btnEl.innerHTML;
+            btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            btnEl.disabled = true;
+
+            let proyectoActivo = window.proyectoActualGlobal || '';
+            let config = {};
+            if (proyectoActivo) {
+                try {
+                    const configSnap = await window.fsGetDoc(window.fsDoc(window.firebaseDb, `proyectos/${proyectoActivo}/configuracionRDI/formato`));
+                    if (configSnap.exists()) config = configSnap.data();
+                } catch(e) {}
+            }
+
+            let prio = rdi.prioridad || 'MEDIA';
+            let strFechaEmision = rdi.fechaEmision || rdi.fecha || new Date().toISOString().split('T')[0];
+            let diasSumar = 3; 
+            if (prio === 'ALTA') diasSumar = config.diasAlta !== undefined ? parseInt(config.diasAlta) : 1;
+            if (prio === 'MEDIA') diasSumar = config.diasMedia !== undefined ? parseInt(config.diasMedia) : 3;
+            if (prio === 'BAJA') diasSumar = config.diasBaja !== undefined ? parseInt(config.diasBaja) : 5;
+
+            let partes = strFechaEmision.split('-'); let objFecha = new Date(partes[0], partes[1] - 1, partes[2]); objFecha.setDate(objFecha.getDate() + diasSumar);
+            let fechaRespuestaCalculada = `${String(objFecha.getDate()).padStart(2, '0')}/${String(objFecha.getMonth() + 1).padStart(2, '0')}/${objFecha.getFullYear()}`;
+
+            let rdiData = {
+                proyecto: proyectoActivo, correlativo: rdi.correlativo || '',
+                fecha: strFechaEmision, plano: rdi.plano || '', especialidad: rdi.especialidad || '',
+                emisor: rdi.emisor || '', receptor: rdi.receptor || '', asunto: rdi.asunto || '', descripcion: rdi.descripcion || '',
+                prioridad: prio, fechaRequerida: fechaRespuestaCalculada,
+                cliente: config.cliente || '', contratista: config.contratista || '', supervision: config.supervision || '',
+                imagenes: rdi.imagenesUrls || []
+            };
+
+            window.procesarExcelRDI(rdiData).then(() => {
+                btnEl.innerHTML = txtOrig; btnEl.disabled = false;
+            });
+        };
     </script>
 </body>
 </html>
