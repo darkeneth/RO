@@ -6532,6 +6532,9 @@ window.iniciarNuevoReporte = function() {
         // NAVEGACIÓN: ABRIR NUEVO TAREO
         // ==========================================
         window.iniciarNuevoTareo = function() {
+            // 🔥 Asegurar que el botón de guardar reaparezca
+            const btnG = document.getElementById('btnGuardarTareoNube');
+            if (btnG) btnG.classList.remove('hidden');
             // 1. Ocultar historial y mostrar zona de carga
             document.getElementById('historialTareos').classList.add('hidden');
             document.getElementById('zonaCargaTareo').classList.remove('hidden');
@@ -7985,11 +7988,13 @@ window.iniciarNuevoReporte = function() {
                     filasGeneradas: datosListosParaExportar.length,
                     datos: datosListosParaExportar,
                     archivoPadronUrl: padronUrl, 
-                    nombreOriginalPadron: padronName // 🔥 NUEVO: Se guarda el nombre en la Base de Datos
+                    nombreOriginalPadron: padronName,
+                    // 🔥 NUEVO: Empaquetar y guardar el registro histórico de faltas
+                    faltasRegistradas: window.reporteFaltas || [] 
                 };
 
-                const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyecto}/tareosGuardados/Semana_${semana}`);
-                await window.fsSetDoc(docRef, tareoData);
+                const tareoRef = window.fsDoc(window.firebaseDb, `proyectos/${proyecto}/tareosGuardados/Semana_${semana}`);
+                await window.fsSetDoc(tareoRef, tareoData);
 
                 alert(`✅ El Tareo y la Plantilla de la Semana ${semana} se guardaron en la nube.`);
                 
@@ -8251,8 +8256,14 @@ window.iniciarNuevoReporte = function() {
             htmlTotales += `</tr>`;
             tbody.innerHTML += htmlTotales;
 
-            document.getElementById('resumenVistaPrevia').innerHTML = `<span class="text-indigo-600">${filasGeneradas}</span> filas alineadas al S10 | <span class="text-emerald-600">${totalHorasGlobal}</span> horas totales`;
-            document.getElementById('vistaPreviaExportacion').classList.remove('hidden');
+            document.getElementById('resumenVistaPrevia').innerHTML = `<span class="text-indigo-600">${datosListosParaExportar.length}</span> filas alineadas al S10 | <span class="text-emerald-600" id="totalHorasVisualResumen">${totalHorasGlobal}</span> horas totales`;
+                
+                document.getElementById('vistaPreviaExportacion').classList.remove('hidden');
+
+                // 🔥 SOLUCIÓN DEL BUG: Forzar a la calculadora a sumar TODAS las cajas recién creadas (incluyendo Convenios)
+                if (typeof window.recalcularTotalesTareo === 'function') {
+                    window.recalcularTotalesTareo();
+                }
             
             // 🔥 Asegurar que el botón Guardar esté visible para Tareos Nuevos
             const btnGuardar = document.getElementById('btnGuardarTareoNube');
@@ -8589,9 +8600,11 @@ window.iniciarNuevoReporte = function() {
 
                 datosListosParaExportar = snap.data().datos;
                 window.semanaActualTareo = semanaId.replace('Semana_', ''); 
-                // 🔥 PASO 2: GUARDAR LA URL DEL PADRÓN EN MEMORIA AL ABRIR UN HISTÓRICO
                 window.currentPadronUrl = snap.data().archivoPadronUrl || null;
-                window.currentPadronName = snap.data().nombreOriginalPadron || `Plantilla_S10.xlsx`; // 🔥 Recupera el nombre exacto
+                window.currentPadronName = snap.data().nombreOriginalPadron || `Plantilla_S10.xlsx`; 
+                
+                // 🔥 NUEVO: Recuperar el registro de faltas desde Firebase
+                window.reporteFaltas = snap.data().faltasRegistradas || [];
 
                 const tbody = document.getElementById('tablaVistaPreviaTareo');
                 const theadLetras = document.getElementById('headLetrasExcel');
@@ -8612,7 +8625,7 @@ window.iniciarNuevoReporte = function() {
                 });
 
                 const diasSemana = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo"];
-                let charCode = 70; // 'F'
+                let charCode = 70;
 
                 diasSemana.forEach(dia => {
                     htmlDias += `<th colspan="3" class="py-1 px-2 text-center border-r border-amber-300 font-bold text-[11px]">${dia}</th>`;
@@ -8664,7 +8677,6 @@ window.iniciarNuevoReporte = function() {
                     nroFilaVisual++;
                 });
 
-                // Fila de Totales
                 let htmlTotales = `<tr class="bg-slate-800 text-white font-bold sticky bottom-0 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">`;
                 htmlTotales += `<td colspan="6" class="py-3 px-4 text-right border-r border-slate-600 uppercase tracking-widest text-[11px] shadow-inner">TOTAL DE HORAS DIARIAS:</td>`;
                 totalesPorDia.forEach((total, idx) => {
@@ -8675,10 +8687,21 @@ window.iniciarNuevoReporte = function() {
                 htmlTotales += `</tr>`;
                 tbody.innerHTML += htmlTotales;
 
-                document.getElementById('resumenVistaPrevia').innerHTML = `<span class="text-indigo-600">${datosListosParaExportar.length}</span> filas alineadas al S10 | <span class="text-emerald-600">${totalHorasGlobal}</span> horas totales`;
+                // 🔥 BOTÓN HISTÓRICO DE FALTAS: Solo se muestra si hubo ausencias guardadas
+                let btnFaltasHTML = window.reporteFaltas && window.reporteFaltas.length > 0 
+                    ? `<button onclick="window.abrirModalFaltas()" class="ml-4 bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest border border-red-300 transition cursor-pointer shadow-sm"><i class="fa-solid fa-user-xmark mr-1"></i> Ver Faltas (${window.reporteFaltas.length})</button>`
+                    : '';
+
+                document.getElementById('resumenVistaPrevia').innerHTML = `<span class="text-indigo-600">${datosListosParaExportar.length}</span> filas alineadas al S10 | <span class="text-emerald-600" id="totalHorasVisualResumen">${totalHorasGlobal}</span> horas totales ${btnFaltasHTML}`;
+                
                 document.getElementById('vistaPreviaExportacion').classList.remove('hidden');
 
-            // 🔥 MODO LECTURA: Ocultar botón guardar y bloquear inputs
+                // 🔥 Disparamos la suma exacta para el histórico
+                if (typeof window.recalcularTotalesTareo === 'function') {
+                    setTimeout(() => window.recalcularTotalesTareo(), 100);
+                }
+
+            // MODO LECTURA: Ocultar botón guardar y bloquear inputs
             const btnGuardar = document.getElementById('btnGuardarTareoNube');
             if (btnGuardar) btnGuardar.classList.add('hidden');
 
@@ -8692,7 +8715,6 @@ window.iniciarNuevoReporte = function() {
                     });
                 }
                 
-                // 🔥 SOLUCIÓN: Reactivar el redimensionamiento de columnas para históricos
                 if (typeof initResizableColumns === 'function') {
                     initResizableColumns();
                 }
@@ -10530,6 +10552,11 @@ window.iniciarNuevoReporte = function() {
         // 3. INYECTOR MATEMÁTICO (SUMA HORAS A LA TABLA Y AL EXPORTABLE)
         // ==========================================
         window.aplicarConveniosATabla = function() {
+            // 🔥 REGLA DE ORO: Si el botón de Guardar está oculto, significa que estamos viendo un Tareo Histórico.
+            // NO debemos aplicar convenios visualmente porque YA ESTÁN GUARDADOS y sumados en Firebase.
+            const btnGuardar = document.getElementById('btnGuardarTareoNube');
+            if (btnGuardar && btnGuardar.classList.contains('hidden')) return;
+
             const tbody = document.getElementById('tablaVistaPreviaTareo');
             if (!tbody) return;
             const filasTr = Array.from(tbody.querySelectorAll('tr')).filter(tr => !tr.classList.contains('sticky')); 
@@ -10580,7 +10607,6 @@ window.iniciarNuevoReporte = function() {
                             // 🔥 Rescatamos la base real (ya sea de un input o de texto plano)
                             let baseVal = inputEl ? (parseFloat(inputEl.value) || 0) : (parseFloat(tdH.innerText) || 0);
 
-                            // Guardamos el original para cuando se reinicie
                             if (!tdH.hasAttribute('data-base-val')) {
                                 tdH.setAttribute('data-base-val', baseVal);
                                 if (!inputEl) tdH.setAttribute('data-base-html', tdH.innerHTML);
@@ -10601,6 +10627,14 @@ window.iniciarNuevoReporte = function() {
                     }
                 });
             });
+
+            // C. 🔥 SOLUCIÓN DEFINITIVA BUG HORAS: Despertar a la calculadora maestra 
+            // apenas los convenios terminan de inyectarse en los inputs.
+            setTimeout(() => {
+                if (typeof window.recalcularTotalesTareo === 'function') {
+                    window.recalcularTotalesTareo();
+                }
+            }, 50);
         };
 
         // 👁️ VIGILANTE AUTOMÁTICO: Detecta por sí solo cuando procesas el Tareo para inyectar la suma
@@ -10829,7 +10863,6 @@ window.iniciarNuevoReporte = function() {
                     document.getElementById('rdiEspecialidad').value = rdi.especialidad || 'ESTRUCTURAS';
                     document.getElementById('rdiPlano').value = rdi.plano || '';
                     
-                    // Separar título de nombre si existe
                     let emisorFull = rdi.emisor || '';
                     if (emisorFull.startsWith('ING. ')) { document.getElementById('rdiTituloEmisor').value = 'ING.'; document.getElementById('rdiEmisor').value = emisorFull.replace('ING. ', ''); }
                     else if (emisorFull.startsWith('ARQ. ')) { document.getElementById('rdiTituloEmisor').value = 'ARQ.'; document.getElementById('rdiEmisor').value = emisorFull.replace('ARQ. ', ''); }
@@ -10844,7 +10877,35 @@ window.iniciarNuevoReporte = function() {
                     document.getElementById('rdiIncCosto').checked = rdi.incidenciaCosto || false; document.getElementById('rdiIncPlazo').checked = rdi.incidenciaPlazo || false;
                     document.getElementById('rdiIncOtros').checked = rdi.incidenciaOtros || false; document.getElementById('rdiIncOtrosTexto').value = rdi.incidenciaOtrosTexto || '';
 
-                    if (rdi.imagenesUrls && rdi.imagenesUrls.length > 0) rdi.imagenesUrls.filter(u => u && u.length > 50).forEach(url => window.agregarMiniaturaRDI(url));
+                    // 🔥 RECUPERA LEYENDAS Y FOTOS DE FIREBASE
+                    window.rdiImagenesTemp = [];
+                    window.rdiImagenesGuardadas = rdi.imagenesConsulta || [];
+                    
+                    if (window.rdiImagenesGuardadas.length > 0) {
+                        galeria.classList.remove('hidden');
+                        window.rdiImagenesGuardadas.forEach(img => {
+                            let figTitulo = img.caption.split('.- ')[0] || img.caption;
+                            let userText = img.caption.includes('.- ') ? img.caption.split('.- ')[1] : '';
+
+                            galeria.innerHTML += `
+                                <div class="relative w-40 rounded shadow-sm border border-slate-200 overflow-hidden flex flex-col bg-white">
+                                    <div class="h-24 w-full relative group">
+                                        <img src="${img.url}" class="w-full h-full object-contain bg-white miniatura-rdi" onclick="window.abrirEditorImagen(this.src, this)">
+                                        <div class="absolute inset-0 bg-black/40 hidden group-hover:flex items-center justify-center pointer-events-none transition"><i class="fa-solid fa-paintbrush text-white text-2xl"></i></div>
+                                        <button onclick="event.stopPropagation(); this.parentElement.parentElement.remove()" class="absolute top-1 left-1 bg-red-600 hover:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition z-10 cursor-pointer shadow-md"><i class="fa-solid fa-xmark text-xs"></i></button>
+                                    </div>
+                                    <div class="p-1.5 bg-slate-50 border-t border-slate-200 text-center flex flex-col">
+                                        <span class="text-[9px] font-black text-slate-500 uppercase">${figTitulo}</span>
+                                        <input type="text" value="${userText}" class="w-full bg-white text-[9px] font-bold text-slate-700 border border-slate-300 rounded px-1 py-1 mt-1 text-center focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    } else if (rdi.imagenesUrls && rdi.imagenesUrls.length > 0) {
+                        // Respaldo para RDIs viejos (Sin Leyenda)
+                        rdi.imagenesUrls.filter(u => u && u.length > 50).forEach(url => window.agregarMiniaturaRDI(url));
+                    }
+
                     document.getElementById('seccionRespuestaRDI').classList.remove('hidden');
                 }
             } else {
@@ -10853,10 +10914,10 @@ window.iniciarNuevoReporte = function() {
                     let max = 0; window.matrizRDIGlobal.forEach(r => { let num = parseInt(r.correlativo); if (!isNaN(num) && num > max) max = num; }); nextId = max + 1;
                 }
                 document.getElementById('tituloModalRDI').innerHTML = 'NUEVO RDI';
-                document.getElementById('rdiCorrelativo').value = nextId; document.getElementById('rdiFechaEmision').value = new Date().toISOString().split('T')[0];
+                document.getElementById('rdiCorrelativo').value = nextId; document.getElementById('rdiCorrelativo').setAttribute('data-int', nextId);
+                document.getElementById('rdiFechaEmision').value = new Date().toISOString().split('T')[0];
                 document.getElementById('rdiEspecialidad').value = 'ESTRUCTURAS'; document.getElementById('rdiPlano').value = ''; 
                 
-                // 🔥 AUTO-RELLENADO DE DATOS (GOOGLE Y FIREBASE)
                 let proyActivo = window.proyectoActualGlobal || document.getElementById('proyectoSelect')?.value || '';
                 let supervisorAuto = '';
                 if (proyActivo) {
@@ -10869,12 +10930,15 @@ window.iniciarNuevoReporte = function() {
                 let userGoogle = window.firebaseAuth?.currentUser;
                 let nombreAuto = userGoogle ? (userGoogle.displayName || userGoogle.email.split('@')[0]) : '';
                 
-                document.getElementById('rdiTituloEmisor').value = 'ING.'; // Por defecto
+                document.getElementById('rdiTituloEmisor').value = 'ING.'; 
                 document.getElementById('rdiEmisor').value = nombreAuto.toUpperCase();
                 document.getElementById('rdiReceptor').value = supervisorAuto; 
                 
                 document.getElementById('rdiAsunto').value = ''; document.getElementById('rdiDescripcion').value = '';
                 document.getElementById('rdiPrioridad').value = 'MEDIA'; document.getElementById('seccionRespuestaRDI').classList.add('hidden');
+                
+                window.rdiImagenesTemp = [];
+                window.rdiImagenesGuardadas = [];
             }
             modal.classList.remove('hidden');
         };
@@ -10884,7 +10948,7 @@ window.iniciarNuevoReporte = function() {
             try { let proy = window.proyectoActualGlobal; await window.fsDeleteDoc(window.fsDoc(window.firebaseDb, `proyectos/${proy}/rdis/${id}`)); alert("🗑️ RDI eliminado."); } catch(e) { alert("❌ Error."); }
         };
 
-        // --- 3. GUARDAR EN NUBE (STORAGE DE IMÁGENES) ---
+        // --- 3. GUARDAR EN NUBE (NUEVA ESTRUCTURA DE IMÁGENES + LEYENDAS) ---
         window.guardarRDI_Nube_Seguro = async function() {
             const btn = document.getElementById('btnGuardarRDI');
             const txtOrig = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...'; btn.disabled = true;
@@ -10897,32 +10961,58 @@ window.iniciarNuevoReporte = function() {
                 let tituloEmisor = document.getElementById('rdiTituloEmisor')?.value || '';
                 let nombreEmisor = document.getElementById('rdiEmisor')?.value.trim() || '';
                 let emisorCompleto = (tituloEmisor + ' ' + nombreEmisor).trim();
+                const correlativoInt = parseInt(document.getElementById('rdiCorrelativo').getAttribute('data-int') || correlativo);
 
                 const rdiData = {
-                    correlativo: correlativo, fechaEmision: document.getElementById('rdiFechaEmision')?.value || '', especialidad: document.getElementById('rdiEspecialidad')?.value || '',
-                    plano: document.getElementById('rdiPlano')?.value || '', emisor: emisorCompleto, receptor: document.getElementById('rdiReceptor')?.value || '',
+                    correlativoStr: correlativo.startsWith('RDI') ? correlativo : `RDI-${String(correlativo).padStart(3, '0')}`,
+                    correlativoInt: correlativoInt,
+                    correlativo: correlativo, 
+                    fechaEmision: document.getElementById('rdiFechaEmision')?.value || '', especialidad: document.getElementById('rdiEspecialidad')?.value || '',
+                    planoRef: document.getElementById('rdiPlano')?.value || '', plano: document.getElementById('rdiPlano')?.value || '', 
+                    emisor: emisorCompleto, receptor: document.getElementById('rdiReceptor')?.value || '',
                     asunto: document.getElementById('rdiAsunto')?.value || '', descripcion: document.getElementById('rdiDescripcion')?.value || '', prioridad: document.getElementById('rdiPrioridad')?.value || 'MEDIA',
                     respuestaTexto: document.getElementById('rdiRespuestaTexto')?.value || '', resolucion: document.getElementById('rdiResolucion')?.value || 'PENDIENTE',
                     incidenciaCosto: document.getElementById('rdiIncCosto')?.checked || false, incidenciaPlazo: document.getElementById('rdiIncPlazo')?.checked || false, incidenciaOtros: document.getElementById('rdiIncOtros')?.checked || false, incidenciaOtrosTexto: document.getElementById('rdiIncOtrosTexto')?.value || '',
-                    imagenesUrls: [] 
+                    imagenesConsulta: [] // 🔥 ARRAY LIMPIO Y ESTRUCTURADO
                 };
 
-                const imgs = document.querySelectorAll('#rdiGaleriaMiniaturas .miniatura-rdi');
-                for (let i = 0; i < imgs.length; i++) {
-                    let src = imgs[i].src;
-                    if (!src || src.length < 100 || src === window.location.href) continue;
-                    if (src.startsWith('http')) { rdiData.imagenesUrls.push(src); } 
-                    else {
-                        let res = await fetch(src); let blob = await res.blob();
-                        let storageRef = window.fsRef(window.firebaseStorage, `proyectos/${proyecto}/rdis/${correlativo}_img_${i}_${Date.now()}.png`);
-                        await window.fsUploadBytes(storageRef, blob);
-                        rdiData.imagenesUrls.push(await window.fsGetDownloadURL(storageRef));
+                // BARRIDO DE PANTALLA: Leemos foto por foto y su caja de texto
+                const divs = document.querySelectorAll('#rdiGaleriaMiniaturas > div');
+                let tempIndex = 0;
+
+                for (let i = 0; i < divs.length; i++) {
+                    const imgEl = divs[i].querySelector('.miniatura-rdi');
+                    if (!imgEl) continue;
+
+                    const isNewBadge = divs[i].querySelector('.bg-amber-500'); // Detectar si es nueva pegada
+                    const captionInput = divs[i].querySelector('input[type="text"]');
+                    const userCaption = captionInput ? captionInput.value.trim() : '';
+                    
+                    const numFig = rdiData.imagenesConsulta.length + 1;
+                    const numStr = String(numFig).padStart(2, '0');
+                    // 🔥 FORMATO EXACTO REQUERIDO: "FIGURA 01.- PANELADO DE MUROS"
+                    const tituloFinal = userCaption ? `FIGURA ${numStr}.- ${userCaption.toUpperCase()}` : `FIGURA ${numStr}.- SUSTENTO VISUAL`;
+
+                    if (!isNewBadge && imgEl.src.startsWith('http')) {
+                        // Ya estaba en la nube, solo actualizamos su posible nuevo texto
+                        rdiData.imagenesConsulta.push({ url: imgEl.src, caption: tituloFinal });
+                    } else {
+                        // Es una imagen recién pegada
+                        const file = window.rdiImagenesTemp[tempIndex];
+                        if (file) {
+                            const refRuta = window.fsRef(window.firebaseStorage, `proyectos/${proyecto}/rdis/${rdiData.correlativoStr}_FIG_${numStr}_${Date.now()}.png`);
+                            await window.fsUploadBytes(refRuta, file);
+                            const url = await window.fsGetDownloadURL(refRuta);
+                            
+                            rdiData.imagenesConsulta.push({ url: url, caption: tituloFinal });
+                            tempIndex++;
+                        }
                     }
                 }
 
-                await window.fsSetDoc(window.fsDoc(window.firebaseDb, `proyectos/${proyecto}/rdis/${correlativo}`), rdiData, { merge: true });
+                await window.fsSetDoc(window.fsDoc(window.firebaseDb, `proyectos/${proyecto}/rdis/${rdiData.correlativoStr}`), rdiData, { merge: true });
                 document.getElementById('modalEdicionRDI').classList.add('hidden');
-            } catch (e) { alert("❌ Ocurrió un error."); } finally { btn.innerHTML = txtOrig; btn.disabled = false; }
+            } catch (e) { console.error(e); alert("❌ Ocurrió un error."); } finally { btn.innerHTML = txtOrig; btn.disabled = false; }
         };
 
         setTimeout(() => {
@@ -10931,23 +11021,21 @@ window.iniciarNuevoReporte = function() {
                 const btnNew = btnOld.cloneNode(true); btnOld.parentNode.replaceChild(btnNew, btnOld);
                 btnNew.addEventListener('click', window.guardarRDI_Nube_Seguro);
             }
-        }, 2000);
+        }, 1500);
 
-        // --- 4. CÁPSULA: EDITOR VECTORIAL, PEGADO SEGURO Y DICTADO POR VOZ ---
+        // --- 4. CÁPSULA: PEGADO SEGURO DE IMÁGENES Y LEYENDAS ---
         if (window._pasteListenerRDI) document.removeEventListener('paste', window._pasteListenerRDI);
         
         document.addEventListener('paste', window._pasteListenerRDI = function(e) {
             const modalRDI = document.getElementById('modalEdicionRDI');
             if (modalRDI && !modalRDI.classList.contains('hidden')) {
                 const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-                let imagenPegada = false; // Bloqueador para aceptar solo 1 imagen por intento
+                let imagenPegada = false; 
 
                 for (let i = 0; i < items.length; i++) {
                     if (items[i].type.indexOf('image/') !== -1 && !imagenPegada) {
                         const blob = items[i].getAsFile(); 
-                        
-                        // 🔥 BARRERA DEFINITIVA: Si el archivo pesa menos de 1 KB, es un fantasma del portapapeles. ¡Lo ignoramos!
-                        if (!blob || blob.size < 1024) continue; 
+                        if (!blob || blob.size < 1024) continue; // 🔥 Evita la imagen fantasma en blanco
                         
                         e.preventDefault(); 
                         imagenPegada = true; 
@@ -10955,8 +11043,9 @@ window.iniciarNuevoReporte = function() {
                         const reader = new FileReader();
                         reader.onload = (event) => {
                             let res = event.target.result;
-                            // 🔥 BARRERA 2: Exigimos que el Base64 sea lo suficientemente largo para ser una imagen real
                             if (res && res.length > 5000) {
+                                if (!window.rdiImagenesTemp) window.rdiImagenesTemp = [];
+                                window.rdiImagenesTemp.push(blob);
                                 window.agregarMiniaturaRDI(res);
                             }
                         };
@@ -10969,12 +11058,25 @@ window.iniciarNuevoReporte = function() {
         window.agregarMiniaturaRDI = function(srcUrl) {
             const galeria = document.getElementById('rdiGaleriaMiniaturas');
             if(galeria) galeria.classList.remove('hidden');
+            
+            // Calculamos numeración visual
+            const numFig = document.querySelectorAll('#rdiGaleriaMiniaturas > div').length + 1;
+            const figStr = String(numFig).padStart(2, '0');
+
             const div = document.createElement('div');
-            div.className = "relative group cursor-pointer border-2 border-transparent hover:border-amber-500 rounded-lg overflow-hidden shadow-sm";
+            div.className = "relative group cursor-pointer border-2 border-transparent hover:border-amber-500 rounded-lg overflow-hidden shadow-sm flex flex-col bg-white ring-1 ring-slate-200 w-40";
+            
             div.innerHTML = `
-                <img src="${srcUrl}" class="h-32 w-auto object-contain bg-white miniatura-rdi" onclick="window.abrirEditorImagen(this.src, this)" title="Clic para editar">
-                <div class="absolute inset-0 bg-black/40 hidden group-hover:flex items-center justify-center pointer-events-none transition"><i class="fa-solid fa-paintbrush text-white text-3xl"></i></div>
-                <button onclick="event.stopPropagation(); this.parentElement.remove()" class="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white rounded-full w-7 h-7 flex items-center justify-center opacity-0 group-hover:opacity-100 transition z-10 cursor-pointer shadow-md"><i class="fa-solid fa-xmark text-sm"></i></button>
+                <div class="h-24 w-full relative">
+                    <img src="${srcUrl}" class="h-full w-full object-contain bg-white miniatura-rdi" onclick="window.abrirEditorImagen(this.src, this)" title="Clic para editar">
+                    <div class="absolute top-1 right-1 bg-amber-500 text-white text-[9px] px-1.5 py-0.5 rounded font-bold shadow">NUEVA</div>
+                    <div class="absolute inset-0 bg-black/40 hidden group-hover:flex items-center justify-center pointer-events-none transition"><i class="fa-solid fa-paintbrush text-white text-2xl"></i></div>
+                    <button onclick="event.stopPropagation(); this.parentElement.parentElement.remove()" class="absolute top-1 left-1 bg-red-600 hover:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition z-10 cursor-pointer shadow-md"><i class="fa-solid fa-xmark text-xs"></i></button>
+                </div>
+                <div class="flex-1 p-1.5 bg-amber-50 flex flex-col justify-center border-t border-amber-100">
+                    <span class="text-[9px] font-black text-amber-700 text-center uppercase tracking-widest mb-1">FIGURA ${figStr}</span>
+                    <input type="text" placeholder="Ej: Plano Muro..." class="w-full bg-white text-[9px] font-bold text-slate-700 border border-amber-200 rounded px-1 py-1 text-center focus:outline-none focus:ring-1 focus:ring-amber-500 shadow-inner">
+                </div>
             `;
             galeria.appendChild(div);
         };
@@ -11000,10 +11102,10 @@ window.iniciarNuevoReporte = function() {
 
             motorReconocimientoVoz = new SpeechRecognition();
             motorReconocimientoVoz.lang = 'es-PE'; 
-            motorReconocimientoVoz.interimResults = true; // 🔥 CRUCIAL: Permite leer en tiempo real
+            motorReconocimientoVoz.interimResults = true; 
             motorReconocimientoVoz.continuous = true;
 
-            let textoEstable = textarea.value; // Memoria del texto que ya estaba escrito
+            let textoEstable = textarea.value; 
 
             motorReconocimientoVoz.onstart = function() {
                 window.isDictating = true;
@@ -11016,30 +11118,17 @@ window.iniciarNuevoReporte = function() {
                 let transcripcionInterina = '';
                 let transcripcionFinal = '';
 
-                // Separar lo que ya entendió bien, de lo que aún está analizando
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        transcripcionFinal += event.results[i][0].transcript;
-                    } else {
-                        transcripcionInterina += event.results[i][0].transcript;
-                    }
+                    if (event.results[i].isFinal) transcripcionFinal += event.results[i][0].transcript;
+                    else transcripcionInterina += event.results[i][0].transcript;
                 }
                 
-                // Si consolidó una frase, la suma a la memoria
-                if (transcripcionFinal) {
-                    textoEstable = (textoEstable ? textoEstable + ' ' : '') + transcripcionFinal.trim();
-                }
-
-                // Escribe en tiempo real: La memoria estable + lo que está procesando
+                if (transcripcionFinal) textoEstable = (textoEstable ? textoEstable + ' ' : '') + transcripcionFinal.trim();
                 textarea.value = (textoEstable + ' ' + transcripcionInterina).trim();
-                textarea.scrollTop = textarea.scrollHeight; // Auto-scroll hacia abajo
+                textarea.scrollTop = textarea.scrollHeight; 
             };
 
-            motorReconocimientoVoz.onerror = function(event) {
-                console.warn("Interrupción: ", event.error);
-                window.detenerDictado();
-            };
-
+            motorReconocimientoVoz.onerror = function() { window.detenerDictado(); };
             motorReconocimientoVoz.onend = function() { window.detenerDictado(); };
             motorReconocimientoVoz.start();
         };
@@ -11053,7 +11142,7 @@ window.iniciarNuevoReporte = function() {
             }
         };
 
-        // El Editor Vectorial (Canvas) se mantiene intacto para mover flechas
+        // Editor Vectorial 
         (function() {
             let canvasEd = null, ctxEd = null, imgOriginal = new Image();
             let herramientaActual = 'rect', isDrawing = false, isDragging = false;
@@ -11135,7 +11224,7 @@ window.iniciarNuevoReporte = function() {
             };
         })();
 
-        // --- 5. MEGA-EXPORTADOR A EXCEL S10 (REDDISEÑO DE PRECISIÓN MILIMÉTRICA) ---
+        // --- 5. EXPORTACIÓN MÁGICA DEL FORMATO OFICIAL A EXCELJS (CORREGIDO LEYENDAS Y LOOP INFINITO) ---
         window.procesarExcelRDI = async function(rdiData) {
             let config = window.configRDIGlobal || {};
             try {
@@ -11167,7 +11256,6 @@ window.iniciarNuevoReporte = function() {
                 }
             }
 
-            // Cabecera Principal
             ws.mergeCells('B1:F4'); ws.getCell('B1').border = { top: {style:'thin'}, bottom: {style:'thin'}, left: {style:'thin'}, right: {style:'thin'} };
             ws.mergeCells('G1:AI2'); let t1 = ws.getCell('G1'); t1.value = config.nombreEmpresa || "SISTEMA INTEGRADO DE GESTIÓN";
             t1.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 }; t1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF000000' } }; t1.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -11176,7 +11264,6 @@ window.iniciarNuevoReporte = function() {
 
             ws.mergeCells('B5:AI5'); let dg = ws.getCell('B5'); dg.value = "DATOS GENERALES"; dg.font = { bold: true, color: { argb: 'FFFFFFFF' } }; dg.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF000000' } };
 
-            // 🔥 ALINEACIÓN A LA IZQUIERDA PARA DATOS GENERALES
             const estiloT = { font: { bold: true }, border: { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} }, alignment: { vertical: 'middle', horizontal: 'left', indent: 1 } };
             const estiloV = { border: { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} }, alignment: { vertical: 'middle', horizontal: 'left', indent: 1 } };
 
@@ -11216,7 +11303,6 @@ window.iniciarNuevoReporte = function() {
             
             ws.mergeCells(`B14:AB${descEndRow}`); let desc = ws.getCell('B14'); desc.value = " " + rdiData.descripcion; desc.alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
 
-            // Caja Derecha: Prioridad
             ws.mergeCells('AC13:AI14'); let fReqT = ws.getCell('AC13'); fReqT.value = "FECHA REQUERIDA DE\nRESPUESTA"; fReqT.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; fReqT.font = { bold: true }; fReqT.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
             ws.mergeCells('AC15:AI16'); let fReqD = ws.getCell('AC15'); fReqD.value = rdiData.fechaRequerida; fReqD.alignment = { horizontal: 'center', vertical: 'middle' }; fReqD.font = { bold: true, size: 10 }; fReqD.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
 
@@ -11238,27 +11324,36 @@ window.iniciarNuevoReporte = function() {
             ['B13'].forEach(c => ws.getCell(c).border = { top: {style:'thin'}, bottom: {style:'thin'}, left: {style:'thin'}, right: {style:'thin'} });
 
             let rC = descEndRow + 1;
-            let imagenesValidas = rdiData.imagenes.filter(img => img && img.length > 100);
+            
+            // 🔥 AQUÍ SE DIBUJAN LAS IMÁGENES CON LA LEYENDA REAL
+            let imagenesValidas = rdiData.imagenesConsulta || [];
+            
+            if (imagenesValidas.length === 0 && rdiData.imagenes && rdiData.imagenes.length > 0) {
+                // Respaldo para los RDIs antiquísimos que usaban el array 'imagenes'
+                rdiData.imagenes.forEach((src, idx) => imagenesValidas.push({ url: src, caption: `FIGURA 0${idx+1} - Sustento Visual` }));
+            }
 
             if (imagenesValidas.length > 0) {
                 for (let i = 0; i < imagenesValidas.length; i++) {
+                    const objImg = imagenesValidas[i];
+                    if (!objImg.url || objImg.url.length < 100) continue;
+
                     ws.mergeCells(`B${rC}:AB${rC}`);
-                    ws.getCell(`B${rC}`).value = ` FIGURA 0${i+1} - Sustento Visual`;
-                    ws.getCell(`B${rC}`).font = { bold: true, italic: true, color: { argb: 'FF475569' } }; 
+                    ws.getCell(`B${rC}`).value = ` ${objImg.caption}`; // 🔥 TITULO REAL AQUÍ
+                    ws.getCell(`B${rC}`).font = { bold: true, italic: true, color: { argb: 'FF475569' } };
                     rC++;
                     
                     let imgEnd = rC + 18; 
                     ws.mergeCells(`B${rC}:AB${imgEnd}`); 
                     
                     try {
-                        let rawSrc = imagenesValidas[i];
                         let pureB64 = ''; let ext = 'png';
-                        if (rawSrc.startsWith('http')) {
-                            let res = await fetch(rawSrc); let blob = await res.blob();
+                        if (objImg.url.startsWith('http')) {
+                            let res = await fetch(objImg.url); let blob = await res.blob();
                             pureB64 = await new Promise(resolve => { let reader = new FileReader(); reader.onloadend = () => resolve(reader.result.split(',')[1]); reader.readAsDataURL(blob); });
                         } else {
-                            pureB64 = rawSrc.includes(',') ? rawSrc.split(',')[1] : rawSrc;
-                            ext = rawSrc.substring(rawSrc.indexOf('/')+1, rawSrc.indexOf(';')); if(ext === 'jpeg') ext = 'png';
+                            pureB64 = objImg.url.includes(',') ? objImg.url.split(',')[1] : objImg.url;
+                            ext = objImg.url.substring(objImg.url.indexOf('/')+1, objImg.url.indexOf(';')); if(ext === 'jpeg') ext = 'png';
                         }
                         
                         const imgId = wb.addImage({ base64: pureB64, extension: ext });
@@ -11272,7 +11367,6 @@ window.iniciarNuevoReporte = function() {
 
             let finalRow = rC - 1;
             if (finalRow < 20) finalRow = 20; 
-            
             if (finalRow > 20) ws.mergeCells(`AC21:AI${finalRow}`);
 
             drawBoxBorder(2, 11, 28, finalRow);   
@@ -11321,113 +11415,117 @@ window.iniciarNuevoReporte = function() {
 
             if (config.logoUrl) {
                 try {
-                    const logoRes = await fetch(config.logoUrl); const logoBlob = await logoRes.blob(); const logoReader = new FileReader();
+                    const logoRes = await fetch(config.logoUrl); 
+                    const logoBlob = await logoRes.blob(); 
+                    const logoReader = new FileReader();
+                    
                     logoReader.onload = function() {
                         try {
-                            let b64Logo = logoReader.result; let pureB64Logo = b64Logo.includes(',') ? b64Logo.split(',')[1] : b64Logo;
+                            let b64Logo = logoReader.result; 
+                            let pureB64Logo = b64Logo.includes(',') ? b64Logo.split(',')[1] : b64Logo;
                             const logoId = wb.addImage({ base64: pureB64Logo, extension: 'png' });
                             
-                            // 🔥 TAMAÑO EXACTO Y CENTRADO REAJUSTADO HACIA LA IZQUIERDA
+                            // 🔥 SOLUCIÓN: Anclaje proporcional exacto de celda a celda
+                            // tl = top-left (Esquina superior izquierda: Empieza en Columna B = 1, Fila 1 = 0)
+                            // br = bottom-right (Esquina inferior derecha: Termina en Columna G = 6, Fila 5 = 4)
+                            // Al usar decimales como 0.1 y 0.9, dejamos un pequeño "padding" para que respire.
                             ws.addImage(logoId, { 
-                                tl: { col: 1.1, row: 0.5 }, // Coordenadas ajustadas para alinear perfectamente al centro
-                                ext: { width: 110, height: 37 }, 
-                                editAs: 'oneCell' 
+                                tl: { col: 1.2, row: 0.2 }, 
+                                br: { col: 5.8, row: 3.8 }, 
+                                editAs: 'absolute' 
                             });
+                            
                             wb.xlsx.writeBuffer().then(buffer => saveAs(new Blob([buffer]), nombreArchivo));
-                        } catch(e) {}
+                        } catch(e) {
+                            console.error("Error al inyectar logo:", e);
+                        }
                     };
-                    logoReader.readAsDataURL(logoBlob); return; 
-                } catch(e) {}
+                    logoReader.readAsDataURL(logoBlob); 
+                    return; // Retornamos porque la descarga se dispara dentro del onload
+                } catch(e) {
+                    console.error("Error al descargar logo de firebase:", e);
+                }
             }
 
             const buffer = await wb.xlsx.writeBuffer();
             saveAs(new Blob([buffer]), nombreArchivo);
         };
         
-        // LLAMADA DESDE EL BOTÓN DE EXPORTAR DEL MODAL
+        // LLAMADA DESDE EL BOTÓN DE EXPORTAR DEL MODAL (AHORA CON BARRIDO DE LEYENDAS Y CORRECCIÓN DE BUG)
         window.descargarExcelRDI_Actual = async function() {
             const btn = document.querySelector('button[onclick="window.descargarExcelRDI_Actual()"]');
-            if(btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando...';
-            
-            let proyectoActivo = window.proyectoActualGlobal || document.getElementById('proyectoSelect')?.value || '';
-            let config = {};
-            if (proyectoActivo) {
-                try {
-                    const configSnap = await window.fsGetDoc(window.fsDoc(window.firebaseDb, `proyectos/${proyectoActivo}/configuracionRDI/formato`));
-                    if (configSnap.exists()) config = configSnap.data();
-                } catch(e) {}
+            if(btn) {
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando...';
+                btn.disabled = true; // Bloqueamos el botón para evitar doble clic
             }
-
-            let prio = document.getElementById('rdiPrioridad')?.value || 'MEDIA';
-            let strFechaEmision = document.getElementById('rdiFechaEmision')?.value || new Date().toISOString().split('T')[0];
-            let diasSumar = 3; 
-            if (prio === 'ALTA') diasSumar = config.diasAlta !== undefined ? parseInt(config.diasAlta) : 1;
-            if (prio === 'MEDIA') diasSumar = config.diasMedia !== undefined ? parseInt(config.diasMedia) : 3;
-            if (prio === 'BAJA') diasSumar = config.diasBaja !== undefined ? parseInt(config.diasBaja) : 5;
-
-            let partes = strFechaEmision.split('-'); let objFecha = new Date(partes[0], partes[1] - 1, partes[2]); objFecha.setDate(objFecha.getDate() + diasSumar);
-            let fechaRespuestaCalculada = `${String(objFecha.getDate()).padStart(2, '0')}/${String(objFecha.getMonth() + 1).padStart(2, '0')}/${objFecha.getFullYear()}`;
-
-            let tituloEmisor = document.getElementById('rdiTituloEmisor')?.value || '';
-            let nombreEmisor = document.getElementById('rdiEmisor')?.value.trim() || '';
-            let emisorCompleto = (tituloEmisor + ' ' + nombreEmisor).trim();
-
-            let rdiData = {
-                proyecto: proyectoActivo,
-                correlativo: document.getElementById('rdiCorrelativo')?.value || '',
-                fecha: strFechaEmision, plano: document.getElementById('rdiPlano')?.value || '', especialidad: document.getElementById('rdiEspecialidad')?.value || '',
-                emisor: emisorCompleto, receptor: document.getElementById('rdiReceptor')?.value || '',
-                asunto: document.getElementById('rdiAsunto')?.value || '', descripcion: document.getElementById('rdiDescripcion')?.value || '',
-                prioridad: prio, fechaRequerida: fechaRespuestaCalculada,
-                cliente: config.cliente || '', contratista: config.contratista || '', supervision: config.supervision || '', imagenes: []
-            };
-            document.querySelectorAll('#rdiGaleriaMiniaturas .miniatura-rdi').forEach(img => rdiData.imagenes.push(img.src));
             
-            window.procesarExcelRDI(rdiData).then(() => {
-                if(btn) btn.innerHTML = '<i class="fa-solid fa-file-excel"></i> Exportar a Excel';
-            });
-        };
+            try {
+                let proyectoActivo = window.proyectoActualGlobal || document.getElementById('proyectoSelect')?.value || '';
+                let config = {};
+                if (proyectoActivo) {
+                    try {
+                        const configSnap = await window.fsGetDoc(window.fsDoc(window.firebaseDb, `proyectos/${proyectoActivo}/configuracionRDI/formato`));
+                        if (configSnap.exists()) config = configSnap.data();
+                    } catch(e) {}
+                }
 
-        // LLAMADA DESDE EL BOTÓN VERDE DE LA MATRIZ EXTERNA
-        window.descargarExcelRDI_ID = async function(id, btnEl) {
-            let rdi = window.matrizRDIGlobal.find(r => r.id === id);
-            if(!rdi) return alert("RDI no encontrado.");
-            
-            const txtOrig = btnEl.innerHTML;
-            btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-            btnEl.disabled = true;
+                let prio = document.getElementById('rdiPrioridad')?.value || 'MEDIA';
+                let strFechaEmision = document.getElementById('rdiFechaEmision')?.value || new Date().toISOString().split('T')[0];
+                let diasSumar = 3; 
+                if (prio === 'ALTA') diasSumar = config.diasAlta !== undefined ? parseInt(config.diasAlta) : 1;
+                if (prio === 'MEDIA') diasSumar = config.diasMedia !== undefined ? parseInt(config.diasMedia) : 3;
+                if (prio === 'BAJA') diasSumar = config.diasBaja !== undefined ? parseInt(config.diasBaja) : 5;
 
-            let proyectoActivo = window.proyectoActualGlobal || '';
-            let config = {};
-            if (proyectoActivo) {
-                try {
-                    const configSnap = await window.fsGetDoc(window.fsDoc(window.firebaseDb, `proyectos/${proyectoActivo}/configuracionRDI/formato`));
-                    if (configSnap.exists()) config = configSnap.data();
-                } catch(e) {}
+                let partes = strFechaEmision.split('-'); let objFecha = new Date(partes[0], partes[1] - 1, partes[2]); objFecha.setDate(objFecha.getDate() + diasSumar);
+                let fechaRespuestaCalculada = `${String(objFecha.getDate()).padStart(2, '0')}/${String(objFecha.getMonth() + 1).padStart(2, '0')}/${objFecha.getFullYear()}`;
+
+                let tituloEmisor = document.getElementById('rdiTituloEmisor')?.value || '';
+                let nombreEmisor = document.getElementById('rdiEmisor')?.value.trim() || '';
+                let emisorCompleto = (tituloEmisor + ' ' + nombreEmisor).trim();
+
+                // 🔥 BARRIDO DE LAS IMÁGENES AL EXPORTAR DESDE EL MODAL (Recoge las nuevas leyendas antes de guardar en Firebase)
+                let arrayImagenesExport = [];
+                const divs = document.querySelectorAll('#rdiGaleriaMiniaturas > div');
+                divs.forEach((div, index) => {
+                    const img = div.querySelector('.miniatura-rdi');
+                    if (!img) return;
+                    
+                    const captionInput = div.querySelector('input[type="text"]');
+                    const captionDiv = div.querySelector('div[title]'); 
+                    
+                    let numFig = String(index + 1).padStart(2, '0');
+                    let captionFinal = `FIGURA ${numFig} - Sustento Visual`;
+
+                    if (captionInput && captionInput.value.trim() !== '') {
+                        captionFinal = `FIGURA ${numFig} - ${captionInput.value.trim()}`;
+                    } else if (captionDiv && captionDiv.innerText.trim() !== '') {
+                        captionFinal = captionDiv.innerText.trim();
+                    }
+
+                    arrayImagenesExport.push({ url: img.src, caption: captionFinal });
+                });
+
+                let rdiData = {
+                    proyecto: proyectoActivo, correlativo: document.getElementById('rdiCorrelativo')?.value || '',
+                    fecha: strFechaEmision, plano: document.getElementById('rdiPlano')?.value || '', especialidad: document.getElementById('rdiEspecialidad')?.value || '',
+                    emisor: emisorCompleto, receptor: document.getElementById('rdiReceptor')?.value || '',
+                    asunto: document.getElementById('rdiAsunto')?.value || '', descripcion: document.getElementById('rdiDescripcion')?.value || '',
+                    prioridad: prio, fechaRequerida: fechaRespuestaCalculada,
+                    cliente: config.cliente || '', contratista: config.contratista || '', supervision: config.supervision || '', 
+                    imagenesConsulta: arrayImagenesExport
+                };
+                
+                await window.procesarExcelRDI(rdiData);
+                
+            } catch (err) {
+                console.error(err);
+                alert("Hubo un error al generar el archivo.");
+            } finally {
+                if(btn) {
+                    btn.innerHTML = '<i class="fa-solid fa-file-excel"></i> Exportar a Excel';
+                    btn.disabled = false; // Desbloqueamos el botón
+                }
             }
-
-            let prio = rdi.prioridad || 'MEDIA';
-            let strFechaEmision = rdi.fechaEmision || rdi.fecha || new Date().toISOString().split('T')[0];
-            let diasSumar = 3; 
-            if (prio === 'ALTA') diasSumar = config.diasAlta !== undefined ? parseInt(config.diasAlta) : 1;
-            if (prio === 'MEDIA') diasSumar = config.diasMedia !== undefined ? parseInt(config.diasMedia) : 3;
-            if (prio === 'BAJA') diasSumar = config.diasBaja !== undefined ? parseInt(config.diasBaja) : 5;
-
-            let partes = strFechaEmision.split('-'); let objFecha = new Date(partes[0], partes[1] - 1, partes[2]); objFecha.setDate(objFecha.getDate() + diasSumar);
-            let fechaRespuestaCalculada = `${String(objFecha.getDate()).padStart(2, '0')}/${String(objFecha.getMonth() + 1).padStart(2, '0')}/${objFecha.getFullYear()}`;
-
-            let rdiData = {
-                proyecto: proyectoActivo, correlativo: rdi.correlativo || '',
-                fecha: strFechaEmision, plano: rdi.plano || '', especialidad: rdi.especialidad || '',
-                emisor: rdi.emisor || '', receptor: rdi.receptor || '', asunto: rdi.asunto || '', descripcion: rdi.descripcion || '',
-                prioridad: prio, fechaRequerida: fechaRespuestaCalculada,
-                cliente: config.cliente || '', contratista: config.contratista || '', supervision: config.supervision || '',
-                imagenes: rdi.imagenesUrls || []
-            };
-
-            window.procesarExcelRDI(rdiData).then(() => {
-                btnEl.innerHTML = txtOrig; btnEl.disabled = false;
-            });
         };
     </script>
 
