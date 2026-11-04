@@ -5145,28 +5145,29 @@ window.iniciarNuevoReporte = function() {
         }
 
         // ==========================================
-        // MOTOR MULTIJUGADOR EN TIEMPO REAL (REPARADO Y BLINDADO)
+        // MOTOR MULTIJUGADOR EN TIEMPO REAL (BLINDADO Y CORREGIDO)
         // ==========================================
         
         window.getSincronizacionParams = function() {
-            // Buscamos primero en variables globales vivas
-            let proj = window.currentProyecto || window.proyectoActualGlobal;
-            let per = window.currentPeriodo;
-            
-            // Si fallan, buscamos en los elementos visuales
+            // 🔥 FIX CRÍTICO: Variables de conexión a Firebase estrictas y garantizadas
+            let proj = window.currentProyecto;
+            if (!proj) proj = window.proyectoActualGlobal;
             if (!proj) {
                 let pSel = document.getElementById('proyectoSelect');
                 if (pSel && pSel.value) proj = pSel.value;
             }
+            
+            let per = window.currentPeriodo;
             if (!per) {
                 let mSel = document.getElementById('mesSelect');
                 if (mSel && mSel.value) per = mSel.value;
-                else {
-                    let statusStr = document.getElementById('statusText') ? document.getElementById('statusText').textContent : '';
-                    let match = statusStr.match(/\((.*?)\)/); 
-                    if (match) per = match[1];
-                }
             }
+            if (!per) {
+                let statusStr = document.getElementById('statusText') ? document.getElementById('statusText').textContent : '';
+                let match = statusStr.match(/\((.*?)\)/); 
+                if (match) per = match[1];
+            }
+
             return { proj, per };
         };
 
@@ -5177,9 +5178,11 @@ window.iniciarNuevoReporte = function() {
         };
 
         window.guardarReasignacionesEnVivo = async function() {
-            // 🔥 Se eliminó el "esNuevoReporte" para forzar transmisión de datos en vivo siempre
             const { proj, per } = window.getSincronizacionParams();
-            if (!proj || !per) return;
+            if (!proj || !per) {
+                console.error("Fallo de sincronización: No se detectó Proyecto o Periodo.");
+                return;
+            }
             
             try { 
                 await window.fsSetDoc(window.fsDoc(window.firebaseDb, `proyectos/${proj}/reportes/${per}`), { 
@@ -5188,7 +5191,7 @@ window.iniciarNuevoReporte = function() {
                 
                 if (typeof window.subirCTCaFirebase === 'function') window.subirCTCaFirebase();
             } catch (e) {
-                console.error("Error en auto-guardado: ", e);
+                console.error("Error en auto-guardado a Firebase: ", e);
             }
         };
 
@@ -5220,48 +5223,52 @@ window.iniciarNuevoReporte = function() {
             window.semanasUnsubscribe = window.fsOnSnapshot(docRef, (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    let repintar = false;
+                    let necesitaRepintar = false;
+                    let forzarPestana = false;
 
                     // A) Sincronizar Semanas
                     if (data.activeSemanas && Array.isArray(data.activeSemanas)) {
-                        activeSemanas = new Set(data.activeSemanas);
-                        document.querySelectorAll('.semana-chk').forEach(chk => { chk.checked = activeSemanas.has(chk.value); });
-                        const chkAll = document.getElementById('chkAllSemanas');
-                        if (chkAll && typeof subcontratoSemanas !== 'undefined') chkAll.checked = (activeSemanas.size === subcontratoSemanas.size);
-                        repintar = true;
+                        let newSemanasStr = data.activeSemanas.sort().join('|');
+                        let oldSemanasStr = Array.from(activeSemanas).sort().join('|');
+                        
+                        if (newSemanasStr !== oldSemanasStr) {
+                            activeSemanas = new Set(data.activeSemanas);
+                            document.querySelectorAll('.semana-chk').forEach(chk => { chk.checked = activeSemanas.has(chk.value); });
+                            const chkAll = document.getElementById('chkAllSemanas');
+                            if (chkAll && typeof subcontratoSemanas !== 'undefined') chkAll.checked = (activeSemanas.size === subcontratoSemanas.size);
+                            necesitaRepintar = true;
+                        }
                     }
 
                     // B) Sincronizar Reasignaciones (Multijugador Activo y Sensible)
                     if (data.reasignaciones) {
                         if (typeof window.reasignacionesNube === 'undefined') window.reasignacionesNube = {};
                         
-                        let nuevasReasignaciones = data.reasignaciones;
-                        let cambiosDetectados = false;
-
-                        // Comparamos la nube entrante con la RAM
-                        if (JSON.stringify(window.reasignacionesNube) !== JSON.stringify(nuevasReasignaciones)) {
-                            window.reasignacionesNube = { ...nuevasReasignaciones };
+                        // Si la nube detecta que alguien reasignó una fila
+                        if (JSON.stringify(window.reasignacionesNube) !== JSON.stringify(data.reasignaciones)) {
+                            window.reasignacionesNube = { ...data.reasignaciones };
+                            let cambiosDetectados = false;
                             
                             if (typeof consolidatedRows !== 'undefined' && consolidatedRows.length > 0) {
                                 consolidatedRows.forEach(row => {
-                                    // 🔥 Localiza a su par idéntico por ID Base64
                                     let destinoNube = window.reasignacionesNube[row._id];
                                     let destinoFinal = destinoNube || row._PartidaOriginal;
                                     
                                     if (row._PartidaActual !== destinoFinal) {
                                         row._PartidaActual = destinoFinal;
-                                        row._reassignedTimestamp = Date.now(); // Fuerza a que la fila salte al inicio
+                                        row._reassignedTimestamp = Date.now(); // ⏱️ Nueva estampa para reordenar
                                         cambiosDetectados = true;
                                     }
                                 });
                                 
                                 if (cambiosDetectados) {
-                                    // RE-CONSTRUIR TODO EL MOTOR AL INSTANTE
+                                    // RECONSTRUYE DATOS INTERNOS
                                     groupDataByPartida(); 
                                     buildPartidaTabsAndSelect(); 
                                     updateReassignmentCountUI(); 
                                     if (typeof window.actualizarMatrizROEnVivo === 'function') window.actualizarMatrizROEnVivo();
-                                    repintar = true;
+                                    necesitaRepintar = true;
+                                    forzarPestana = true; // 🔥 CRUCIAL: Fuerza a vaciar la tabla y redibujarla de cero
                                 }
                             }
                         }
@@ -5275,22 +5282,27 @@ window.iniciarNuevoReporte = function() {
                             roProjections = data.proyecciones;
                             window.proyeccionesNube = data.proyecciones;
                             localStorage.setItem('s10_ro_projections', nubeStr);
-                            repintar = true;
+                            necesitaRepintar = true;
                         }
                     }
 
-                    // 🔥 FORZAR EL REPINTADO UNIVERSAL (El Fix Definitivo)
-                    if (repintar && typeof renderTableData === 'function') {
-                        // Reseteamos a la página 1 para asegurar que el usuario vea el cambio si estaba en otra página
-                        currentPage = 1;
-                        
-                        // Si estamos en Consolidado, forzamos un switch limpio a la misma pestaña que estaba viendo
-                        if (currentMainView === 'CONSOLIDADO') {
-                            switchPartidaTab(currentPartidaKey);
-                        } else {
-                            // Si estamos en RO u otra pestaña, simplemente repintamos
-                            window.requestAnimationFrame(() => renderTableData());
+                    // 🔥 EJECUTAR REPINTADO EN LA PC RECEPTORA INMEDIATAMENTE
+                    if (necesitaRepintar && typeof renderTableData === 'function') {
+                        // 1. Efecto Visual de que la PC está recibiendo datos de otra persona
+                        const tbody = document.getElementById('tableBody');
+                        if (tbody && forzarPestana) {
+                            tbody.innerHTML = '<tr><td colspan="15" class="text-center py-4 text-emerald-600 font-bold bg-emerald-50"><i class="fa-solid fa-cloud-arrow-down mr-2 animate-bounce"></i>Sincronizando cambios de otro usuario...</td></tr>';
                         }
+                        
+                        // 2. Repintamos la tabla (Forzamos a la misma pestaña si estábamos en Consolidado)
+                        setTimeout(() => {
+                            if (currentMainView === 'CONSOLIDADO' && forzarPestana) {
+                                // Esto vacía la tabla y la vuelve a dibujar con el nuevo combo box
+                                switchPartidaTab(currentPartidaKey);
+                            } else {
+                                renderTableData();
+                            }
+                        }, 50); // Le damos 50ms al navegador para respirar y no congelarse
                     }
                 }
             });
