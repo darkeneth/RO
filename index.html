@@ -2540,9 +2540,10 @@ window.iniciarNuevoReporte = function() {
                     let recursoClean = recurso ? String(recurso).trim() : "-";
                     let n1Clean = recursoN1 ? String(recursoN1).trim() : "GENERAL";
 
-                    // 🔥 FIX MULTIJUGADOR: ID universal garantizado sin Math.random()
-                    let stringBase = `${partidaClean}_${n1Clean}_${recursoClean}_${globalIndex}`;
-                    let idUniversal = btoa(encodeURIComponent(stringBase)).replace(/=/g, '');
+                    // 🔥 FIX DEFINITIVO MULTIJUGADOR: ID universal garantizado sin Math.random()
+                    // Usamos Base64 (btoa) para crear un identificador idéntico en todos los navegadores
+                    let stringId = `${partidaClean}_${n1Clean}_${recursoClean}_${globalIndex}`;
+                    let idUniversal = btoa(unescape(encodeURIComponent(stringId))).replace(/=/g, '');
 
                     let rowCopy = {
                         "_id": idUniversal,
@@ -5144,20 +5145,27 @@ window.iniciarNuevoReporte = function() {
         }
 
         // ==========================================
-        // MOTOR MULTIJUGADOR EN TIEMPO REAL (BLINDADO)
+        // MOTOR MULTIJUGADOR EN TIEMPO REAL (REPARADO Y BLINDADO)
         // ==========================================
         
         window.getSincronizacionParams = function() {
-            let pSel = document.getElementById('proyectoSelect');
-            let proj = (pSel && pSel.value) ? pSel.value : window.proyectoActualGlobal;
+            // Buscamos primero en variables globales vivas
+            let proj = window.currentProyecto || window.proyectoActualGlobal;
+            let per = window.currentPeriodo;
             
-            let mSel = document.getElementById('mesSelect');
-            let per = (mSel && mSel.value) ? mSel.value : window.currentPeriodo;
-            
+            // Si fallan, buscamos en los elementos visuales
+            if (!proj) {
+                let pSel = document.getElementById('proyectoSelect');
+                if (pSel && pSel.value) proj = pSel.value;
+            }
             if (!per) {
-                let statusStr = document.getElementById('statusText') ? document.getElementById('statusText').textContent : '';
-                let match = statusStr.match(/\((.*?)\)/); 
-                if (match) per = match[1];
+                let mSel = document.getElementById('mesSelect');
+                if (mSel && mSel.value) per = mSel.value;
+                else {
+                    let statusStr = document.getElementById('statusText') ? document.getElementById('statusText').textContent : '';
+                    let match = statusStr.match(/\((.*?)\)/); 
+                    if (match) per = match[1];
+                }
             }
             return { proj, per };
         };
@@ -5169,9 +5177,10 @@ window.iniciarNuevoReporte = function() {
         };
 
         window.guardarReasignacionesEnVivo = async function() {
-            // 🔥 Se eliminó el bloqueo de window.esNuevoReporte para asegurar sincronización
+            // 🔥 Se eliminó el "esNuevoReporte" para forzar transmisión de datos en vivo siempre
             const { proj, per } = window.getSincronizacionParams();
             if (!proj || !per) return;
+            
             try { 
                 await window.fsSetDoc(window.fsDoc(window.firebaseDb, `proyectos/${proj}/reportes/${per}`), { 
                     reasignaciones: window.reasignacionesNube || {} 
@@ -5183,13 +5192,25 @@ window.iniciarNuevoReporte = function() {
             }
         };
 
+        window.guardarProyeccionesEnVivo = async function() {
+            const { proj, per } = window.getSincronizacionParams();
+            if (!proj || !per) return;
+            try { await window.fsSetDoc(window.fsDoc(window.firebaseDb, `proyectos/${proj}/reportes/${per}`), { proyecciones: window.roProjections || {} }, { merge: true }); } catch (e) {}
+        };
+
         // Escuchador blindado MULTI-SISTEMA
         window.escucharSemanasEnVivo = function() {
             let pSel = document.getElementById('proyectoSelect');
-            let proj = (pSel && pSel.value) ? pSel.value : window.proyectoActualGlobal;
-            let statusStr = document.getElementById('statusText') ? document.getElementById('statusText').textContent : '';
-            let match = statusStr.match(/\((.*?)\)/); 
-            let per = match ? match[1] : (document.getElementById('mesSelect') ? document.getElementById('mesSelect').value : window.currentPeriodo);
+            let proj = window.currentProyecto || (pSel && pSel.value) ? pSel.value : window.proyectoActualGlobal;
+            
+            let mSel = document.getElementById('mesSelect');
+            let per = window.currentPeriodo || (mSel && mSel.value) ? mSel.value : null;
+            
+            if (!per) {
+                let statusStr = document.getElementById('statusText') ? document.getElementById('statusText').textContent : '';
+                let match = statusStr.match(/\((.*?)\)/); 
+                if (match) per = match[1];
+            }
 
             if (!proj || !per) return;
             
@@ -5210,25 +5231,32 @@ window.iniciarNuevoReporte = function() {
                         repintar = true;
                     }
 
-                    // B) Sincronizar Reasignaciones (Multijugador Activo)
+                    // B) Sincronizar Reasignaciones (Multijugador Activo y Sensible)
                     if (data.reasignaciones) {
                         if (typeof window.reasignacionesNube === 'undefined') window.reasignacionesNube = {};
                         
-                        // Si la nube detecta un cambio respecto a lo que tiene nuestra RAM
-                        if (JSON.stringify(window.reasignacionesNube) !== JSON.stringify(data.reasignaciones)) {
-                            window.reasignacionesNube = { ...data.reasignaciones };
+                        let nuevasReasignaciones = data.reasignaciones;
+                        let cambiosDetectados = false;
+
+                        // Comparamos la nube entrante con la RAM
+                        if (JSON.stringify(window.reasignacionesNube) !== JSON.stringify(nuevasReasignaciones)) {
+                            window.reasignacionesNube = { ...nuevasReasignaciones };
                             
-                            let huboCambios = false;
-                            if (typeof consolidatedRows !== 'undefined') {
+                            if (typeof consolidatedRows !== 'undefined' && consolidatedRows.length > 0) {
                                 consolidatedRows.forEach(row => {
-                                    let destino = window.reasignacionesNube[row._id] || row._PartidaOriginal;
-                                    if (row._PartidaActual !== destino) {
-                                        row._PartidaActual = destino;
-                                        row._reassignedTimestamp = Date.now();
-                                        huboCambios = true;
+                                    // 🔥 Localiza a su par idéntico por ID Base64
+                                    let destinoNube = window.reasignacionesNube[row._id];
+                                    let destinoFinal = destinoNube || row._PartidaOriginal;
+                                    
+                                    if (row._PartidaActual !== destinoFinal) {
+                                        row._PartidaActual = destinoFinal;
+                                        row._reassignedTimestamp = Date.now(); // Fuerza a que la fila salte al inicio
+                                        cambiosDetectados = true;
                                     }
                                 });
-                                if (huboCambios) {
+                                
+                                if (cambiosDetectados) {
+                                    // RE-CONSTRUIR TODO EL MOTOR AL INSTANTE
                                     groupDataByPartida(); 
                                     buildPartidaTabsAndSelect(); 
                                     updateReassignmentCountUI(); 
@@ -5251,8 +5279,18 @@ window.iniciarNuevoReporte = function() {
                         }
                     }
 
+                    // 🔥 FORZAR EL REPINTADO UNIVERSAL (El Fix Definitivo)
                     if (repintar && typeof renderTableData === 'function') {
-                        setTimeout(() => renderTableData(), 50);
+                        // Reseteamos a la página 1 para asegurar que el usuario vea el cambio si estaba en otra página
+                        currentPage = 1;
+                        
+                        // Si estamos en Consolidado, forzamos un switch limpio a la misma pestaña que estaba viendo
+                        if (currentMainView === 'CONSOLIDADO') {
+                            switchPartidaTab(currentPartidaKey);
+                        } else {
+                            // Si estamos en RO u otra pestaña, simplemente repintamos
+                            window.requestAnimationFrame(() => renderTableData());
+                        }
                     }
                 }
             });
