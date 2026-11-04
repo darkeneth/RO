@@ -346,19 +346,14 @@
     <!-- PANTALLA DE HISTORIAL DEL PROYECTO -->
     <!-- ========================================== -->
     <div id="vistaHistorial" class="hidden flex-1 w-full bg-slate-50">
-        <div class="w-full px-6 lg:px-12 pt-4 pb-12">
+        <!-- 🔥 FIX: Padding superior reducido para que los módulos suban pegados al header -->
+        <div class="w-full px-6 lg:px-12 pt-6 pb-12">
             
-            <!-- Cabecera Premium (Reducida) -->
-            <div class="flex justify-end mb-6 w-full">
-                <button id="btnNuevoReporteRO" onclick="window.iniciarNuevoReporte()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold uppercase tracking-widest py-3.5 px-6 rounded-full shadow-md transition flex items-center gap-2 cursor-pointer transform hover:-translate-y-0.5 hidden">
-                    <i class="fa-solid fa-plus text-sm"></i> NUEVO REPORTE RO
-                </button>
-            </div>
-
             <!-- ========================================== -->
             <!-- LOBBY DE MÓDULOS DEL PROYECTO -->
             <!-- ========================================== -->
-            <div id="lobbyModulosProyecto" class="w-full flex flex-col sm:flex-row gap-8 justify-center mt-12">
+            <!-- 🔥 FIX: Sin márgenes superiores extraños que empujen hacia abajo -->
+            <div id="lobbyModulosProyecto" class="w-full flex flex-col sm:flex-row gap-8 justify-center">
                 
                 <!-- Tarjeta: Control RO -->
                 <div onclick="window.abrirModulo('RO')" class="bg-white rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-200 cursor-pointer group flex flex-col items-center text-center w-full max-w-sm transform hover:-translate-y-2">
@@ -401,7 +396,19 @@
             <!-- ========================================== -->
             <!-- CONTENEDOR MÓDULO RO -->
             <!-- ========================================== -->
-            <div id="moduloProyectoRO" class="w-full">
+            <div id="moduloProyectoRO" class="hidden w-full"> <!-- 🔥 FIX: RO Inicia oculto -->
+                
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 w-full gap-4">
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-800 tracking-tight">Control de Resultado Operativo (RO)</h2>
+                        <p class="text-sm text-slate-500">Gestión de Costos, Reasignaciones, Subcontratos y Almacén.</p>
+                    </div>
+                    <!-- 🔥 FIX: El botón ahora vive DENTRO del módulo de RO -->
+                    <button onclick="window.iniciarNuevoReporte()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold uppercase tracking-widest py-3.5 px-6 rounded-full shadow-md transition flex items-center gap-2 cursor-pointer transform hover:-translate-y-0.5 whitespace-nowrap">
+                        <i class="fa-solid fa-plus text-sm"></i> NUEVO REPORTE RO
+                    </button>
+                </div>
+
                 <!-- DASHBOARD GERENCIAL (Tarjetas + Semáforo) -->
                 <div id="dashboardHistorico" class="w-full mb-10 hidden">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -430,16 +437,25 @@
                 </div>
             </div>
 
-            <!-- 🔥 PANTALLA 1: HISTORIAL DE TAREOS -->
+            <!-- ========================================== -->
+            <!-- CONTENEDOR MÓDULO TAREOS -->
+            <!-- ========================================== -->
+            <div id="moduloProyectoTareos" class="hidden w-full">
+                
+                <!-- 🔥 PANTALLA 1: HISTORIAL DE TAREOS -->
                 <div id="historialTareos" class="w-full">
-                    <div class="flex justify-between items-center mb-6 w-full">
-                        <h2 class="text-2xl font-black text-slate-800 tracking-tight">Historial de Tareos</h2>
-                        <button onclick="window.iniciarNuevoTareo()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold uppercase tracking-widest py-3.5 px-6 rounded-full shadow-md transition flex items-center gap-2 cursor-pointer transform hover:-translate-y-0.5">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 w-full gap-4">
+                        <div>
+                            <h2 class="text-2xl font-black text-slate-800 tracking-tight">Historial de Tareos</h2>
+                            <p class="text-sm text-slate-500">Procesamiento automático y vinculación con S10.</p>
+                        </div>
+                        <!-- 🔥 FIX: El botón ahora vive DENTRO del módulo de Tareos -->
+                        <button onclick="window.iniciarNuevoTareo()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold uppercase tracking-widest py-3.5 px-6 rounded-full shadow-md transition flex items-center gap-2 cursor-pointer transform hover:-translate-y-0.5 whitespace-nowrap">
                             <i class="fa-solid fa-plus text-sm"></i> NUEVO TAREO
                         </button>
                     </div>
 
-                    <!-- 🔥 NUEVO: DASHBOARD DE PERSONAL TAREO -->
+                    <!-- DASHBOARD DE PERSONAL TAREO -->
                     <div id="dashboardTareos" class="hidden mb-8 grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-center border-l-4 border-l-emerald-500">
                             <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Personal Actual</span>
@@ -462,7 +478,7 @@
                     </div>
                 </div>
 
-                <!-- 🔥 PANTALLA 2: ZONA DE CARGA (Oculta por defecto) -->
+                <!-- PANTALLA 2: ZONA DE CARGA (Oculta por defecto) -->
                 <div id="zonaCargaTareo" class="hidden w-full">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     
@@ -572,7 +588,7 @@
             <!-- CONTENEDOR MÓDULO RDI -->
             <!-- ========================================== -->
             <div id="moduloProyectoRDI" class="hidden w-full">
-                
+                <!-- 🔥 FIX: Botón de RDI y título juntos en línea. -->
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 w-full gap-4">
                     <div>
                         <h2 class="text-2xl font-black text-slate-800 tracking-tight">Requerimientos de Información (RDI)</h2>
@@ -2521,16 +2537,21 @@ window.iniciarNuevoReporte = function() {
                     let recurso = findValueByPossibleKeys(row, ['Recurso', 'RECURSO', 'Descripcion', 'DESCRIPCION']);
 
                     let partidaClean = partida ? String(partida).trim() : "SIN PARTIDA";
+                    let recursoClean = recurso ? String(recurso).trim() : "-";
+                    let n1Clean = recursoN1 ? String(recursoN1).trim() : "GENERAL";
+
+                    // 🔥 FIX MULTIJUGADOR: ID universal basado en el contenido real de S10
+                    let idUniversal = btoa(encodeURIComponent(`${partidaClean}_${n1Clean}_${recursoClean}_${globalIndex}`)).replace(/=/g, '');
 
                     let rowCopy = {
-                        "_id": "row_" + globalIndex + "_" + Math.random().toString(36).substr(2, 6),
+                        "_id": idUniversal,
                         "_originalIndex": globalIndex,
                         "_PartidaControl": partidaClean,
                         "_PartidaOriginal": partidaClean,
                         "_PartidaActual": partidaClean,
                         "_reassignedTimestamp": 0,
-                        "_RecursoN1": recursoN1 || "GENERAL",
-                        "_Recurso": recurso || "-",
+                        "_RecursoN1": n1Clean,
+                        "_Recurso": recursoClean,
                         "_Origen": fileObj.name,
                         ...row
                     };
@@ -5147,14 +5168,14 @@ window.iniciarNuevoReporte = function() {
         };
 
         window.guardarReasignacionesEnVivo = async function() {
-            if (window.esNuevoReporte) return; 
             const { proj, per } = window.getSincronizacionParams();
             if (!proj || !per) return;
+            
             try { 
                 await window.fsSetDoc(window.fsDoc(window.firebaseDb, `proyectos/${proj}/reportes/${per}`), { 
                     reasignaciones: window.reasignacionesNube || {} 
                 }, { merge: true }); 
-                // Actualizar la Curva S automáticamente
+                
                 if (typeof window.subirCTCaFirebase === 'function') window.subirCTCaFirebase();
             } catch (e) {
                 console.error("Error en auto-guardado: ", e);
@@ -5194,28 +5215,36 @@ window.iniciarNuevoReporte = function() {
                         repintar = true;
                     }
 
-                    // B) Sincronizar Reasignaciones (Doble Blindaje)
+                    // B) Sincronizar Reasignaciones (Multijugador Activo)
                     if (data.reasignaciones) {
                         if (typeof window.reasignacionesNube === 'undefined') window.reasignacionesNube = {};
-                        // 🔥 Aquí está la magia: Mezcla la nube con la RAM para no perder nada
-                        window.reasignacionesNube = { ...window.reasignacionesNube, ...data.reasignaciones };
                         
-                        let huboCambios = false;
-                        if (typeof consolidatedRows !== 'undefined') {
-                            consolidatedRows.forEach(row => {
-                                let destino = window.reasignacionesNube[row._id] || row._PartidaOriginal;
-                                if (row._PartidaActual !== destino) {
-                                    row._PartidaActual = destino;
-                                    row._reassignedTimestamp = Date.now();
-                                    huboCambios = true;
+                        let nuevasReasignaciones = data.reasignaciones;
+                        let cambiosDetectados = false;
+
+                        // Comparamos lo que llegó de la nube vs la RAM actual
+                        if (JSON.stringify(window.reasignacionesNube) !== JSON.stringify(nuevasReasignaciones)) {
+                            window.reasignacionesNube = { ...nuevasReasignaciones };
+                            
+                            if (typeof consolidatedRows !== 'undefined' && consolidatedRows.length > 0) {
+                                consolidatedRows.forEach(row => {
+                                    let destinoNube = window.reasignacionesNube[row._id];
+                                    let destinoFinal = destinoNube || row._PartidaOriginal;
+                                    
+                                    if (row._PartidaActual !== destinoFinal) {
+                                        row._PartidaActual = destinoFinal;
+                                        row._reassignedTimestamp = Date.now();
+                                        cambiosDetectados = true;
+                                    }
+                                });
+                                
+                                if (cambiosDetectados) {
+                                    groupDataByPartida(); 
+                                    buildPartidaTabsAndSelect(); 
+                                    updateReassignmentCountUI(); 
+                                    if (typeof window.actualizarMatrizROEnVivo === 'function') window.actualizarMatrizROEnVivo();
+                                    repintar = true;
                                 }
-                            });
-                            if (huboCambios) {
-                                groupDataByPartida(); 
-                                buildPartidaTabsAndSelect(); 
-                                updateReassignmentCountUI(); 
-                                if (typeof window.actualizarMatrizROEnVivo === 'function') window.actualizarMatrizROEnVivo();
-                                repintar = true;
                             }
                         }
                     }
@@ -6353,11 +6382,16 @@ window.iniciarNuevoReporte = function() {
             const modRO = document.getElementById('moduloProyectoRO');
             const modTareo = document.getElementById('moduloProyectoTareos');
             const modRDI = document.getElementById('moduloProyectoRDI'); 
-            const modCrono = document.getElementById('moduloProyectoCronograma'); // NUEVO
+            const modCrono = document.getElementById('moduloProyectoCronograma');
+            
             const btnNuevoRO = document.getElementById('btnNuevoReporteRO');
+            const btnHeaderRDI = document.getElementById('btnHeaderNuevoRDI'); // 🔥 NUEVO BOTÓN
             
             const vistaPrevia = document.getElementById('vistaPreviaExportacion');
             if (vistaPrevia) vistaPrevia.classList.add('hidden');
+
+            // Aseguramos de apagar el botón del header RDI en todos lados menos en RDI
+            if (btnHeaderRDI) btnHeaderRDI.classList.add('hidden');
 
             if (modulo === 'RO') {
                 if (pushHistory) history.pushState({ vista: 'modulo_ro', proyecto: window.proyectoActualGlobal }, '', '#modulo-ro');
@@ -6384,7 +6418,12 @@ window.iniciarNuevoReporte = function() {
                 if (modRO) modRO.classList.add('hidden');
                 if (modCrono) modCrono.classList.add('hidden');
                 if (btnNuevoRO) btnNuevoRO.classList.add('hidden');
+                if (btnHeaderRDI) btnHeaderRDI.classList.remove('hidden'); // 🔥 ENCENDEMOS BOTÓN RDI
                 
+                // Ocultar botón duplicado inferior de RDI para ahorrar espacio
+                const oldRdiBtn = document.querySelector('#moduloProyectoRDI button[onclick="window.abrirModalEdicionRDI()"]');
+                if(oldRdiBtn) oldRdiBtn.classList.add('hidden');
+
                 if(typeof window.cargarMatrizRDI === 'function') window.cargarMatrizRDI(window.proyectoActualGlobal);
             } else if (modulo === 'CRONOGRAMA') { 
                 if (pushHistory) history.pushState({ vista: 'modulo_cronograma', proyecto: window.proyectoActualGlobal }, '', '#modulo-cronograma');
@@ -6394,7 +6433,6 @@ window.iniciarNuevoReporte = function() {
                 if (modRO) modRO.classList.add('hidden');
                 if (btnNuevoRO) btnNuevoRO.classList.add('hidden');
                 
-                // Dispara el cerebro del Cronograma la primera vez
                 if (!window.ganttInicializado) {
                     window.inicializarCronograma();
                     window.ganttInicializado = true;
@@ -11095,33 +11133,216 @@ window.iniciarNuevoReporte = function() {
             const tbody = document.getElementById('cuerpoMatrizRDI');
             if (!tbody) return; tbody.innerHTML = '';
             if (window.matrizRDIGlobal.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-400 italic">No hay RDIs creados en este proyecto aún.</td></tr>'; return; }
-            window.matrizRDIGlobal.sort((a, b) => (parseInt(a.correlativo) || 0) - (parseInt(b.correlativo) || 0));
+            
+            // Ordenar numéricamente para que la vista y la renumeración sean perfectas
+            window.matrizRDIGlobal.sort((a, b) => {
+                let numA = a.correlativoInt || parseInt(String(a.id).replace(/\D/g, '')) || 0;
+                let numB = b.correlativoInt || parseInt(String(b.id).replace(/\D/g, '')) || 0;
+                return numA - numB;
+            });
 
             window.matrizRDIGlobal.forEach(rdi => {
                 let badgeClass = 'bg-slate-100 text-slate-600';
-                let estadoTexto = rdi.resolucion || 'PENDIENTE';
+                let estadoTexto = rdi.resolucion || rdi.estado || 'PENDIENTE';
                 if (estadoTexto === 'PENDIENTE') badgeClass = 'bg-red-100 text-red-700';
-                if (estadoTexto === 'CUMPLE') badgeClass = 'bg-emerald-100 text-emerald-700';
-                if (estadoTexto === 'GENERA MODIFICACION PLANO') badgeClass = 'bg-amber-100 text-amber-700';
+                else if (estadoTexto === 'CUMPLE' || estadoTexto === 'ABSUELTO') { badgeClass = 'bg-emerald-100 text-emerald-700'; estadoTexto = 'ABSUELTO'; }
+                else if (estadoTexto === 'GENERA MODIFICACION PLANO') { badgeClass = 'bg-amber-100 text-amber-700'; estadoTexto = 'MODIF. PLANO'; }
 
-                let numRDI = String(rdi.correlativo).padStart(3, '0');
+                let numVisual = rdi.correlativoStr || (rdi.correlativo ? (String(rdi.correlativo).startsWith('RDI') ? rdi.correlativo : `RDI-${String(rdi.correlativo).padStart(3, '0')}`) : rdi.id);
+
                 tbody.innerHTML += `
                     <tr class="hover:bg-slate-50 transition border-b border-slate-100">
-                        <td class="p-3 font-bold text-slate-800">RDI-${numRDI}</td>
+                        <td class="p-3 font-bold text-slate-800">${numVisual}</td>
                         <td class="p-3 text-xs">${rdi.fechaEmision || rdi.fecha || ''}</td>
-                        <td class="p-3"><span class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-[10px] font-bold">${rdi.especialidad || ''}</span></td>
-                        <td class="p-3 font-medium text-xs">${rdi.asunto || ''}</td>
+                        <td class="p-3"><span class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest">${rdi.especialidad || ''}</span></td>
+                        <td class="p-3 font-medium text-xs truncate max-w-xs" title="${rdi.asunto || ''}">${rdi.asunto || ''}</td>
                         <td class="p-3 text-center"><span class="${badgeClass} px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider">${estadoTexto}</span></td>
                         <td class="p-3 text-center">
                             <div class="flex items-center justify-center gap-2">
-                                <button onclick="window.abrirModalEdicionRDI('${rdi.id}')" class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 hover:bg-blue-100 hover:text-blue-600 transition" title="Ver / Editar"><i class="fa-solid fa-eye"></i></button>
-                                <button onclick="window.descargarExcelRDI_ID('${rdi.id}', this)" class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-600 hover:text-white transition" title="Exportar Excel"><i class="fa-solid fa-file-excel"></i></button>
-                                <button onclick="window.eliminarRDI('${rdi.id}')" class="w-8 h-8 rounded-full bg-red-50 text-red-500 hover:bg-red-600 hover:text-white transition" title="Eliminar"><i class="fa-solid fa-trash-can"></i></button>
+                                <button onclick="window.abrirModalEdicionRDI('${rdi.id}')" class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 hover:bg-blue-100 hover:text-blue-600 transition shadow-sm" title="Ver / Editar"><i class="fa-solid fa-eye"></i></button>
+                                <button onclick="window.descargarExcelRDI_ID('${rdi.id}', this)" class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-600 hover:text-white transition shadow-sm" title="Exportar Excel"><i class="fa-solid fa-file-excel"></i></button>
+                                <button onclick="window.eliminarYRenumerarRDI('${rdi.id}')" class="w-8 h-8 rounded-full bg-red-50 text-red-500 hover:bg-red-600 hover:text-white transition shadow-sm" title="Eliminar"><i class="fa-solid fa-trash-can"></i></button>
                             </div>
                         </td>
                     </tr>
                 `;
             });
+
+            // 🔥 SECCIÓN RECUPERADA: CÁLCULO Y RENDERIZADO DE GRÁFICOS KPI
+            let countsEspecialidad = {};
+            let countsEstado = { 'Pendientes': 0, 'Absueltos': 0, 'Modif. Plano': 0 };
+
+            window.matrizRDIGlobal.forEach(rdi => {
+                // Conteo por Especialidad
+                let esp = rdi.especialidad || 'SIN ESPEC.';
+                countsEspecialidad[esp] = (countsEspecialidad[esp] || 0) + 1;
+
+                // Conteo por Estado Real
+                let est = rdi.resolucion || rdi.estado || 'PENDIENTE';
+                if (est === 'PENDIENTE') countsEstado['Pendientes']++;
+                else if (est === 'CUMPLE' || est === 'ABSUELTO') countsEstado['Absueltos']++;
+                else if (est === 'GENERA MODIFICACION PLANO') countsEstado['Modif. Plano']++;
+            });
+
+            // Destruir gráficos anteriores si existen
+            if (window.chartRdiEspInst) window.chartRdiEspInst.destroy();
+            if (window.chartRdiEstInst) window.chartRdiEstInst.destroy();
+
+            // PLUGIN PERSONALIZADO: Inyecta los números directamente sobre los gráficos
+            const pluginEtiquetasMinimalistas = {
+                id: 'etiquetasMinimalistas',
+                afterDatasetsDraw(chart) {
+                    const { ctx } = chart;
+                    chart.data.datasets.forEach((dataset, i) => {
+                        const meta = chart.getDatasetMeta(i);
+                        meta.data.forEach((element, index) => {
+                            const value = dataset.data[index];
+                            if (value > 0) { 
+                                ctx.fillStyle = '#ffffff'; 
+                                ctx.font = 'bold 18px Arial'; 
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+                                
+                                ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+                                ctx.shadowBlur = 4;
+                                ctx.shadowOffsetX = 1;
+                                ctx.shadowOffsetY = 1;
+
+                                let xPos = element.x;
+                                let yPos = element.y;
+
+                                if (chart.config.type === 'bar') {
+                                    yPos = (element.base + element.y) / 2; 
+                                } else if (chart.config.type === 'doughnut') {
+                                    const pos = element.tooltipPosition();
+                                    xPos = pos.x;
+                                    yPos = pos.y;
+                                }
+
+                                ctx.fillText(value, xPos, yPos);
+                                
+                                ctx.shadowBlur = 0; 
+                                ctx.shadowOffsetX = 0;
+                                ctx.shadowOffsetY = 0;
+                            }
+                        });
+                    });
+                }
+            };
+
+            // 1. Gráfico de Donut (Especialidades)
+            const ctxEsp = document.getElementById('chartRdiEspecialidad');
+            if (ctxEsp && Object.keys(countsEspecialidad).length > 0) {
+                window.chartRdiEspInst = new Chart(ctxEsp, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(countsEspecialidad),
+                        datasets: [{
+                            data: Object.values(countsEspecialidad),
+                            backgroundColor: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#64748B'],
+                            borderWidth: 2,
+                            borderColor: '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true, 
+                        maintainAspectRatio: false,
+                        layout: { padding: 15 },
+                        cutout: '55%', 
+                        plugins: {
+                            legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10, family: 'Arial', weight: 'bold' } } }
+                        }
+                    },
+                    plugins: [pluginEtiquetasMinimalistas] 
+                });
+            }
+
+            // 2. Gráfico de Barras (Estados)
+            const ctxEst = document.getElementById('chartRdiEstado');
+            if (ctxEst && window.matrizRDIGlobal.length > 0) {
+                window.chartRdiEstInst = new Chart(ctxEst, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(countsEstado),
+                        datasets: [{
+                            label: 'Cantidad',
+                            data: Object.values(countsEstado),
+                            backgroundColor: ['#EF4444', '#10B981', '#F59E0B'],
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true, 
+                        maintainAspectRatio: false,
+                        layout: { padding: { top: 20 } },
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, ticks: { display: false }, grid: { display: false }, border: { display: false } },
+                            x: { grid: { display: false }, border: { display: false }, ticks: { font: { weight: 'bold' } } }
+                        }
+                    },
+                    plugins: [pluginEtiquetasMinimalistas] 
+                });
+            }
+        };
+
+        // 🔥 MOTOR INTELIGENTE DE ELIMINACIÓN Y RENUMERACIÓN EN CASCADA
+        window.eliminarYRenumerarRDI = async function(idDocumento) {
+            const rdiAEliminar = window.matrizRDIGlobal.find(r => r.id === idDocumento);
+            if (!rdiAEliminar) return alert("❌ Error: No se encontró el RDI en la memoria.");
+
+            let numVisual = rdiAEliminar.correlativoStr || rdiAEliminar.correlativo || rdiAEliminar.id;
+            
+            const confirmacion = confirm(`⚠️ ALERTA: ¿Estás totalmente seguro de ELIMINAR el requerimiento ${numVisual}?\n\nEsta acción no se puede deshacer. El sistema borrará este registro y renumerará automáticamente todos los RDIs que le siguen para mantener el orden.`);
+            if (!confirmacion) return;
+
+            const proyecto = window.proyectoActualGlobal;
+            if (!proyecto) return;
+
+            // Tratamos de obtener el número entero de este RDI para saber cuáles le siguen
+            const targetInt = rdiAEliminar.correlativoInt || parseInt(String(numVisual).replace(/\D/g, '')) || 0;
+            
+            // Separar y ordenar los RDIs que están "por encima" del que vamos a borrar
+            const rdisSiguientes = window.matrizRDIGlobal
+                .filter(r => {
+                    let num = r.correlativoInt || parseInt(String(r.correlativoStr || r.id).replace(/\D/g, '')) || 0;
+                    return num > targetInt;
+                })
+                .sort((a, b) => {
+                    let numA = a.correlativoInt || parseInt(String(a.correlativoStr || a.id).replace(/\D/g, '')) || 0;
+                    let numB = b.correlativoInt || parseInt(String(b.correlativoStr || b.id).replace(/\D/g, '')) || 0;
+                    return numA - numB;
+                });
+
+            try {
+                // 1. Destruir el RDI principal
+                await window.fsDeleteDoc(window.fsDoc(window.firebaseDb, `proyectos/${proyecto}/rdis/${idDocumento}`));
+
+                // 2. Renumerar el resto en cascada
+                for (let rdi of rdisSiguientes) {
+                    const oldId = rdi.id; // El nombre del documento viejo en Firebase
+                    const oldInt = rdi.correlativoInt || parseInt(String(rdi.correlativoStr || rdi.id).replace(/\D/g, '')) || 0;
+                    
+                    const newInt = oldInt - 1; // Le restamos 1
+                    const newStr = `RDI-${String(newInt).padStart(3, '0')}`;
+                    
+                    // Clonamos la data y le actualizamos los valores de identificación
+                    let newData = { ...rdi, correlativoInt: newInt, correlativoStr: newStr, correlativo: newStr };
+                    delete newData.id; // Quitamos el ID de lectura para no guardarlo sucio
+                    
+                    // Creamos el nuevo documento con la numeración corregida
+                    await window.fsSetDoc(window.fsDoc(window.firebaseDb, `proyectos/${proyecto}/rdis/${newStr}`), newData);
+                    
+                    // Borramos el documento viejo que quedó con la numeración desfasada
+                    await window.fsDeleteDoc(window.fsDoc(window.firebaseDb, `proyectos/${proyecto}/rdis/${oldId}`));
+                }
+                
+                alert("✅ El RDI fue eliminado y toda la matriz se renumeró correctamente.");
+            } catch (e) {
+                console.error("Error al renumerar:", e);
+                alert("❌ Ocurrió un error en la nube al intentar renumerar la matriz.");
+            }
+        };
 
             // 🔥 NUEVO: CÁLCULO Y RENDERIZADO DE GRÁFICOS KPI CON ETIQUETAS MINIMALISTAS
             let countsEspecialidad = {};
@@ -11243,7 +11464,6 @@ window.iniciarNuevoReporte = function() {
                     plugins: [pluginEtiquetasMinimalistas] // 🔥 Inyectamos el plugin
                 });
             }
-        };
 
         window.abrirModalEdicionRDI = async function(id = null) {
             const modal = document.getElementById('modalEdicionRDI');
@@ -11851,16 +12071,17 @@ window.iniciarNuevoReporte = function() {
             saveAs(new Blob([buffer]), nombreArchivo);
         };
         
-        // LLAMADA DESDE EL BOTÓN DE EXPORTAR DEL MODAL (AHORA CON BARRIDO DE LEYENDAS Y CORRECCIÓN DE BUG)
-        window.descargarExcelRDI_Actual = async function() {
-            const btn = document.querySelector('button[onclick="window.descargarExcelRDI_Actual()"]');
-            if(btn) {
-                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando...';
-                btn.disabled = true; // Bloqueamos el botón para evitar doble clic
-            }
+        // 🔥 FUNCIÓN INFALIBLE PARA EXPORTAR EXCEL DESDE LA MATRIZ EXTERNA
+        window.descargarExcelRDI_ID = async function(id, btnEl) {
+            let rdi = window.matrizRDIGlobal.find(r => r.id === id);
+            if(!rdi) return alert("RDI no encontrado.");
             
+            const txtOrig = btnEl.innerHTML;
+            btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            btnEl.disabled = true;
+
             try {
-                let proyectoActivo = window.proyectoActualGlobal || document.getElementById('proyectoSelect')?.value || '';
+                let proyectoActivo = window.proyectoActualGlobal || '';
                 let config = {};
                 if (proyectoActivo) {
                     try {
@@ -11869,8 +12090,8 @@ window.iniciarNuevoReporte = function() {
                     } catch(e) {}
                 }
 
-                let prio = document.getElementById('rdiPrioridad')?.value || 'MEDIA';
-                let strFechaEmision = document.getElementById('rdiFechaEmision')?.value || new Date().toISOString().split('T')[0];
+                let prio = rdi.prioridad || 'MEDIA';
+                let strFechaEmision = rdi.fechaEmision || rdi.fecha || new Date().toISOString().split('T')[0];
                 let diasSumar = 3; 
                 if (prio === 'ALTA') diasSumar = config.diasAlta !== undefined ? parseInt(config.diasAlta) : 1;
                 if (prio === 'MEDIA') diasSumar = config.diasMedia !== undefined ? parseInt(config.diasMedia) : 3;
@@ -11879,52 +12100,35 @@ window.iniciarNuevoReporte = function() {
                 let partes = strFechaEmision.split('-'); let objFecha = new Date(partes[0], partes[1] - 1, partes[2]); objFecha.setDate(objFecha.getDate() + diasSumar);
                 let fechaRespuestaCalculada = `${String(objFecha.getDate()).padStart(2, '0')}/${String(objFecha.getMonth() + 1).padStart(2, '0')}/${objFecha.getFullYear()}`;
 
-                let tituloEmisor = document.getElementById('rdiTituloEmisor')?.value || '';
-                let nombreEmisor = document.getElementById('rdiEmisor')?.value.trim() || '';
-                let emisorCompleto = (tituloEmisor + ' ' + nombreEmisor).trim();
-
-                // 🔥 BARRIDO DE LAS IMÁGENES AL EXPORTAR DESDE EL MODAL (Recoge las nuevas leyendas antes de guardar en Firebase)
-                let arrayImagenesExport = [];
-                const divs = document.querySelectorAll('#rdiGaleriaMiniaturas > div');
-                divs.forEach((div, index) => {
-                    const img = div.querySelector('.miniatura-rdi');
-                    if (!img) return;
-                    
-                    const captionInput = div.querySelector('input[type="text"]');
-                    const captionDiv = div.querySelector('div[title]'); 
-                    
-                    let numFig = String(index + 1).padStart(2, '0');
-                    let captionFinal = `FIGURA ${numFig} - Sustento Visual`;
-
-                    if (captionInput && captionInput.value.trim() !== '') {
-                        captionFinal = `FIGURA ${numFig} - ${captionInput.value.trim()}`;
-                    } else if (captionDiv && captionDiv.innerText.trim() !== '') {
-                        captionFinal = captionDiv.innerText.trim();
-                    }
-
-                    arrayImagenesExport.push({ url: img.src, caption: captionFinal });
-                });
-
                 let rdiData = {
-                    proyecto: proyectoActivo, correlativo: document.getElementById('rdiCorrelativo')?.value || '',
-                    fecha: strFechaEmision, plano: document.getElementById('rdiPlano')?.value || '', especialidad: document.getElementById('rdiEspecialidad')?.value || '',
-                    emisor: emisorCompleto, receptor: document.getElementById('rdiReceptor')?.value || '',
-                    asunto: document.getElementById('rdiAsunto')?.value || '', descripcion: document.getElementById('rdiDescripcion')?.value || '',
+                    proyecto: proyectoActivo, 
+                    correlativo: rdi.correlativoStr || rdi.correlativo || '',
+                    fecha: strFechaEmision, plano: rdi.planoRef || rdi.plano || '', especialidad: rdi.especialidad || '',
+                    emisor: rdi.emisor || '', receptor: rdi.receptor || '', asunto: rdi.asunto || '', descripcion: rdi.descripcion || '',
                     prioridad: prio, fechaRequerida: fechaRespuestaCalculada,
-                    cliente: config.cliente || '', contratista: config.contratista || '', supervision: config.supervision || '', 
-                    imagenesConsulta: arrayImagenesExport
+                    cliente: config.cliente || '', contratista: config.contratista || '', supervision: config.supervision || '',
+                    
+                    // 🔥 CORRECCIÓN: Leemos el formato moderno de imágenes que incluye tu leyenda
+                    imagenesConsulta: rdi.imagenesConsulta || []
                 };
-                
-                await window.procesarExcelRDI(rdiData);
-                
-            } catch (err) {
-                console.error(err);
-                alert("Hubo un error al generar el archivo.");
-            } finally {
-                if(btn) {
-                    btn.innerHTML = '<i class="fa-solid fa-file-excel"></i> Exportar a Excel';
-                    btn.disabled = false; // Desbloqueamos el botón
+
+                // Respaldo de compatibilidad para tus RDIs antiguos
+                if (rdiData.imagenesConsulta.length === 0 && rdi.imagenesUrls && rdi.imagenesUrls.length > 0) {
+                    rdi.imagenesUrls.forEach((url, index) => {
+                        let num = String(index + 1).padStart(2, '0');
+                        rdiData.imagenesConsulta.push({ url: url, caption: `FIGURA ${num} - Sustento Visual` });
+                    });
                 }
+
+                // Llamada al motor general que dibuja el Excel y coloca las imágenes
+                await window.procesarExcelRDI(rdiData);
+
+            } catch (err) {
+                console.error("Error al exportar desde matriz: ", err);
+                alert("Ocurrió un problema al generar el archivo Excel.");
+            } finally {
+                btnEl.innerHTML = txtOrig; 
+                btnEl.disabled = false;
             }
         };
     </script>
@@ -11961,17 +12165,22 @@ window.iniciarNuevoReporte = function() {
                 <div class="flex flex-row w-full flex-1 bg-white rounded-2xl shadow-sm border border-slate-300 overflow-hidden min-h-[500px]">
                     
                     <!-- Tabla MS Project (Fija a la Izquierda) -->
-                    <div class="w-[450px] shrink-0 flex flex-col border-r border-slate-300 bg-slate-50 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                        <!-- Cabecera de Tabla (Altura idéntica al header del Gantt = 50px) -->
+                    <!-- 🔥 PANEL REDIMENSIONABLE -->
+                    <div id="panelTablaCronograma" style="width: 450px; min-width: 300px;" class="shrink-0 flex flex-col border-r border-slate-300 bg-slate-50 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] relative group">
+                        
+                        <!-- 🔥 BARRA PARA AGRANDAR LA COLUMNA -->
+                        <div class="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize z-50 hover:bg-blue-500 transition-colors" onmousedown="window.iniciarResizePanelCronograma(event)"></div>
+
+                        <!-- Cabecera de Tabla -->
                         <div class="bg-slate-800 text-white text-[10px] font-bold uppercase tracking-widest flex items-center shrink-0 h-[50px]">
-                            <div class="w-8 h-full flex items-center justify-center border-r border-slate-600">N°</div>
+                            <div class="w-12 h-full flex items-center justify-center border-r border-slate-600">N°</div>
                             <div class="flex-1 h-full flex items-center px-3 border-r border-slate-600">Partida</div>
                             <div class="w-20 h-full flex items-center justify-center border-r border-slate-600 text-center">Inicio</div>
                             <div class="w-20 h-full flex items-center justify-center border-r border-slate-600 text-center">Fin</div>
                             <div class="w-12 h-full flex items-center justify-center text-center">%</div>
                         </div>
                         <!-- Filas de Tabla -->
-                        <div id="tablaPartidasCronograma" class="overflow-y-hidden overflow-x-hidden flex-1 text-xs bg-white">
+                        <div id="tablaPartidasCronograma" class="overflow-y-hidden overflow-x-hidden flex-1 text-xs bg-white pb-20">
                             <!-- JS inyectará las filas aquí -->
                         </div>
                     </div>
@@ -12134,12 +12343,150 @@ window.iniciarNuevoReporte = function() {
             });
         }
 
+        // ==========================================
+        // MOTOR WBS Y DRAG & DROP PARA CRONOGRAMA
+        // ==========================================
+
+        window.inicializarCronograma = function() {
+            window.renderizarCronograma();
+            if (!window.scrollSincronizado) {
+                const tablaCont = document.getElementById('tablaPartidasCronograma');
+                const ganttCont = document.getElementById('gantt_container');
+                if (tablaCont && ganttCont) {
+                    ganttCont.addEventListener('scroll', () => { tablaCont.scrollTop = ganttCont.scrollTop; });
+                    tablaCont.addEventListener('scroll', () => { ganttCont.scrollTop = tablaCont.scrollTop; });
+                    window.scrollSincronizado = true;
+                }
+            }
+        };
+
+        window.iniciarResizePanelCronograma = function(e) {
+            e.preventDefault();
+            const panel = document.getElementById('panelTablaCronograma');
+            let startX = e.clientX;
+            let startWidth = panel.offsetWidth;
+            
+            document.body.classList.add('cursor-col-resize');
+            
+            function onMouseMove(e) {
+                let newWidth = startWidth + (e.clientX - startX);
+                if (newWidth < 300) newWidth = 300; 
+                if (newWidth > 800) newWidth = 800; // Límite máximo para no aplastar el gráfico
+                panel.style.width = newWidth + 'px';
+            }
+            
+            function onMouseUp(e) {
+                document.body.classList.remove('cursor-col-resize');
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            }
+            
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        };
+
+        // Recalcular WBS (1.1, 1.2, etc.) en base al nivel de jerarquía
+        window.recalcularWBSCronograma = function() {
+            let counters = [0];
+            let lastLevel = 0;
+            
+            window.tareasCronograma.forEach((t, i) => {
+                if (t.level === undefined) t.level = t.hasExplicitDates ? 1 : 0;
+                
+                if (t.level > lastLevel) {
+                    while(counters.length <= t.level) counters.push(1);
+                } else if (t.level < lastLevel) {
+                    counters = counters.slice(0, t.level + 1);
+                    counters[t.level]++;
+                } else {
+                    if (counters.length === 0) counters = [1];
+                    else counters[t.level]++;
+                }
+                
+                t.wbs = counters.join('.');
+                lastLevel = t.level;
+                
+                if (t.level > 0) {
+                    for(let k = i - 1; k >= 0; k--) {
+                        if (window.tareasCronograma[k].level < t.level) {
+                            t.parent = window.tareasCronograma[k].id;
+                            break;
+                        }
+                    }
+                } else {
+                    t.parent = null;
+                }
+                
+                t.isSummary = (t.level === 0 || window.tareasCronograma.some((child, idx) => idx > i && child.level > t.level && idx === i + 1));
+            });
+        };
+
+        // Eventos de Drag & Drop (Arreglados y estabilizados)
+        window.dragStartCrono = function(e, id) {
+            e.dataTransfer.setData("text/plain", id);
+            e.dataTransfer.effectAllowed = "move";
+            setTimeout(() => { if (e.target) e.target.style.opacity = "0.4"; }, 10);
+        };
+        
+        window.dropCrono = function(e, targetId) {
+            e.preventDefault();
+            const sourceId = e.dataTransfer.getData("text/plain");
+            if (sourceId === targetId || !sourceId) return;
+
+            const sourceIndex = window.tareasCronograma.findIndex(t => t.id === sourceId);
+            const targetIndex = window.tareasCronograma.findIndex(t => t.id === targetId);
+            
+            if (sourceIndex === -1 || targetIndex === -1) return;
+
+            const [movedItem] = window.tareasCronograma.splice(sourceIndex, 1);
+            const targetItem = window.tareasCronograma[targetIndex]; 
+            
+            if (targetItem && targetItem.isSummary) {
+                movedItem.level = targetItem.level + 1; // Si sueltas en carpeta, se vuelve hijo
+            } else if (targetItem) {
+                movedItem.level = targetItem.level; // Si sueltas en archivo, se vuelve hermano
+            }
+
+            window.tareasCronograma.splice(targetIndex, 0, movedItem);
+            window.recalcularWBSCronograma();
+            window.renderizarCronograma();
+        };
+
+        // Edición Manual WBS (Inteligencia de Reubicación)
+        window.cambiarWBSManual = function(id, newWbs) {
+            let t = window.tareasCronograma.find(x => x.id === id);
+            if (!t || !newWbs || newWbs.trim() === '') return window.renderizarCronograma();
+            
+            t.wbs = newWbs.trim();
+            t.level = Math.max(0, t.wbs.split('.').length - 1); 
+            
+            window.tareasCronograma.sort((a, b) => {
+                let aParts = (a.wbs||'').split('.').map(Number);
+                let bParts = (b.wbs||'').split('.').map(Number);
+                for(let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+                    let pA = aParts[i] || 0;
+                    let pB = bParts[i] || 0;
+                    if(pA !== pB) return pA - pB;
+                }
+                return 0;
+            });
+            
+            window.recalcularWBSCronograma();
+            window.renderizarCronograma();
+        };
+
+        // Botones manuales de Sangría (Indent / Outdent)
+        window.cambiarNivelCrono = function(id, cambio) {
+            const t = window.tareasCronograma.find(x => x.id === id);
+            if (!t) return;
+            t.level = Math.max(0, (t.level || 0) + cambio);
+            window.recalcularWBSCronograma();
+            window.renderizarCronograma();
+        };
+
         window.renderizarCronograma = function() {
             const tbody = document.getElementById('tablaPartidasCronograma');
-            const selectDep = document.getElementById('cronoDependencia');
-            
             tbody.innerHTML = '';
-            if(selectDep) selectDep.innerHTML = '<option value="">-- Ninguna --</option>';
 
             if (window.tareasCronograma.length === 0) {
                 tbody.innerHTML = '<div class="p-6 text-center text-slate-400 italic font-bold">No hay partidas. Usa IMPORTAR S10 / EXCEL para cargar tu cronograma.</div>';
@@ -12147,54 +12494,85 @@ window.iniciarNuevoReporte = function() {
                 return;
             }
 
-            // Formateador de Fechas DD/MM/YYYY
+            window.recalcularWBSCronograma();
+
             const formDate = (isoDate) => {
                 if (!isoDate) return '';
                 const parts = isoDate.split('-');
                 return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : isoDate;
             };
 
-            // 1. Construir la Tabla Izquierda 
             window.tareasCronograma.forEach((t, index) => {
-                if(selectDep) selectDep.innerHTML += `<option value="${t.id}">${t.name}</option>`;
-
-                // Estilos Jerárquicos
                 let isParent = t.isSummary;
                 let bgFila = isParent ? 'bg-slate-100 border-t-2 border-slate-300' : 'bg-white';
-                let fontNombre = isParent ? 'font-black text-slate-900 uppercase' : 'font-semibold text-slate-700 ml-3';
+                let paddingL = (t.level || 0) * 16 + 8;
+                let fontNombre = isParent ? 'font-black text-slate-900 uppercase' : 'font-semibold text-slate-700';
+                
+                let wbsVal = t.wbs || (index + 1);
 
                 tbody.innerHTML += `
-                    <div class="flex items-center hover:bg-amber-50 cursor-pointer transition group border-b border-slate-200 h-[43px] box-border ${bgFila}" onclick="window.abrirModalNuevaPartida('${t.id}')">
-                        <div class="w-8 h-full flex items-center justify-center border-r border-slate-200 text-center font-bold text-slate-400 shrink-0">${index + 1}</div>
-                        <div class="flex-1 px-3 h-full flex items-center border-r border-slate-200 truncate ${fontNombre}" title="${t.name}">
-                            ${t.name}
+                    <div class="fila-cronograma flex items-center hover:bg-amber-50 transition group border-b border-slate-200 box-border ${bgFila}" 
+                         style="height: 38px; min-height: 38px; max-height: 38px;"
+                         draggable="true" 
+                         ondragstart="window.dragStartCrono(event, '${t.id}')" 
+                         ondragend="this.style.opacity='1'"
+                         ondragover="event.preventDefault(); this.classList.add('border-b-4', 'border-b-indigo-500')" 
+                         ondragleave="this.classList.remove('border-b-4', 'border-b-indigo-500')" 
+                         ondrop="event.preventDefault(); this.classList.remove('border-b-4', 'border-b-indigo-500'); window.dropCrono(event, '${t.id}')">
+                        
+                        <!-- 🔥 COLUMNA N°: Input WBS 100% Funcional -->
+                        <div class="w-12 h-full flex items-center justify-center border-r border-slate-200 text-center font-bold text-slate-500 shrink-0 text-[10px] bg-slate-50">
+                            <input type="text" value="${wbsVal}" onchange="window.cambiarWBSManual('${t.id}', this.value)" onfocus="this.select()" class="w-full h-full bg-transparent text-center focus:outline-none focus:bg-white focus:ring-2 focus:ring-amber-500 cursor-text hover:bg-slate-200 transition-colors" title="Editar número para reubicar jerarquía">
                         </div>
+                        
+                        <!-- 🔥 COLUMNA PARTIDA: Se movieron los botones aquí (Borrar, Sangría) -->
+                        <div class="flex-1 px-2 h-full flex items-center border-r border-slate-200 ${fontNombre} relative" style="padding-left: ${paddingL}px;">
+                            <i class="fa-solid fa-grip-vertical text-slate-300 hover:text-indigo-500 cursor-grab mr-2"></i>
+                            ${isParent ? '<i class="fa-solid fa-folder-open text-amber-500 mr-2 shrink-0"></i>' : '<i class="fa-regular fa-file text-slate-400 mr-2 shrink-0"></i>'} 
+                            <span class="truncate flex-1" title="${t.name}">${t.name}</span>
+                            
+                            <!-- Botonera Mágica (Eliminar y Sangrías flotantes a la derecha) -->
+                            <div class="absolute right-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition bg-white/95 shadow-md rounded border border-slate-200 px-1 py-0.5">
+                                <button onclick="window.cambiarNivelCrono('${t.id}', -1)" class="w-6 h-6 bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 rounded transition flex items-center justify-center" title="Nivel Superior (Padre)"><i class="fa-solid fa-outdent text-[10px]"></i></button>
+                                <button onclick="window.cambiarNivelCrono('${t.id}', 1)" class="w-6 h-6 bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 rounded transition flex items-center justify-center" title="Nivel Inferior (Hijo)"><i class="fa-solid fa-indent text-[10px]"></i></button>
+                                <button onclick="window.eliminarPartidaCronograma('${t.id}')" class="w-6 h-6 bg-red-50 hover:bg-red-600 hover:text-white text-red-600 rounded transition flex items-center justify-center" title="Eliminar"><i class="fa-solid fa-trash-can text-[10px]"></i></button>
+                            </div>
+                        </div>
+                        
+                        <!-- COLUMNA INICIO -->
                         <div class="w-20 h-full flex items-center justify-center border-r border-slate-200 text-center font-mono font-bold text-slate-700 text-[10px] shrink-0">
                             ${formDate(t.start)}
                         </div>
+                        
+                        <!-- COLUMNA FIN -->
                         <div class="w-20 h-full flex items-center justify-center border-r border-slate-200 text-center font-mono font-bold text-slate-700 text-[10px] shrink-0">
                             ${formDate(t.end)}
                         </div>
-                        <div class="w-12 h-full flex items-center justify-center text-center font-black ${isParent ? 'text-slate-400' : (t.progress === 100 ? 'text-emerald-600' : 'text-amber-600')} shrink-0 relative">
+                        
+                        <!-- 🔥 COLUMNA PORCENTAJE (Limpia y Libre) -->
+                        <div class="w-12 h-full flex items-center justify-center text-center font-black ${isParent ? 'text-slate-400' : (t.progress === 100 ? 'text-emerald-600' : 'text-amber-600')} shrink-0">
                             <span id="label_tabla_prog_${t.id}">${isParent ? '-' : t.progress + '%'}</span>
-                            <button onclick="event.stopPropagation(); window.eliminarPartidaCronograma('${t.id}')" class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition shadow flex items-center justify-center cursor-pointer">
-                                <i class="fa-solid fa-xmark text-[10px]"></i>
-                            </button>
                         </div>
                     </div>
                 `;
             });
 
-            // Asignar clase de jerarquía al Gantt
             window.tareasCronograma.forEach(t => t.custom_class = t.isSummary ? 'bar-summary' : '');
-
-            // 2. Construir el Gráfico Gantt
             document.getElementById('gantt_chart').innerHTML = '';
+            
+            // 🔥 ALINEACIÓN PERFECTA (38px de altura forzados)
             window.ganttInstancia = new Gantt("#gantt_chart", window.tareasCronograma, {
-                header_height: 50, column_width: 30, step: 24,
+                header_height: 50, 
+                column_width: 30, 
+                step: 24,
                 view_modes: ['Quarter Day', 'Half Day', 'Day', 'Week', 'Month'],
-                bar_height: 25, bar_corner_radius: 6, arrow_curve: 5, padding: 18,
-                view_mode: 'Day', date_format: 'YYYY-MM-DD', language: 'es',
+                bar_height: 22,    // 22px de barra
+                bar_corner_radius: 6, 
+                arrow_curve: 5, 
+                padding: 16,       // + 16px de padding = 38px exactos (Igual a la fila de la izquierda)
+                view_mode: 'Day', 
+                date_format: 'YYYY-MM-DD', 
+                language: 'es',
                 
                 on_date_change: function(task, start, end) {
                     let t = window.tareasCronograma.find(x => x.id === task.id);
@@ -12202,7 +12580,15 @@ window.iniciarNuevoReporte = function() {
                         let oldEnd = new Date(t.end); let newEnd = new Date(end);
                         let offsetDias = Math.round((newEnd - oldEnd) / (1000 * 60 * 60 * 24));
                         t.start = start.toISOString().split('T')[0]; t.end = end.toISOString().split('T')[0];
-                        if (offsetDias !== 0) empujarSucesores(t.id, offsetDias);
+                        if (offsetDias !== 0) {
+                            window.tareasCronograma.forEach(succ => {
+                                if (succ.dependencies === t.id) {
+                                    let dIniReal = new Date(succ.start); let dFinReal = new Date(succ.end);
+                                    dIniReal.setDate(dIniReal.getDate() + offsetDias); dFinReal.setDate(dFinReal.getDate() + offsetDias);
+                                    succ.start = dIniReal.toISOString().split('T')[0]; succ.end = dFinReal.toISOString().split('T')[0];
+                                }
+                            });
+                        }
                         window.renderizarCronograma(); 
                     }
                 },
@@ -12212,7 +12598,7 @@ window.iniciarNuevoReporte = function() {
                         t.progress = progress; 
                         let labelTabla = document.getElementById(`label_tabla_prog_${task.id}`);
                         if(labelTabla) labelTabla.textContent = `${progress}%`;
-                        window.actualizarEtiquetasGantt(); 
+                        window.actualizarEtiquetasGantt();
                     }
                 },
                 custom_popup_html: function(task) {
@@ -12221,7 +12607,7 @@ window.iniciarNuevoReporte = function() {
                     let badgeAtraso = t.isSummary ? '<span class="bg-slate-600 text-white text-[9px] px-1 rounded uppercase">Jerarquía</span>' : (estaAtrasado ? '<span class="bg-red-500 text-white text-[9px] px-1 rounded uppercase">Atraso</span>' : '<span class="bg-blue-500 text-white text-[9px] px-1 rounded uppercase">En Plan</span>');
 
                     return `<div class="p-3 bg-slate-800 text-white rounded-lg shadow-xl text-xs border border-slate-600 z-50">
-                                <b class="text-amber-400 block mb-1 font-bold text-[14px]">${task.name}</b>
+                                <b class="text-amber-400 block mb-1 font-bold text-[14px]">${t.wbs || ''} - ${task.name}</b>
                                 ${badgeAtraso}
                                 <div class="mt-2 text-slate-400">
                                     P: ${formDate(t.planStart)} ➔ ${formDate(t.planEnd)}<br>
@@ -12230,9 +12616,10 @@ window.iniciarNuevoReporte = function() {
                             </div>`;
                 }
             });
+
             window.actualizarEtiquetasGantt();
         };
-
+        
         // ==========================================
         // LECTOR INTELIGENTE DE CRONOGRAMA EXCEL (JERARQUÍAS MS PROJECT)
         // ==========================================
@@ -12324,17 +12711,45 @@ window.iniciarNuevoReporte = function() {
                     nuevasTareas.push(t);
                 }
                 
-                // 2. ASIGNAR FECHAS A LAS PARTIDAS PADRE (AUTO-JERARQUÍA)
+                // 2. MOTOR INTELIGENTE DE JERARQUÍAS (S10 WBS) Y ASIGNACIÓN DE PADRES
+                let wbsCounters = [0]; 
+                let lastParentByLevel = [null]; 
+                let lastLevel = 0;
+
                 for (let i = 0; i < nuevasTareas.length; i++) {
                     let t = nuevasTareas[i];
+                    
+                    // A. Detectar nivel por jerarquía S10
+                    // Si no tiene fechas en Excel (Ej: "ESTRUCTURAS") es un padre (Jerarquía 1)
+                    // Si tiene fechas (Ej: "CISTERNA") es un hijo (Jerarquía 2)
+                    let currentLevel = t.hasExplicitDates ? 1 : 0; 
+
+                    // Ajustar numeradores (1.1, 1.2, 1.2.1)
+                    if (currentLevel > lastLevel) {
+                        wbsCounters.push(1); 
+                    } else if (currentLevel < lastLevel) {
+                        wbsCounters = wbsCounters.slice(0, currentLevel + 1);
+                        wbsCounters[currentLevel]++; 
+                    } else {
+                        wbsCounters[currentLevel]++; 
+                    }
+                    
+                    t.wbs = wbsCounters.join('.');
+                    lastLevel = currentLevel;
+
+                    // B. Asignar dependencia padre-hijo para Frappe Gantt
+                    if (currentLevel > 0) {
+                        t.parent = lastParentByLevel[currentLevel - 1];
+                    }
+                    lastParentByLevel[currentLevel] = t.id;
+
+                    // C. Cálculo de fechas límite para los padres
                     if (!t.hasExplicitDates) {
-                        t.isSummary = true; // Es Partida Padre
-                        
+                        t.isSummary = true; 
                         let blockMin = "2099-12-31";
                         let blockMax = "2000-01-01";
                         let foundChild = false;
 
-                        // Buscar en sus "hijos" para saber cuánto abarca
                         for (let j = i + 1; j < nuevasTareas.length; j++) {
                             let child = nuevasTareas[j];
                             if (child.hasExplicitDates) {
@@ -12342,7 +12757,7 @@ window.iniciarNuevoReporte = function() {
                                 if (child.start < blockMin) blockMin = child.start;
                                 if (child.end > blockMax) blockMax = child.end;
                             } else if (foundChild) {
-                                break; // Parar al encontrar la siguiente jerarquía
+                                break; 
                             }
                         }
 
@@ -12360,7 +12775,7 @@ window.iniciarNuevoReporte = function() {
                 if (nuevasTareas.length > 0) {
                     window.tareasCronograma = nuevasTareas;
                     window.renderizarCronograma();
-                    alert(`✅ ¡Éxito! Se cargaron ${nuevasTareas.length} partidas (incluyendo Jerarquías).`);
+                    alert(`✅ ¡Éxito! Se cargaron ${nuevasTareas.length} partidas con sus jerarquías WBS automáticas.`);
                 } else {
                     alert("⚠️ No se encontraron partidas.");
                 }
@@ -12408,37 +12823,46 @@ window.iniciarNuevoReporte = function() {
             if(selectDep) selectDep.innerHTML = '<option value="">-- Ninguna --</option>';
 
             if (window.tareasCronograma.length === 0) {
-                tbody.innerHTML = '<div class="p-6 text-center text-slate-400 italic">No hay partidas.</div>';
+                tbody.innerHTML = '<div class="p-6 text-center text-slate-400 italic font-bold">No hay partidas. Usa IMPORTAR S10 / EXCEL para cargar tu cronograma.</div>';
                 document.getElementById('gantt_chart').innerHTML = '';
                 return;
             }
 
-            // Formateador de fechas a DD/MM/YYYY
-            const formatearFecha = (fechaStr) => {
-                if (!fechaStr) return '';
-                const partes = fechaStr.split('-');
-                if (partes.length !== 3) return fechaStr;
-                return `${partes[2]}/${partes[1]}/${partes[0]}`;
+            const formDate = (isoDate) => {
+                if (!isoDate) return '';
+                const parts = isoDate.split('-');
+                return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : isoDate;
             };
 
-            // 1. Construir la Tabla Izquierda (Altura Fija a 43px por fila para encajar con el Gantt)
+            // 1. Construir la Tabla Izquierda con WBS
             window.tareasCronograma.forEach((t, index) => {
                 if(selectDep) selectDep.innerHTML += `<option value="${t.id}">${t.name}</option>`;
 
+                let isParent = t.isSummary;
+                let bgFila = isParent ? 'bg-slate-100 border-t-2 border-slate-300' : 'bg-white';
+                
+                // 🔥 SANGRIAS SEGÚN NIVEL DE WBS
+                let level = (t.wbs ? t.wbs.split('.').length : 1) - 1;
+                let marginLeft = level * 16; 
+                let fontNombre = isParent ? 'font-black text-slate-900 uppercase' : 'font-semibold text-slate-700';
+
+                // Usamos t.wbs si existe, sino index + 1
+                let wbsRender = t.wbs || (index + 1);
+
                 tbody.innerHTML += `
-                    <div class="flex items-center hover:bg-slate-100 cursor-pointer transition group border-b border-slate-200 h-[43px] box-border" onclick="window.abrirModalNuevaPartida('${t.id}')">
-                        <div class="w-8 h-full flex items-center justify-center border-r border-slate-200 text-center font-bold text-slate-400 shrink-0">${index + 1}</div>
-                        <div class="flex-1 px-3 h-full flex items-center border-r border-slate-200 font-semibold text-slate-800 truncate" title="${t.name}">
-                            ${t.name}
+                    <div class="flex items-center hover:bg-amber-50 cursor-pointer transition group border-b border-slate-200 h-[43px] box-border ${bgFila}" onclick="window.abrirModalNuevaPartida('${t.id}')">
+                        <div class="w-10 h-full flex items-center justify-center border-r border-slate-200 text-center font-bold text-slate-500 shrink-0 text-[10px]">${wbsRender}</div>
+                        <div class="flex-1 px-3 h-full flex items-center border-r border-slate-200 truncate ${fontNombre}" style="padding-left: ${marginLeft + 12}px;" title="${t.name}">
+                            ${isParent ? '<i class="fa-solid fa-folder-open text-amber-500 mr-2"></i>' : '<i class="fa-regular fa-file text-slate-400 mr-2"></i>'} ${t.name}
                         </div>
-                        <div class="w-20 h-full flex items-center justify-center border-r border-slate-200 text-center font-mono font-bold text-slate-700 bg-slate-50 text-[10px] shrink-0">
-                            ${formatearFecha(t.start)}
+                        <div class="w-20 h-full flex items-center justify-center border-r border-slate-200 text-center font-mono font-bold text-slate-700 text-[10px] shrink-0">
+                            ${formDate(t.start)}
                         </div>
-                        <div class="w-20 h-full flex items-center justify-center border-r border-slate-200 text-center font-mono font-bold text-slate-700 bg-slate-50 text-[10px] shrink-0">
-                            ${formatearFecha(t.end)}
+                        <div class="w-20 h-full flex items-center justify-center border-r border-slate-200 text-center font-mono font-bold text-slate-700 text-[10px] shrink-0">
+                            ${formDate(t.end)}
                         </div>
-                        <div class="w-12 h-full flex items-center justify-center text-center font-black ${t.progress === 100 ? 'text-emerald-600' : 'text-amber-600'} bg-white shrink-0 relative">
-                            <span id="label_tabla_prog_${t.id}">${t.progress}%</span>
+                        <div class="w-12 h-full flex items-center justify-center text-center font-black ${isParent ? 'text-slate-400' : (t.progress === 100 ? 'text-emerald-600' : 'text-amber-600')} shrink-0 relative">
+                            <span id="label_tabla_prog_${t.id}">${isParent ? '-' : t.progress + '%'}</span>
                             <button onclick="event.stopPropagation(); window.eliminarPartidaCronograma('${t.id}')" class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition shadow flex items-center justify-center cursor-pointer">
                                 <i class="fa-solid fa-xmark text-[10px]"></i>
                             </button>
@@ -12447,24 +12871,28 @@ window.iniciarNuevoReporte = function() {
                 `;
             });
 
-            // 2. Construir el Gráfico Gantt (Derecha)
+            window.tareasCronograma.forEach(t => t.custom_class = t.isSummary ? 'bar-summary' : '');
+
+            // 2. Construir el Gráfico Gantt
             document.getElementById('gantt_chart').innerHTML = '';
+            
+            // 🔥 HABILITAR DRAG & DROP EN FRAPPE GANTT
             window.ganttInstancia = new Gantt("#gantt_chart", window.tareasCronograma, {
                 header_height: 50, column_width: 30, step: 24,
                 view_modes: ['Quarter Day', 'Half Day', 'Day', 'Week', 'Month'],
                 bar_height: 25, bar_corner_radius: 6, arrow_curve: 5, padding: 18,
                 view_mode: 'Day', date_format: 'YYYY-MM-DD', language: 'es',
                 
+                // Mover jerarquías (Drag&Drop filas no nativo completo, pero habilitamos movimiento general)
+                order_branch: true,
+                order_branch_free: true, 
+
                 on_date_change: function(task, start, end) {
                     let t = window.tareasCronograma.find(x => x.id === task.id);
-                    if (t) {
-                        let oldEnd = new Date(t.end);
-                        let newEnd = new Date(end);
+                    if (t && !t.isSummary) {
+                        let oldEnd = new Date(t.end); let newEnd = new Date(end);
                         let offsetDias = Math.round((newEnd - oldEnd) / (1000 * 60 * 60 * 24));
-                        
-                        t.start = start.toISOString().split('T')[0];
-                        t.end = end.toISOString().split('T')[0];
-                        
+                        t.start = start.toISOString().split('T')[0]; t.end = end.toISOString().split('T')[0];
                         if (offsetDias !== 0) empujarSucesores(t.id, offsetDias);
                         window.renderizarCronograma(); 
                     }
