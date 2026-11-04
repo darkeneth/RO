@@ -1306,7 +1306,7 @@
             window.cargarHistorialReportes(nombreProyecto);
         };
 
-        // 🔥 NUEVO: Función que lee la Base de Datos y dibuja las tarjetas y la Curva S
+        // 🔥 Función que lee la Base de Datos y dibuja las tarjetas y la Curva S
         window.cargarHistorialReportes = function(nombreProyecto) {
             const contenedor = document.getElementById('listaReportesProyecto');
             contenedor.innerHTML = '<div class="text-slate-400 italic font-medium py-10 flex items-center gap-2"><i class="fa-solid fa-spinner fa-spin"></i> Buscando reportes en la nube...</div>';
@@ -1314,7 +1314,24 @@
             const reportesRef = window.fsCollection(window.firebaseDb, `proyectos/${nombreProyecto}/reportes`);
             
             window.fsOnSnapshot(reportesRef, (snapshot) => {
+                // 🔥 FIX: Si no hay reportes, DEBEMOS ocultar y borrar los gráficos del proyecto anterior
                 if (snapshot.empty) {
+                    const dashboardEl = document.getElementById('dashboardHistorico');
+                    if (dashboardEl) dashboardEl.classList.add('hidden'); // Ocultar tarjetas de arriba
+                    
+                    if (window.miGraficoRO) {
+                        window.miGraficoRO.destroy(); // Destruir gráfico fantasma
+                        window.miGraficoRO = null;
+                    }
+                    
+                    // Resetear los textos por seguridad
+                    const vCostoEl = document.getElementById('dashVCosto');
+                    if(vCostoEl) vCostoEl.textContent = 'S/ 0.00';
+                    const eacEl = document.getElementById('dashEAC');
+                    if(eacEl) eacEl.textContent = 'S/ 0.00';
+                    const margenEl = document.getElementById('dashMargen');
+                    if(margenEl) margenEl.textContent = 'S/ 0.00';
+
                     contenedor.innerHTML = `
                         <div class="w-full text-center py-16 bg-white rounded-[32px] border border-slate-200 shadow-sm mt-4">
                             <div class="w-20 h-20 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-6 border border-slate-100">
