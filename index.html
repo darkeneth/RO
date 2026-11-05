@@ -2407,6 +2407,7 @@ window.iniciarNuevoReporte = function() {
             if (btnProcess) btnProcess.disabled = true;
             rawDataFiles = [];
             
+            // Limpiamos la memoria anterior por seguridad
             window.hojaActividadesCruda = null; 
 
             try {
@@ -2414,11 +2415,13 @@ window.iniciarNuevoReporte = function() {
                     const data = await item.file.arrayBuffer();
                     const workbook = XLSX.read(data, { type: 'array' });
                     
+                    // 🔥 LECTURA ABSOLUTA: Extraer la hoja 'Actividad' mapeando por letras (A, B, C, D)
                     const nombreHojaActividad = workbook.SheetNames.find(name => name.toUpperCase().includes('ACTIVIDAD'));
                     if (nombreHojaActividad) {
                         window.hojaActividadesCruda = XLSX.utils.sheet_to_json(workbook.Sheets[nombreHojaActividad], { header: "A", defval: "" });
                     }
 
+                    // Lectura del Tareo (Hoja 1)
                     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                     rawDataFiles.push({ 
                         name: item.file.name, 
@@ -2451,16 +2454,18 @@ window.iniciarNuevoReporte = function() {
             let maxCols = 0;
             rawAOA.forEach(row => { if (row && row.length > maxCols) maxCols = row.length; });
 
-            // 1. Buscar palabras clave primero
+            // 1. Buscar palabras clave primero (Soporta RO, Subcontratos y Stock)
             for (let i = 0; i < Math.min(30, rawAOA.length); i++) {
                 let rowStr = (rawAOA[i] || []).join(' ').toLowerCase();
+                
+                // 🔥 Palabras mágicas del Stock: "precio promedio", "almacén"
                 if (rowStr.includes('precio promedio') || rowStr.includes('almacén') || rowStr.includes('descripci') || rowStr.includes('estado') || rowStr.includes('subcontratista')) {
                     headerIdx = i;
                     break;
                 }
             }
 
-            // 2. FALLBACK
+            // 2. FALLBACK: Si no encontró la palabra clave, usa la fila con más texto (vital para el Stock)
             if (headerIdx === -1) {
                 let maxTextCols = 0;
                 for (let i = 0; i < Math.min(20, rawAOA.length); i++) {
@@ -2536,12 +2541,12 @@ window.iniciarNuevoReporte = function() {
             const verticalFiles = rawDataFiles.filter(f => f.category === 'VERT'); 
             const horizontalFiles = rawDataFiles.filter(f => f.category === 'HORIZ'); 
             const stockFiles = rawDataFiles.filter(f => f.category === 'STOCK'); 
-            const subcontratoFiles = rawDataFiles.filter(f => f.category === 'SUBCONTRATO'); 
+            const subcontratoFiles = rawDataFiles.filter(f => f.category === 'SUBCONTRATO');
 
             // 🔥 1. EXTRAER CATÁLOGO DE PARTIDAS "OFICIAL" DEL RESUMEN RO (HORIZONTAL)
             let diccionarioRO = {}; 
             if (horizontalFiles.length > 0) {
-                // Buscamos temporalmente los nombres y códigos para usarlos como fuente de verdad
+                // Buscamos los nombres y códigos para usarlos como fuente de verdad
                 horizontalFiles.forEach(f => {
                     let extracted = extractRoStructure(f.rawAOA);
                     extracted.dataRows.forEach(row => {
@@ -2568,6 +2573,7 @@ window.iniciarNuevoReporte = function() {
                     let partidaClean = partidaRaw ? String(partidaRaw).trim() : "SIN PARTIDA";
                     
                     // 🔥 LÓGICA DE CORRECCIÓN AUTOMÁTICA DE CÓDIGOS DUPLICADOS/MALOS
+                    // Tu solución: Emparejar por nombre y forzar el código correcto del RO
                     if (partidaClean !== "SIN PARTIDA") {
                         let partes = partidaClean.split(' ');
                         if (partes.length > 1) {
@@ -2593,8 +2599,8 @@ window.iniciarNuevoReporte = function() {
                         "_id": idUniversal,
                         "_originalIndex": globalIndex,
                         "_PartidaControl": partidaClean,
-                        "_PartidaOriginal": partidaClean, // Se asigna la partida corregida automáticamente
-                        "_PartidaActual": partidaClean,   // Se asigna la partida corregida automáticamente
+                        "_PartidaOriginal": partidaClean, // Se asigna la partida corregida
+                        "_PartidaActual": partidaClean,   // Se asigna la partida corregida
                         "_reassignedTimestamp": 0,
                         "_RecursoN1": n1Clean,
                         "_Recurso": recursoClean,
@@ -2607,20 +2613,20 @@ window.iniciarNuevoReporte = function() {
                 });
             });
 
-            // Juntar todos los archivos STOCK con el lector inteligente
+            // Juntar todos los archivos STOCK
             stockRows = [];
             stockFiles.forEach(fileObj => { 
                 let extracted = extractTableFromS10(fileObj.rawAOA);
                 extracted.forEach(row => stockRows.push({ ...row, _Origen: fileObj.name })); 
             });
 
-            // Juntar todos los archivos SUBCONTRATO con el lector inteligente
+            // Juntar todos los archivos SUBCONTRATO
             subcontratoRows = [];
             subcontratoFiles.forEach(fileObj => { 
                 let extracted = extractTableFromS10(fileObj.rawAOA);
                 extracted.forEach(row => subcontratoRows.push({ ...row, _Origen: fileObj.name })); 
             });
-            extractSemanasFromSubcontratos(); // <-- NUEVA LÍNEA
+            extractSemanasFromSubcontratos();
 
             // 2. Process RESUMEN RO with N-file horizontal joining
             roFilteredMatrix2D = [];
@@ -2667,14 +2673,8 @@ window.iniciarNuevoReporte = function() {
             const baseData = parsedFiles[0].dataRows;
             const mergedDataRows = [];
 
-            // 🔥 Función para limpiar el texto y comparar de forma 100% segura (sin tildes ni espacios extra)
-            const cleanText = (txt) => String(txt || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/\s+/g, ' ').trim();
-
             baseData.forEach((r0, idx) => {
-                let code0 = String(r0[0] || '').trim();
-                let desc0 = cleanText(r0[1]);
-                let isTitleOrEmpty = (!code0 && !desc0);
-
+                let code0 = String(r0[0] || '').trim() || String(r0[1] || '').trim();
                 let mergedRow = [...r0];
                 while (mergedRow.length < fileColCounts[0]) mergedRow.push('');
 
@@ -2682,45 +2682,35 @@ window.iniciarNuevoReporte = function() {
                     const pf = parsedFiles[f];
                     let matchedRow = null;
 
-                    if (isTitleOrEmpty) {
-                        // Para filas vacías o títulos, intentamos mantener el formato
-                        let rF = pf.dataRows[idx] || [];
-                        let cF = String(rF[0] || '').trim();
-                        let dF = cleanText(rF[1]);
-                        if (!cF && !dF) {
-                            matchedRow = rF;
+                    if (pf.dataRows[idx]) {
+                        let codeF = String(pf.dataRows[idx][0] || '').trim() || String(pf.dataRows[idx][1] || '').trim();
+                        if (codeF === code0 || (!code0 && !codeF)) {
+                            matchedRow = pf.dataRows[idx];
                         }
-                    } else {
-                        // 🔥 BUSCADOR INTELIGENTE (ESTILO BUSCARV)
-                        // Escanea TODO el archivo destino buscando a la partida gemela por su NOMBRE
-                        for (let k = 0; k < pf.dataRows.length; k++) {
-                            let codeK = String(pf.dataRows[k][0] || '').trim();
-                            let descK = cleanText(pf.dataRows[k][1]);
-                            
-                            // Match Primario infalible: Mismo Nombre de Partida
-                            if (desc0 && descK === desc0) {
-                                matchedRow = pf.dataRows[k];
-                                break;
-                            } 
-                            // Match Secundario: Si no tienen nombre pero sí el mismo código (ítems raros)
-                            else if (code0 && codeK === code0 && (!desc0 || !descK)) {
+                    }
+
+                    if (!matchedRow && code0) {
+                        const startWin = Math.max(0, idx - 15);
+                        const endWin = Math.min(pf.dataRows.length - 1, idx + 15);
+                        for (let k = startWin; k <= endWin; k++) {
+                            let codeK = String(pf.dataRows[k][0] || '').trim() || String(pf.dataRows[k][1] || '').trim();
+                            if (codeK === code0) {
                                 matchedRow = pf.dataRows[k];
                                 break;
                             }
                         }
                     }
 
-                    // Si encontró a su gemela, copia la fila. Si no, inyecta espacios en blanco.
-                    // Ya no junta filas por defecto.
+                    if (!matchedRow && pf.dataRows[idx]) {
+                        matchedRow = pf.dataRows[idx];
+                    }
+
                     let rFPadded = matchedRow ? [...matchedRow] : [];
                     while (rFPadded.length < fileColCounts[f]) rFPadded.push('');
                     mergedRow.push(...rFPadded);
                 }
 
-                // Agrega la fila a la matriz final solo si tiene algún dato
-                if (mergedRow.some(cell => String(cell).trim() !== '')) {
-                    mergedDataRows.push(mergedRow);
-                }
+                mergedDataRows.push(mergedRow);
             });
 
             return {
@@ -2876,11 +2866,13 @@ window.iniciarNuevoReporte = function() {
                 };
             });
 
-            // --- CÁLCULO DE R COSTO CORREGIDO (ALIMENTADO DEL CONSOLIDADO) ---
+            // --- CÁLCULO MAESTRO: TOTALES Y DESGLOSES (ALIMENTADO DEL CONSOLIDADO VERTICAL) ---
             const partidaCostsMap = {};
+            const partidaCostsOriginalMap = {};
             if (consolidatedRows && consolidatedRows.length > 0) {
                 consolidatedRows.forEach(r => {
                     let pAct = String(r._PartidaActual || '').trim();
+                    let pOrig = String(r._PartidaOriginal || '').trim();
                     let origCost = parseNumberValue(
                         getConsolidadoRowValue(r, 'R Costo') || 
                         r.rCostoOriginal || 
@@ -2888,8 +2880,25 @@ window.iniciarNuevoReporte = function() {
                         r['R Costo (Original)']
                     );
 
+                    // 🔥 Leemos qué tipo de recurso es directamente de la fila limpia
+                    let n1 = String(getConsolidadoRowValue(r, 'Recurso N1') || '').toUpperCase();
+                    let isMO = n1.includes('MANO DE OBRA');
+                    let isMAT = n1.includes('MATERIAL');
+                    let isSC = n1.includes('SUBCONTRATO');
+
                     if (pAct) {
-                        partidaCostsMap[pAct] = (partidaCostsMap[pAct] || 0) + origCost;
+                        if (!partidaCostsMap[pAct]) partidaCostsMap[pAct] = { total: 0, mo: 0, mat: 0, sc: 0 };
+                        partidaCostsMap[pAct].total += origCost;
+                        if (isMO) partidaCostsMap[pAct].mo += origCost;
+                        if (isMAT) partidaCostsMap[pAct].mat += origCost;
+                        if (isSC) partidaCostsMap[pAct].sc += origCost;
+                    }
+                    if (pOrig) {
+                        if (!partidaCostsOriginalMap[pOrig]) partidaCostsOriginalMap[pOrig] = { total: 0, mo: 0, mat: 0, sc: 0 };
+                        partidaCostsOriginalMap[pOrig].total += origCost;
+                        if (isMO) partidaCostsOriginalMap[pOrig].mo += origCost;
+                        if (isMAT) partidaCostsOriginalMap[pOrig].mat += origCost;
+                        if (isSC) partidaCostsOriginalMap[pOrig].sc += origCost;
                     }
                 });
             }
@@ -2904,28 +2913,26 @@ window.iniciarNuevoReporte = function() {
             const resultMatrix = [];
             resultMatrix.push(mappedTargets.map(t => t.name));
 
-            // --- NUEVO: PRE-CALCULAR CTC POR JERARQUÍA WBS ---
+            // --- PRE-CALCULAR CTC POR JERARQUÍA WBS ---
                 const ctcMap = {};
                 for (let r = headerRowsCount; r < fullMatrix.length; r++) {
                     const origRow = fullMatrix[r];
                     if (!origRow) continue;
                     let rawCode = String(origRow[codeColIdx] || '').trim();
                     
-                    // Solo sumarizamos lo que viene de las partidas de menor jerarquía (> 4 dígitos)
                     if (rawCode.length > 4) {
                         let storedProj = roProjections[rawCode] || { amount: 0 };
                         let val = parseFloat(storedProj.amount) || 0;
                         
-                        ctcMap[rawCode] = (ctcMap[rawCode] || 0) + val; // Suma a sí mismo
+                        ctcMap[rawCode] = (ctcMap[rawCode] || 0) + val; 
                         
-                        let parent4 = rawCode.substring(0, 4); // Busca a su padre de 4 dígitos
+                        let parent4 = rawCode.substring(0, 4); 
                         ctcMap[parent4] = (ctcMap[parent4] || 0) + val;
                         
-                        let parent2 = rawCode.substring(0, 2); // Busca a su abuelo de 2 dígitos
+                        let parent2 = rawCode.substring(0, 2); 
                         ctcMap[parent2] = (ctcMap[parent2] || 0) + val;
                     }
                 }
-                // ----------------------------------------------
 
             // Procesar cada fila de datos del Resumen RO
             for (let r = headerRowsCount; r < fullMatrix.length; r++) {
@@ -2935,40 +2942,59 @@ window.iniciarNuevoReporte = function() {
                 let rawCode = String(origRow[codeColIdx] || '').trim();
                 let rawDesc = normStr(origRow[descColIdx] || '');
 
-                // 🔥 FIX: MATCH ESTRICTO PARA EVITAR CRUCE DE PARTIDAS
                 let sumCorregido = 0;
-                Object.keys(partidaCostsMap).forEach(partName => {
+                let sumOriginal = 0;
+                let sumOriginalMO = 0;
+                let sumOriginalMAT = 0;
+                let sumOriginalSC = 0;
+                
+                let allPartNames = new Set([...Object.keys(partidaCostsMap), ...Object.keys(partidaCostsOriginalMap)]);
+
+                // 🔥 MOTOR DE BÚSQUEDA EXACTA POR NOMBRE (IGNORANDO CÓDIGOS ERRÓNEOS DE S10)
+                allPartNames.forEach(partName => {
                     let partClean = normStr(partName);
                     let partCode = partName.split(' ')[0].trim();
+                    let partNameOnly = normStr(partName.substring(partCode.length));
+
                     let isMatch = false;
                     
                     if (rawCode && rawCode.length > 0) {
                         if (rawCode.length <= 4) {
-                            // Si es una carpeta (2 o 4 dígitos), suma todo lo que empiece igual
                             if (partCode.startsWith(rawCode)) isMatch = true;
-                        } else {
-                            // Si es una partida individual (> 4 dígitos), exige COINCIDENCIA EXACTA del código
-                            if (partCode === rawCode) isMatch = true;
+                        } 
+                        else {
+                            if (rawDesc.length > 3 && partNameOnly === rawDesc) {
+                                isMatch = true;
+                            } else if (partCode === rawCode && partNameOnly.includes(rawDesc)) {
+                                isMatch = true;
+                            }
                         }
                     }
-                    // Fallback estricto si S10 no exportó código en la celda
-                    if (!isMatch && (!rawCode || rawCode.length < 2) && rawDesc.length > 3) {
-                        if (partClean === rawDesc) isMatch = true;
+                    
+                    if (!isMatch && (!rawCode || rawCode.length < 2) && rawDesc && rawDesc.length > 3) {
+                        if (partNameOnly === rawDesc || partClean === rawDesc) {
+                            isMatch = true;
+                        }
                     }
 
-                    if (isMatch) sumCorregido += partidaCostsMap[partName];
+                    if (isMatch) {
+                        if (partidaCostsMap[partName]) {
+                            sumCorregido += partidaCostsMap[partName].total;
+                        }
+                        if (partidaCostsOriginalMap[partName]) {
+                            sumOriginal += partidaCostsOriginalMap[partName].total;
+                            sumOriginalMO += partidaCostsOriginalMap[partName].mo;
+                            sumOriginalMAT += partidaCostsOriginalMap[partName].mat;
+                            sumOriginalSC += partidaCostsOriginalMap[partName].sc;
+                        }
+                    }
                 });
 
-                let sumMoFinal = 0;
-                moColIndices.forEach(idx => { if (idx !== -1 && idx < origRow.length) sumMoFinal += parseNumberValue(origRow[idx]); });
-
-                let sumMatFinal = 0;
-                matColIndices.forEach(idx => { if (idx !== -1 && idx < origRow.length) sumMatFinal += parseNumberValue(origRow[idx]); });
-
-                let sumScFinal = 0;
-                scColIndices.forEach(idx => { if (idx !== -1 && idx < origRow.length) sumScFinal += parseNumberValue(origRow[idx]); });
-
-                const sumTotal = sumMoFinal + sumMatFinal + sumScFinal;
+                // 🔥 FIX: Reemplazamos la suma horizontal corrupta por nuestra matemática vertical exacta
+                let sumMoFinal = sumOriginalMO;
+                let sumMatFinal = sumOriginalMAT;
+                let sumScFinal = sumOriginalSC;
+                const sumTotal = sumOriginal;
 
                 // NUEVO CÁLCULO: Columna C (V Costo) - Columna P (SUM_CORREGIDO)
                 let vCostoIdx = mappedTargets.find(t => t.key === 'V_COSTO')?.colIndex;
@@ -3126,16 +3152,20 @@ window.iniciarNuevoReporte = function() {
                 partidasGrouped[pKey] = [...originalItems, ...movedInItems];
             });
         }
+        // 🔥 NUEVA FUNCIÓN MAESTRA: Recalcula la matriz RO en tiempo real al mover ítems
         window.actualizarMatrizROEnVivo = function() {
             if (!roFilteredMatrix2D || roFilteredMatrix2D.length === 0) return;
             if (!consolidatedRows || consolidatedRows.length === 0) return;
 
-            // 1. Recalcular la sumatoria exacta del Consolidado actual
+            // 1. Recalcular sumatoria exacta del Consolidado actual
             const partidaCostsMap = {};
+            const partidaCostsOriginalMap = {};
             consolidatedRows.forEach(r => {
                 let pAct = String(r._PartidaActual || '').trim();
+                let pOrig = String(r._PartidaOriginal || '').trim();
                 let origCost = parseNumberValue(getConsolidadoRowValue(r, 'R Costo'));
                 if (pAct) partidaCostsMap[pAct] = (partidaCostsMap[pAct] || 0) + origCost;
+                if (pOrig) partidaCostsOriginalMap[pOrig] = (partidaCostsOriginalMap[pOrig] || 0) + origCost;
             });
 
             // 2. Identificar columnas clave en la matriz RO
@@ -3143,6 +3173,7 @@ window.iniciarNuevoReporte = function() {
             const idxCodigo = headers.findIndex(h => h === 'Código');
             const idxDesc = headers.findIndex(h => h === 'Descripción');
             const idxCorregido = headers.findIndex(h => h === 'R Costo Corregido');
+            const idxTotal = headers.findIndex(h => h === 'R Costo Total');
             const idxDiffCP = headers.findIndex(h => h === 'Diferencia (C - P)');
             const idxVCosto = headers.findIndex(h => h === 'V costo');
             
@@ -3152,34 +3183,50 @@ window.iniciarNuevoReporte = function() {
                 if (/^[\d\.\-\s]{2,15}$/.test(c0) && /^\d/.test(c0)) { dataStart = i; break; }
             }
 
-            // 3. Inyectar los nuevos valores fila por fila con MATCH ESTRICTO
             for (let r = dataStart; r < roFilteredMatrix2D.length; r++) {
                 let row = roFilteredMatrix2D[r];
                 let rawCode = String(row[idxCodigo] || '').trim();
                 let rawDesc = normStr(row[idxDesc] || '');
 
                 let sumCorregido = 0;
-                Object.keys(partidaCostsMap).forEach(partName => {
+                let sumOriginal = 0;
+                
+                let allPartNames = new Set([...Object.keys(partidaCostsMap), ...Object.keys(partidaCostsOriginalMap)]);
+
+                // 🔥 MOTOR MATEMÁTICO BLINDADO EN TIEMPO REAL (Misma Regla por Nombre)
+                allPartNames.forEach(partName => {
                     let partClean = normStr(partName);
                     let partCode = partName.split(' ')[0].trim();
+                    let partNameOnly = normStr(partName.substring(partCode.length));
+                    
                     let isMatch = false;
                     
                     if (rawCode && rawCode.length > 0) {
                         if (rawCode.length <= 4) {
                             if (partCode.startsWith(rawCode)) isMatch = true;
                         } else {
-                            if (partCode === rawCode) isMatch = true; // Igualdad estricta
+                            if (rawDesc.length > 3 && partNameOnly === rawDesc) {
+                                isMatch = true;
+                            } else if (partCode === rawCode && partNameOnly.includes(rawDesc)) {
+                                isMatch = true;
+                            }
                         }
                     }
+                    
                     if (!isMatch && (!rawCode || rawCode.length < 2) && rawDesc.length > 3) {
-                        if (partClean === rawDesc) isMatch = true;
+                        if (partNameOnly === rawDesc || partClean === rawDesc) isMatch = true;
                     }
 
-                    if (isMatch) sumCorregido += partidaCostsMap[partName];
+                    if (isMatch) {
+                        if (partidaCostsMap[partName]) sumCorregido += partidaCostsMap[partName];
+                        if (partidaCostsOriginalMap[partName]) sumOriginal += partidaCostsOriginalMap[partName];
+                    }
                 });
 
-                // Actualizar Costo Corregido y Diferencias en vivo
+                // Actualizar Costo Corregido, Total y Diferencias en vivo
                 if (idxCorregido !== -1) row[idxCorregido] = sumCorregido !== 0 ? sumCorregido : 0;
+                if (idxTotal !== -1) row[idxTotal] = sumOriginal !== 0 ? sumOriginal : 0;
+                
                 if (idxDiffCP !== -1 && idxVCosto !== -1) {
                     let vCostoVal = typeof row[idxVCosto] === 'number' ? row[idxVCosto] : 0;
                     let diff = vCostoVal - sumCorregido;
