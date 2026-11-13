@@ -6469,6 +6469,9 @@ window.iniciarNuevoReporte = function() {
                         // Prevenir renderizados si la data es idéntica
                         if (JSON.stringify(window.tareasCronograma) !== JSON.stringify(nubeData)) {
                             window.tareasCronograma = nubeData;
+                            if (typeof window.ordenarYRecalcularCronograma === 'function') {
+                                window.ordenarYRecalcularCronograma();
+                            }
                             if (window.ganttInicializado) {
                                 window.renderizarCronograma(); 
                             }
@@ -12215,28 +12218,192 @@ window.iniciarNuevoReporte = function() {
                     </div>
                 </div>
 
-                <!-- Aprovecha todo el alto disponible hasta el pie de ventana -->
-                <div class="flex flex-col w-full bg-white rounded-2xl shadow-sm border border-slate-300 overflow-hidden" style="height: calc(100vh - 145px); min-height: 400px;">
+                <!-- VISTA 1: HISTORIAL DE CRONOGRAMAS (PANTALLA PRINCIPAL) -->
+                <div id="vistaHistorialCronogramas" class="w-full px-6 pt-2 pb-8 space-y-5 self-start">
+                    <!-- Cabecera Historial -->
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-2xl font-black text-slate-800 tracking-tight">Historial de Cronogramas</h2>
+                            <p class="text-xs text-slate-500 font-medium">Gestión de línea base, cortes de avance y reprogramaciones S10.</p>
+                        </div>
+                        <div class="flex items-center gap-3 self-start sm:self-auto">
+                            <button onclick="window.abrirModalHitos()" class="bg-amber-100 text-amber-700 hover:bg-amber-200 hover:text-amber-800 border border-amber-200 font-black text-xs uppercase tracking-wider px-4 py-3 rounded-xl shadow-sm transition flex items-center gap-2">
+                                <i class="fa-solid fa-flag"></i> Hitos del Proyecto
+                            </button>
+                            <button onclick="window.abrirModalNuevoCronogramaHistorial()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider px-5 py-3 rounded-xl shadow-md hover:shadow-lg transition flex items-center gap-2">
+                                <i class="fa-solid fa-plus"></i> Nuevo Cronograma
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Panel Superior: KPI Vigente + Curva S de Evolución + Resumen Hitos -->
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                        <!-- Tarjeta Izquierda: Resumen del Cronograma Vigente -->
+                        <div class="lg:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-sm p-5 relative overflow-hidden flex flex-col justify-between min-h-[175px]">
+                            <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500"></div>
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Avance Real Vigente</span>
+                                    <span id="kpiCronoVariacionBadge" class="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-500">0d</span>
+                                </div>
+                                <div class="flex items-baseline gap-3 my-2">
+                                    <span id="kpiCronoAvanceReal" class="text-4xl font-black text-emerald-600 tracking-tight">0%</span>
+                                    <span class="text-xs font-bold text-slate-500">vs <strong id="kpiCronoAvanceProg" class="text-indigo-600">0%</strong> programado</span>
+                                </div>
+                            </div>
+                            <div class="pt-3 mt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-600 font-bold">
+                                <span id="kpiCronoNombreVigente" class="truncate">Sin cronograma vigente</span>
+                                <span id="kpiCronoTotalVersiones" class="text-slate-400 font-semibold shrink-0 ml-2">0 versiones</span>
+                            </div>
+                        </div>
+
+                        <!-- Tarjeta Centro: Evolución % Programado vs % Real -->
+                        <div class="lg:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col justify-between min-h-[175px]">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Evolución de Avance</span>
+                                <div class="flex items-center gap-3 text-[10px] font-bold">
+                                    <span class="flex items-center gap-1 text-indigo-600"><span class="w-2 h-2 rounded-full bg-indigo-500 inline-block"></span>Prog.</span>
+                                    <span class="flex items-center gap-1 text-emerald-600"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>Real</span>
+                                </div>
+                            </div>
+                            <div id="graficoEvolucionCronogramas" class="w-full flex-1 flex items-center justify-center">
+                                <!-- SVG Curva S inyectado por JS -->
+                            </div>
+                        </div>
+
+                        <!-- Tarjeta Derecha: Resumen de Hitos -->
+                        <div class="lg:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col min-h-[175px] max-h-[195px]">
+                            <div class="flex items-center justify-between mb-2.5 shrink-0">
+                                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hitos del Proyecto</span>
+                                <span id="contadorHitosResumen" class="bg-amber-100 text-amber-700 text-[10px] font-black px-2.5 py-0.5 rounded-full">0</span>
+                            </div>
+                            <div id="listaHitosResumen" class="flex-1 overflow-y-auto custom-scrollbar space-y-1.5 pr-1">
+                                <div class="text-xs text-slate-400 font-medium italic text-center mt-6">Sin hitos registrados.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Título Sección Versiones -->
+                    <div class="flex items-center justify-between pt-1">
+                        <span class="text-[11px] font-black text-slate-400 uppercase tracking-widest">Versiones Guardadas</span>
+                    </div>
+
+                    <!-- MODAL HITOS -->
+                    <div id="modalGestionHitos" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+                        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col" style="max-height: 85vh;">
+                            <div class="bg-slate-800 px-6 py-4 flex items-center justify-between shrink-0">
+                                <div class="flex items-center gap-2.5 text-white">
+                                    <i class="fa-solid fa-flag text-amber-400"></i>
+                                    <h3 class="font-black text-sm uppercase tracking-wider">Gestión de Hitos</h3>
+                                </div>
+                                <button onclick="document.getElementById('modalGestionHitos').classList.add('hidden')" class="text-slate-400 hover:text-white transition">
+                                    <i class="fa-solid fa-xmark text-lg"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Formulario Nuevo Hito -->
+                            <div class="p-5 bg-slate-50 border-b border-slate-200 shrink-0">
+                                <div class="flex gap-3 items-end">
+                                    <div class="flex-1">
+                                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Descripción del Hito</label>
+                                        <input type="text" id="inputNombreHito" placeholder="Ej: Vaciado Losa Piso 1" class="w-full bg-white border border-slate-300 text-slate-800 text-sm rounded-xl p-2.5 font-bold focus:ring-2 focus:ring-amber-500 outline-none">
+                                    </div>
+                                    <div class="w-36">
+                                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Fecha</label>
+                                        <input type="date" id="inputFechaHito" class="w-full bg-white border border-slate-300 text-slate-800 text-sm rounded-xl p-2.5 font-bold focus:ring-2 focus:ring-amber-500 outline-none">
+                                    </div>
+                                    <button onclick="window.agregarHitoCrono()" class="bg-amber-500 hover:bg-amber-600 text-white font-black px-4 py-2.5 rounded-xl transition shadow-sm h-[42px]">
+                                        Añadir
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Lista de Hitos -->
+                            <div class="flex-1 overflow-y-auto p-5 bg-white">
+                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 block">Hitos Programados</label>
+                                <div id="listaHitosAdmin" class="space-y-2">
+                                    <!-- JS inyecta hitos aquí -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Grilla de Tarjetas de Cronogramas -->
+                    <div id="gridTarjetasCronogramas" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                        <!-- Tarjetas generadas por JS -->
+                    </div>
+                </div>
+
+                <!-- MODAL: CREAR NUEVO CRONOGRAMA -->
+                <div id="modalNuevoCronogramaHistorial" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden">
+                        <div class="bg-slate-800 px-6 py-4 flex items-center justify-between">
+                            <div class="flex items-center gap-2.5 text-white">
+                                <i class="fa-solid fa-calendar-plus text-emerald-400"></i>
+                                <h3 class="font-black text-sm uppercase tracking-wider">Nuevo Cronograma</h3>
+                            </div>
+                            <button onclick="document.getElementById('modalNuevoCronogramaHistorial').classList.add('hidden')" class="text-slate-400 hover:text-white transition">
+                                <i class="fa-solid fa-xmark text-lg"></i>
+                            </button>
+                        </div>
+                        <div class="p-6 space-y-4">
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block">Nombre / Versión del Cronograma</label>
+                                <input type="text" id="inputNombreNuevoCrono" placeholder="Ej: Reprogramación Noviembre 2026" class="w-full bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-xl p-3 font-bold focus:ring-2 focus:ring-emerald-500 outline-none">
+                            </div>
+                            <div class="flex items-center gap-2.5 bg-emerald-50/70 border border-emerald-200 rounded-xl p-3">
+                                <input type="checkbox" id="checkNuevoCronoVigente" checked class="w-4 h-4 accent-emerald-600 rounded cursor-pointer">
+                                <label for="checkNuevoCronoVigente" class="text-xs font-bold text-slate-700 cursor-pointer">Marcar como cronograma vigente del proyecto</label>
+                            </div>
+                            <div class="pt-2 flex flex-col sm:flex-row gap-2.5 justify-end">
+                                <button onclick="window.crearNuevoCronogramaHistorial(false)" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-xs uppercase tracking-wider transition">
+                                    Crear Vacío
+                                </button>
+                                <button onclick="window.crearNuevoCronogramaHistorial(true)" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-wider shadow-sm transition flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-file-excel"></i> Crear e Importar S10 / Excel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Diseño Dividido: Tabla (Izquierda) | Gantt (Derecha) con 1 solo scroll vertical -->
+                <div id="contenedorSplitCronograma" class="hidden flex flex-col w-full bg-white rounded-2xl shadow-sm border border-slate-300 overflow-hidden" style="height: calc(100vh - 145px); min-height: 400px;">
                     <!-- ÚNICO SCROLL VERTICAL PARA DATOS Y GRÁFICA -->
                     <div id="cronogramaScrollUnificado" class="flex-1 overflow-y-auto overflow-x-hidden relative custom-scrollbar">
                         
-                        <!-- CABECERA STICKY INMOVILIZADA ARRIBA -->
-                        <div class="sticky top-0 z-30 flex flex-row w-full bg-slate-800 border-b border-slate-600 shadow-sm" style="height: 59px; min-height: 59px; max-height: 59px;">
-                            <div id="headerTablaCronograma" style="width: 450px; min-width: 300px;" class="shrink-0 bg-slate-800 text-white text-[10px] font-bold uppercase tracking-widest flex items-center border-r border-slate-600 box-border h-full">
-                                <div class="w-12 h-full flex items-center justify-center border-r border-slate-600">N°</div>
-                                <div class="flex-1 h-full flex items-center px-3 border-r border-slate-600">Partida</div>
-                                <div class="w-20 h-full flex items-center justify-center border-r border-slate-600 text-center">Inicio</div>
-                                <div class="w-20 h-full flex items-center justify-center border-r border-slate-600 text-center">Fin</div>
-                                <div class="w-12 h-full flex items-center justify-center text-center">%</div>
+                        <!-- CABECERA STICKY INMOVILIZADA ARRIBA (CON FRANJA SUPERIOR DE HITOS SOBRE LAS FECHAS) -->
+                        <div class="sticky top-0 z-30 flex flex-row w-full bg-slate-800 border-b border-slate-600 shadow-sm" style="height: 81px; min-height: 81px; max-height: 81px;">
+                            <div id="headerTablaCronograma" style="width: 540px; min-width: 380px;" class="shrink-0 bg-slate-800 text-white text-[10px] font-bold uppercase tracking-widest flex flex-col border-r border-slate-600 box-border h-full">
+                                <div class="w-full bg-slate-900/90 border-b border-slate-700 px-3 flex items-center justify-between text-[9px] text-amber-400 font-black tracking-widest" style="height: 22px;">
+                                    <span><i class="fa-solid fa-flag mr-1.5"></i>HITOS DEL PROYECTO</span>
+                                    <span class="text-slate-400 font-semibold normal-case">Pasa el cursor sobre ▲</span>
+                                </div>
+                                <div class="w-full flex items-center flex-1">
+                                    <div class="w-10 h-full flex items-center justify-center border-r border-slate-600">N°</div>
+                                    <div class="flex-1 h-full flex items-center px-3 border-r border-slate-600">Partida</div>
+                                    <div class="w-20 h-full flex items-center justify-center border-r border-slate-600 text-center">Inicio</div>
+                                    <div class="w-20 h-full flex items-center justify-center border-r border-slate-600 text-center">Fin</div>
+                                    <div class="w-12 h-full flex items-center justify-center border-r border-slate-600 text-center leading-tight" title="Avance Programado a hoy">% Prog</div>
+                                    <div class="w-12 h-full flex items-center justify-center border-r border-slate-600 text-center leading-tight" title="Avance Real">% Real</div>
+                                    <div class="w-16 h-full flex items-center justify-center text-center leading-tight" title="Variación de plazo MS Project (-d adelanto / +d atraso)">Variación</div>
+                                </div>
                             </div>
-                            <div id="ganttHeaderViewport" class="flex-1 overflow-hidden bg-slate-800 h-full relative">
-                                <svg id="gantt_header_svg" style="height: 58px; display: block;"></svg>
+                            <div class="flex-1 flex flex-col overflow-hidden h-full">
+                                <!-- FRANJA SUPERIOR DE HITOS (SOBRE LAS FECHAS) -->
+                                <div id="ganttMilestoneViewport" class="w-full overflow-hidden bg-slate-100 border-b border-slate-300 relative" style="height: 22px;">
+                                    <svg id="gantt_milestone_header_svg" style="height: 22px; display: block;"></svg>
+                                </div>
+                                <!-- CABECERA DE FECHAS -->
+                                <div id="ganttHeaderViewport" class="w-full overflow-hidden bg-slate-800 relative" style="height: 58px;">
+                                    <svg id="gantt_header_svg" style="height: 58px; display: block;"></svg>
+                                </div>
                             </div>
                         </div>
 
                         <!-- CUERPO SINCRONIZADO (FILAS + BARRAS AL MISMO NIVEL) -->
                         <div class="flex flex-row w-full items-start relative">
-                            <div id="panelTablaCronograma" style="width: 450px; min-width: 300px;" class="shrink-0 flex flex-col border-r border-slate-300 bg-white z-20 relative">
+                            <div id="panelTablaCronograma" style="width: 540px; min-width: 380px;" class="shrink-0 flex flex-col border-r border-slate-300 bg-white z-20 relative">
                                 <div class="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize z-40 hover:bg-blue-500 transition-colors" onmousedown="window.iniciarResizePanelCronograma(event)"></div>
                                 <div id="tablaPartidasCronograma" class="w-full text-xs bg-white">
                                     <!-- JS inyectará las filas aquí -->
@@ -12253,7 +12420,7 @@ window.iniciarNuevoReporte = function() {
 
                     <!-- BARRA DE SCROLL HORIZONTAL SIEMPRE VISIBLE EN LA VENTANA -->
                     <div class="sticky bottom-0 flex flex-row w-full bg-slate-100 border-t border-slate-300 shrink-0 z-30 shadow-[0_-2px_6px_rgba(0,0,0,0.06)]">
-                        <div id="spacerScrollCronograma" style="width: 450px; min-width: 300px;" class="shrink-0 border-r border-slate-300 bg-slate-50"></div>
+                        <div id="spacerScrollCronograma" style="width: 540px; min-width: 380px;" class="shrink-0 border-r border-slate-300 bg-slate-50"></div>
                         <div id="ganttHScrollBar" class="flex-1 overflow-x-auto overflow-y-hidden" style="height: 14px;">
                             <div id="ganttHScrollSpacer" style="height: 1px;"></div>
                         </div>
@@ -12308,16 +12475,22 @@ window.iniciarNuevoReporte = function() {
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 gap-3">
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">% Avance Real</label>
+                            <input type="number" id="cronoProgreso" min="0" max="100" value="0" class="w-full bg-white border border-slate-300 text-slate-700 text-sm rounded-xl p-2.5 font-bold focus:ring-amber-500 outline-none">
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
-                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">% Avance Real</label>
-                                <input type="number" id="cronoProgreso" min="0" max="100" value="0" class="w-full bg-white border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-amber-500 p-2.5 font-bold outline-none shadow-sm">
+                                <label class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-1 block">Predecesora (Requisito previo)</label>
+                                <select id="cronoDependencia" onchange="window.sincronizarSelectoresDependencia('pred')" class="w-full bg-white border border-slate-300 text-slate-700 text-xs rounded-xl p-2.5 font-bold focus:ring-amber-500 outline-none">
+                                    <option value="">-- Ninguna --</option>
+                                </select>
                             </div>
                             <div>
-                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Predecesora</label>
-                                <select id="cronoDependencia" class="w-full bg-white border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-amber-500 p-2.5 font-bold outline-none cursor-pointer shadow-sm">
+                                <label class="text-[10px] font-bold text-amber-600 uppercase tracking-widest mb-1 block">Sucesora (Condicionada)</label>
+                                <select id="cronoSucesora" onchange="window.sincronizarSelectoresDependencia('succ')" class="w-full bg-white border border-slate-300 text-slate-700 text-xs rounded-xl p-2.5 font-bold focus:ring-amber-500 outline-none">
                                     <option value="">-- Ninguna --</option>
-                                    <!-- JS llenará esto -->
                                 </select>
                             </div>
                         </div>
@@ -12363,8 +12536,31 @@ window.iniciarNuevoReporte = function() {
                 .scrollbar-hide::-webkit-scrollbar { display: none; }
                 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
                 
+                /* 🔥 MAGIA MS PROJECT: Estilos para Partidas Padre (Jerarquías) */
                 .gantt .bar-summary .bar { fill: #334155 !important; stroke: #0f172a !important; }
                 .gantt .bar-summary .bar-progress { fill: #94a3b8 !important; }
+
+                /* 🔥 DOBLE BARRA (Línea Base Programada debajo + Semáforo Adelanto/Atraso) */
+                .gantt .bar-baseline { fill: #3b82f6 !important; stroke: #1d4ed8 !important; stroke-width: 1px; opacity: 0.9; }
+                .gantt .bar-delayed .bar { fill: #fee2e2 !important; stroke: #ef4444 !important; }
+                .gantt .bar-delayed .bar-progress { fill: #dc2626 !important; }
+                .gantt .bar-early .bar { fill: #d1fae5 !important; stroke: #10b981 !important; }
+                .gantt .bar-early .bar-progress { fill: #059669 !important; }
+
+                /* Resaltado interactivo al pasar el mouse sobre una flecha */
+                .gantt.has-arrow-hover .bar-wrapper { opacity: 0.28; transition: opacity 0.15s ease; }
+                .gantt.has-arrow-hover .bar-wrapper.bar-highlight-pred,
+                .gantt.has-arrow-hover .bar-wrapper.bar-highlight-succ { opacity: 1 !important; }
+                .gantt .bar-wrapper.bar-highlight-pred .bar {
+                    stroke: #16a34a !important;
+                    stroke-width: 3px !important;
+                    filter: drop-shadow(0 0 6px rgba(22, 163, 74, 0.7));
+                }
+                .gantt .bar-wrapper.bar-highlight-succ .bar {
+                    stroke: #9333ea !important;
+                    stroke-width: 3px !important;
+                    filter: drop-shadow(0 0 6px rgba(147, 51, 234, 0.7));
+                }
             </style>
 
     <!-- ========================================== -->
@@ -12591,7 +12787,9 @@ window.iniciarNuevoReporte = function() {
                 return;
             }
 
-            window.recalcularWBSCronograma();
+            if (typeof window.ordenarYRecalcularCronograma === 'function') {
+                window.ordenarYRecalcularCronograma();
+            }
 
             const formDate = (isoDate) => {
                 if (!isoDate) return '';
@@ -12601,7 +12799,8 @@ window.iniciarNuevoReporte = function() {
 
             window.tareasCronograma.forEach((t, index) => {
                 let isParent = t.isSummary;
-                let bgFila = isParent ? 'bg-slate-100' : 'bg-white';
+                let nivelJerarquia = t.level || 0;
+                let bgFila = nivelJerarquia === 0 ? 'bg-slate-200' : (nivelJerarquia === 1 ? 'bg-slate-100' : 'bg-white');
                 let paddingL = (t.level || 0) * 16 + 8;
                 let fontNombre = isParent ? 'font-black text-slate-900 uppercase text-[10px]' : 'font-semibold text-slate-700 text-[10px]';
                 
@@ -12613,7 +12812,7 @@ window.iniciarNuevoReporte = function() {
                          style="height: 38px; min-height: 38px; max-height: 38px; width: 100%; overflow: hidden;">
                         
                         <div class="w-12 h-full flex items-center justify-center border-r border-slate-200 text-center font-bold text-slate-500 shrink-0 text-[10px] bg-slate-50 relative z-10 cursor-text">
-                            <input type="text" value="${wbsVal}" onchange="window.cambiarWBSManual('${t.id}', this.value)" onfocus="this.select()" class="w-full h-full bg-transparent text-center focus:outline-none focus:bg-white focus:ring-2 focus:ring-amber-500 hover:bg-slate-200 transition-colors" title="Editar número">
+                            <input type="text" value="${wbsVal}" onkeydown="if(event.key==='Enter'){ event.preventDefault(); this.blur(); }" onchange="window.cambiarWBSManual('${t.id}', this.value)" onfocus="this.select()" class="w-full h-full bg-transparent text-center focus:outline-none focus:bg-white focus:ring-2 focus:ring-amber-500 hover:bg-slate-200 transition-colors" title="Editar número y presionar Enter para reubicar y guardar">
                         </div>
                         
                         <div class="flex-1 px-3 h-full flex items-center border-r border-slate-200 truncate ${fontNombre} cursor-pointer hover:text-indigo-600 transition-colors relative" style="padding-left: ${paddingL}px;" title="Clic para editar: ${t.name}" onclick="window.abrirModalNuevaPartida('${t.id}')">
@@ -12845,19 +13044,1263 @@ window.iniciarNuevoReporte = function() {
             reader.readAsArrayBuffer(file);
         };
 
-        // Cambia el texto interno de la barra por el Porcentaje
+        // Dibuja la doble barra (Ejecución Real arriba + Línea Base Programada azul debajo) y muestra el %
         window.actualizarEtiquetasGantt = function() {
             setTimeout(() => {
+                const ganttInst = window.ganttInstancia;
                 document.querySelectorAll('.gantt .bar-wrapper').forEach(wrapper => {
-                    let taskId = wrapper.getAttribute('data-id');
-                    let task = window.tareasCronograma.find(t => t.id === taskId);
-                    let label = wrapper.querySelector('.bar-label');
-                    if (task && label) {
-                        label.textContent = task.progress + '%';
+                    const taskId = wrapper.getAttribute('data-id');
+                    const task = window.tareasCronograma.find(t => t.id === taskId);
+                    if (!task) return;
+
+                    const barGroup = wrapper.querySelector('.bar-group') || wrapper;
+                    const barRect = wrapper.querySelector('rect.bar');
+                    const progRect = wrapper.querySelector('rect.bar-progress');
+                    const label = wrapper.querySelector('.bar-label');
+
+                    // Semáforo MS Project: rojo si hay atraso (+d), verde si hay adelanto (-d)
+                    wrapper.classList.remove('bar-delayed', 'bar-early');
+                    if (!task.isSummary) {
+                        if ((task.delayDays || 0) > 0) {
+                            wrapper.classList.add('bar-delayed');
+                        } else if ((task.delayDays || 0) < 0) {
+                            wrapper.classList.add('bar-early');
+                        }
+                    }
+
+                    if (barRect) {
+                        const yOrig = parseFloat(barRect.getAttribute('y')) || 0;
+                        // Barra superior: Ejecución Real (16px de alto)
+                        barRect.setAttribute('y', yOrig - 1);
+                        barRect.setAttribute('height', '16');
+
+                        if (progRect) {
+                            progRect.setAttribute('y', yOrig - 1);
+                            progRect.setAttribute('height', '16');
+                        }
+                        if (label) {
+                            label.setAttribute('y', yOrig + 7);
+                            label.textContent = (task.progress || 0) + '%';
+                        }
+
+                        // Barra inferior: Línea Base Programada (6px de alto en azul)
+                        const oldBase = wrapper.querySelector('.bar-baseline');
+                        if (oldBase) oldBase.remove();
+
+                        if (ganttInst && ganttInst.gantt_start && task.planStart && task.planEnd) {
+                            const { step, column_width } = ganttInst.options;
+                            const gStart = new Date(ganttInst.gantt_start);
+                            const pIni = new Date(task.planStart + 'T00:00:00');
+                            const pFin = new Date(task.planEnd + 'T00:00:00');
+                            pFin.setDate(pFin.getDate() + 1);
+
+                            let xPlan = 0, wPlan = column_width;
+                            if (ganttInst.view_is && ganttInst.view_is('Month')) {
+                                const diffIniDays = (pIni - gStart) / 86400000;
+                                const diffDurDays = Math.max(1, (pFin - pIni) / 86400000);
+                                xPlan = (diffIniDays * column_width) / 30;
+                                wPlan = (diffDurDays * column_width) / 30;
+                            } else {
+                                const diffIniHours = (pIni - gStart) / 3600000;
+                                const diffDurHours = Math.max(step, (pFin - pIni) / 3600000);
+                                xPlan = (diffIniHours / step) * column_width;
+                                wPlan = (diffDurHours / step) * column_width;
+                            }
+
+                            const baseRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                            baseRect.setAttribute('class', 'bar-baseline');
+                            baseRect.setAttribute('x', xPlan);
+                            baseRect.setAttribute('y', yOrig + 17);
+                            baseRect.setAttribute('width', Math.max(4, wPlan));
+                            baseRect.setAttribute('height', '6');
+                            baseRect.setAttribute('rx', '3');
+                            baseRect.setAttribute('ry', '3');
+                            barGroup.appendChild(baseRect);
+                        }
                     }
                 });
+
+                // Renderizar flechas de dependencia e hitos (y reintentar tras finalizar animación/layout)
+                if (typeof window.actualizarCapasGanttExtras === 'function') {
+                    window.actualizarCapasGanttExtras();
+                    setTimeout(window.actualizarCapasGanttExtras, 140);
+                    setTimeout(window.actualizarCapasGanttExtras, 350);
+                }
             }, 50);
         };
+
+        // Función dedicada para dibujar flechas e hitos en Días, Semanas y Meses de forma automática
+        window.actualizarCapasGanttExtras = function() {
+            const svgChart = document.getElementById('gantt_chart');
+            if (!svgChart || window._dibujandoExtrasGantt) return;
+            window._dibujandoExtrasGantt = true;
+
+            try {
+                // Instalar observador automático para redibujar hitos y flechas al cambiar Días/Semanas/Meses
+                if (!svgChart._observerExtrasInstalado) {
+                    svgChart._observerExtrasInstalado = true;
+                    let rafId = null;
+                    const obs = new MutationObserver(() => {
+                        if (window._dibujandoExtrasGantt) return;
+                        if (rafId) cancelAnimationFrame(rafId);
+                        rafId = requestAnimationFrame(() => window.actualizarCapasGanttExtras());
+                    });
+                    obs.observe(svgChart, { childList: true, subtree: true });
+
+                    const headerSvgObs = document.getElementById('gantt_header_svg');
+                    if (headerSvgObs) {
+                        obs.observe(headerSvgObs, { childList: true });
+                    }
+                }
+
+                const nativeArrows = svgChart.querySelector('g.arrow');
+                if (nativeArrows) nativeArrows.innerHTML = '';
+
+                let arrowLayer = svgChart.querySelector('#gantt_ms_arrows');
+                if (!arrowLayer) {
+                    arrowLayer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                    arrowLayer.setAttribute('id', 'gantt_ms_arrows');
+                    svgChart.appendChild(arrowLayer);
+                }
+                arrowLayer.innerHTML = '';
+
+                const barCoords = {};
+                svgChart.querySelectorAll('.bar-wrapper').forEach(w => {
+                    const id = w.getAttribute('data-id');
+                    const rect = w.querySelector('rect.bar');
+                    if (id && rect) {
+                        const x = parseFloat(rect.getAttribute('x')) || 0;
+                        const y = parseFloat(rect.getAttribute('y')) || 0;
+                        const width = parseFloat(rect.getAttribute('width')) || 0;
+                        const height = parseFloat(rect.getAttribute('height')) || 16;
+                        barCoords[id] = { x, y, right: x + width, midY: y + height / 2 };
+                    }
+                });
+
+                // 1. FLECHAS DE PREDECESORA / SUCESORA
+                (window.tareasCronograma || []).forEach(task => {
+                    const depId = Array.isArray(task.dependencies) ? (task.dependencies[0] || '') : (task.dependencies || '');
+                    if (!depId || !barCoords[depId] || !barCoords[task.id]) return;
+
+                    const from = barCoords[depId];
+                    const to = barCoords[task.id];
+                    const predTask = window.tareasCronograma.find(x => x.id === depId);
+                    const esSucesora = (task.depOrigin === 'succ');
+                    const colorFlecha = esSucesora ? '#9333ea' : '#16a34a';
+
+                    const startX = from.right;
+                    const startY = from.midY;
+                    const endX = to.x;
+                    const endY = to.midY;
+
+                    let d = '';
+                    if (endX >= startX + 12) {
+                        const elbowX = startX + Math.min(12, (endX - startX) / 2);
+                        d = `M ${startX} ${startY} L ${elbowX} ${startY} L ${elbowX} ${endY} L ${endX - 5} ${endY}`;
+                    } else {
+                        const outX = startX + 10;
+                        const inX = endX - 10;
+                        const midY = (startY + endY) / 2;
+                        d = `M ${startX} ${startY} L ${outX} ${startY} L ${outX} ${midY} L ${inX} ${midY} L ${inX} ${endY} L ${endX - 5} ${endY}`;
+                    }
+
+                    const linkGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+                    const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    dot.setAttribute('cx', startX);
+                    dot.setAttribute('cy', startY);
+                    dot.setAttribute('r', '3');
+                    dot.setAttribute('fill', colorFlecha);
+                    linkGroup.appendChild(dot);
+
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path.setAttribute('d', d);
+                    path.setAttribute('fill', 'none');
+                    path.setAttribute('stroke', colorFlecha);
+                    path.setAttribute('stroke-width', '2.2');
+                    path.setAttribute('stroke-linejoin', 'round');
+                    linkGroup.appendChild(path);
+
+                    const head = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                    head.setAttribute('points', `${endX},${endY} ${endX - 6.5},${endY - 4} ${endX - 6.5},${endY + 4}`);
+                    head.setAttribute('fill', colorFlecha);
+                    linkGroup.appendChild(head);
+
+                    const hitPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    hitPath.setAttribute('d', d);
+                    hitPath.setAttribute('fill', 'none');
+                    hitPath.setAttribute('stroke', 'transparent');
+                    hitPath.setAttribute('stroke-width', '14');
+                    hitPath.setAttribute('data-gantt-tooltip-trigger', '1');
+                    hitPath.style.cursor = 'pointer';
+                    hitPath.style.pointerEvents = 'stroke';
+
+                    hitPath.addEventListener('mouseenter', (ev) => {
+                        svgChart.classList.add('has-arrow-hover');
+                        path.setAttribute('stroke-width', '3.8');
+                        dot.setAttribute('r', '4.4');
+
+                        const predBar = svgChart.querySelector(`.bar-wrapper[data-id="${depId}"]`);
+                        const succBar = svgChart.querySelector(`.bar-wrapper[data-id="${task.id}"]`);
+                        if (predBar) predBar.classList.add('bar-highlight-pred');
+                        if (succBar) succBar.classList.add('bar-highlight-succ');
+
+                        const predRow = document.getElementById(`label_tabla_prog_${depId}`)?.closest('[class*="border-b"]');
+                        const succRow = document.getElementById(`label_tabla_prog_${task.id}`)?.closest('[class*="border-b"]');
+                        if (predRow) predRow.style.boxShadow = 'inset 4px 0 0 #16a34a';
+                        if (succRow) succRow.style.boxShadow = 'inset 4px 0 0 #9333ea';
+
+                        let tip = document.getElementById('ganttArrowTooltip');
+                        if (!tip) {
+                            tip = document.createElement('div');
+                            tip.id = 'ganttArrowTooltip';
+                            tip.className = 'fixed z-50 pointer-events-none bg-slate-900/95 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg shadow-xl border border-slate-700 flex items-center gap-2';
+                            document.body.appendChild(tip);
+                        }
+                        const predTxt = predTask ? `${predTask.wbs} ${predTask.name}` : '';
+                        const succTxt = `${task.wbs} ${task.name}`;
+                        tip.innerHTML = `<span class="text-emerald-400">● Predecesora:</span> <span>${predTxt}</span> <span class="text-slate-400">➔</span> <span class="text-purple-400">● Sucesora:</span> <span>${succTxt}</span>`;
+                        tip.style.left = Math.min(window.innerWidth - 360, ev.clientX + 12) + 'px';
+                        tip.style.top = Math.max(10, ev.clientY - 38) + 'px';
+                        tip.classList.remove('hidden');
+                    });
+
+                    hitPath.addEventListener('mouseleave', () => {
+                        svgChart.classList.remove('has-arrow-hover');
+                        path.setAttribute('stroke-width', '2.2');
+                        dot.setAttribute('r', '3');
+
+                        svgChart.querySelectorAll('.bar-highlight-pred, .bar-highlight-succ').forEach(el => {
+                            el.classList.remove('bar-highlight-pred', 'bar-highlight-succ');
+                        });
+
+                        const predRow = document.getElementById(`label_tabla_prog_${depId}`)?.closest('[class*="border-b"]');
+                        const succRow = document.getElementById(`label_tabla_prog_${task.id}`)?.closest('[class*="border-b"]');
+                        if (predRow) predRow.style.boxShadow = '';
+                        if (succRow) succRow.style.boxShadow = '';
+
+                        const tip = document.getElementById('ganttArrowTooltip');
+                        if (tip) tip.classList.add('hidden');
+                    });
+
+                    linkGroup.appendChild(hitPath);
+                    arrowLayer.appendChild(linkGroup);
+                });
+
+                // 2. HITOS DEL PROYECTO (EN DÍAS, SEMANAS Y MESES)
+                let milestoneLayer = svgChart.querySelector('#gantt_milestones');
+                if (!milestoneLayer) {
+                    milestoneLayer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                    milestoneLayer.setAttribute('id', 'gantt_milestones');
+                    svgChart.appendChild(milestoneLayer);
+                }
+                milestoneLayer.innerHTML = '';
+
+                // Cierre automático garantizado de la nube flotante al salir del hito o hacer scroll
+                const ocultarTooltipGantt = () => {
+                    const tip = document.getElementById('ganttArrowTooltip');
+                    if (tip) {
+                        tip.classList.add('hidden');
+                        tip.style.display = 'none';
+                    }
+                };
+
+                if (!window._tooltipGanttGuardInstalado) {
+                    window._tooltipGanttGuardInstalado = true;
+                    document.addEventListener('mousemove', (ev) => {
+                        const tip = document.getElementById('ganttArrowTooltip');
+                        if (!tip || tip.style.display === 'none') return;
+                        let nodo = ev.target;
+                        let esTrigger = false;
+                        while (nodo && nodo !== document.body) {
+                            if (nodo.getAttribute && nodo.getAttribute('data-gantt-tooltip-trigger') === '1') {
+                                esTrigger = true;
+                                break;
+                            }
+                            nodo = nodo.parentNode;
+                        }
+                        if (!esTrigger) ocultarTooltipGantt();
+                    }, { passive: true });
+                    window.addEventListener('scroll', ocultarTooltipGantt, true);
+                    document.addEventListener('mouseleave', ocultarTooltipGantt);
+                }
+
+                const headerSvg = document.getElementById('gantt_header_svg');
+                const topStripSvg = document.getElementById('gantt_milestone_header_svg');
+                const gridBg = svgChart.querySelector('.grid-background');
+                const maxBarRight = Object.values(barCoords).reduce((m, c) => Math.max(m, c.right || 0), 0);
+                const realChartWidth = Math.max(
+                    parseFloat(gridBg?.getAttribute('width')) || 0,
+                    parseFloat(svgChart.getAttribute('width')) || 0,
+                    parseFloat(headerSvg?.getAttribute('width')) || 0,
+                    maxBarRight + 600,
+                    4000
+                );
+                const svgHeight = Math.max(
+                    parseFloat(gridBg?.getAttribute('height')) || 0,
+                    parseFloat(svgChart.getAttribute('height')) || 0,
+                    ((window.tareasCronograma || []).length * 42 + 120)
+                );
+
+                if (topStripSvg) {
+                    topStripSvg.setAttribute('width', realChartWidth);
+                    topStripSvg.innerHTML = '';
+                }
+
+                let headerMilestoneLayer = headerSvg ? headerSvg.querySelector('#gantt_header_milestones') : null;
+                if (headerSvg && !headerMilestoneLayer) {
+                    headerMilestoneLayer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                    headerMilestoneLayer.setAttribute('id', 'gantt_header_milestones');
+                    headerSvg.appendChild(headerMilestoneLayer);
+                }
+                if (headerMilestoneLayer) headerMilestoneLayer.innerHTML = '';
+
+                // Sincronizar scroll horizontal de la franja de hitos
+                const headerVp = document.getElementById('ganttHeaderViewport');
+                const mileVp = document.getElementById('ganttMilestoneViewport');
+                const hScrollBar = document.getElementById('ganttHScrollBar');
+                const ganttCont = document.getElementById('gantt_container');
+                if (mileVp) {
+                    const scrollActual = (headerVp && headerVp.scrollLeft) || (hScrollBar && hScrollBar.scrollLeft) || (ganttCont && ganttCont.scrollLeft) || 0;
+                    mileVp.scrollLeft = scrollActual;
+                    if (!mileVp._syncScrollInstalado) {
+                        mileVp._syncScrollInstalado = true;
+                        const syncMile = (val) => { mileVp.scrollLeft = val; };
+                        if (headerVp) headerVp.addEventListener('scroll', () => syncMile(headerVp.scrollLeft));
+                        if (hScrollBar) hScrollBar.addEventListener('scroll', () => syncMile(hScrollBar.scrollLeft));
+                        if (ganttCont) ganttCont.addEventListener('scroll', () => syncMile(ganttCont.scrollLeft));
+                    }
+                }
+
+                // Calibrar escala horizontal exacta desde las barras renderizadas en la vista actual (Días, Semanas o Meses)
+                const puntosCalibracion = [];
+                (window.tareasCronograma || []).forEach(t => {
+                    const c = barCoords[t.id];
+                    if (c && t.start) {
+                        const msIni = new Date(t.start + 'T00:00:00').getTime();
+                        puntosCalibracion.push({ ms: msIni, x: c.x });
+                        if (t.end && c.right > c.x) {
+                            const msFin = new Date(t.end + 'T00:00:00').getTime() + 86400000;
+                            puntosCalibracion.push({ ms: msFin, x: c.right });
+                        }
+                    }
+                });
+
+                let pxPerMs = 0, originX = 0;
+                if (puntosCalibracion.length >= 2) {
+                    puntosCalibracion.sort((a, b) => a.ms - b.ms);
+                    const p1 = puntosCalibracion[0];
+                    const p2 = puntosCalibracion[puntosCalibracion.length - 1];
+                    if (p2.ms > p1.ms) {
+                        pxPerMs = (p2.x - p1.x) / (p2.ms - p1.ms);
+                        originX = p1.x - p1.ms * pxPerMs;
+                    }
+                } else if (window.ganttInstance && window.ganttInstance.gantt_start && window.ganttInstance.options) {
+                    const gStartMs = new Date(window.ganttInstance.gantt_start).getTime();
+                    const stepMs = (window.ganttInstance.options.step || 24) * 3600000;
+                    const colW = window.ganttInstance.options.column_width || 24;
+                    pxPerMs = colW / stepMs;
+                    originX = -gStartMs * pxPerMs;
+                }
+
+                if (pxPerMs > 0 && Array.isArray(window.hitosCronograma)) {
+                    window.hitosCronograma.forEach((hito, idx) => {
+                        const hMs = new Date(hito.fecha + 'T00:00:00').getTime();
+                        const posX = originX + hMs * pxPerMs;
+                        if (posX < 0) return;
+
+                        const numHito = idx + 1;
+
+                        const bindTooltipHito = (el) => {
+                            el.setAttribute('data-gantt-tooltip-trigger', '1');
+                            el.style.cursor = 'pointer';
+                            el.style.pointerEvents = 'all';
+                            const posicionar = (ev) => {
+                                let tip = document.getElementById('ganttArrowTooltip');
+                                if (!tip) {
+                                    tip = document.createElement('div');
+                                    tip.id = 'ganttArrowTooltip';
+                                    tip.className = 'fixed pointer-events-none bg-slate-900/95 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg shadow-xl border border-slate-700 items-center gap-2';
+                                    tip.style.zIndex = '99999';
+                                    document.body.appendChild(tip);
+                                }
+                                tip.innerHTML = `<span class="bg-amber-400 text-slate-900 font-black px-1.5 py-0.5 rounded text-[10px]">HITO #${numHito}</span> <span>${hito.nombre}</span> <span class="text-slate-400">(${window.formatearFechaCortaCrono(hito.fecha)})</span>`;
+                                tip.style.left = Math.min(window.innerWidth - 360, ev.clientX + 12) + 'px';
+                                tip.style.top = Math.max(10, ev.clientY + 14) + 'px';
+                                tip.classList.remove('hidden');
+                                tip.style.display = 'flex';
+                            };
+                            el.addEventListener('mouseenter', posicionar);
+                            el.addEventListener('mousemove', posicionar);
+                            el.addEventListener('mouseleave', ocultarTooltipGantt);
+                        };
+
+                        // Triángulo ámbar numerado sobre las fechas
+                        if (topStripSvg) {
+                            const triGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                            const tri = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                            tri.setAttribute('points', `${posX - 11},2 ${posX + 11},2 ${posX},21`);
+                            tri.setAttribute('fill', '#f59e0b');
+                            tri.setAttribute('stroke', '#1e293b');
+                            tri.setAttribute('stroke-width', '1.3');
+                            triGroup.appendChild(tri);
+
+                            const numTxt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                            numTxt.setAttribute('x', posX);
+                            numTxt.setAttribute('y', 11.5);
+                            numTxt.setAttribute('text-anchor', 'middle');
+                            numTxt.setAttribute('font-size', '8.5');
+                            numTxt.setAttribute('font-weight', '900');
+                            numTxt.setAttribute('fill', '#0f172a');
+                            numTxt.style.pointerEvents = 'none';
+                            numTxt.textContent = String(numHito);
+                            triGroup.appendChild(numTxt);
+
+                            bindTooltipHito(triGroup);
+                            bindTooltipHito(tri);
+                            topStripSvg.appendChild(triGroup);
+                        }
+
+                        // Línea vertical punteada atravesando las fechas
+                        if (headerMilestoneLayer) {
+                            const hLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                            hLine.setAttribute('x1', posX);
+                            hLine.setAttribute('y1', 0);
+                            hLine.setAttribute('x2', posX);
+                            hLine.setAttribute('y2', 58);
+                            hLine.setAttribute('stroke', '#ef4444');
+                            hLine.setAttribute('stroke-width', '1.8');
+                            hLine.setAttribute('stroke-dasharray', '3, 3');
+                            headerMilestoneLayer.appendChild(hLine);
+
+                            const hHit = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                            hHit.setAttribute('x1', posX);
+                            hHit.setAttribute('y1', 0);
+                            hHit.setAttribute('x2', posX);
+                            hHit.setAttribute('y2', 58);
+                            hHit.setAttribute('stroke', 'transparent');
+                            hHit.setAttribute('stroke-width', '14');
+                            bindTooltipHito(hHit);
+                            headerMilestoneLayer.appendChild(hHit);
+                        }
+
+                        // Línea vertical punteada cruzando todas las filas del Gantt + área sensible ancha
+                        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                        line.setAttribute('x1', posX);
+                        line.setAttribute('y1', 58);
+                        line.setAttribute('x2', posX);
+                        line.setAttribute('y2', svgHeight);
+                        line.setAttribute('stroke', '#ef4444');
+                        line.setAttribute('stroke-width', '1.8');
+                        line.setAttribute('stroke-dasharray', '4, 4');
+                        milestoneLayer.appendChild(line);
+
+                        const hitLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                        hitLine.setAttribute('x1', posX);
+                        hitLine.setAttribute('y1', 58);
+                        hitLine.setAttribute('x2', posX);
+                        hitLine.setAttribute('y2', svgHeight);
+                        hitLine.setAttribute('stroke', 'transparent');
+                        hitLine.setAttribute('stroke-width', '14');
+                        bindTooltipHito(hitLine);
+                        milestoneLayer.appendChild(hitLine);
+                    });
+                }
+            } finally {
+                window._dibujandoExtrasGantt = false;
+            }
+        };
+
+        // Bloquea elegir la misma partida como Predecesora y Sucesora simultáneamente
+        window.sincronizarSelectoresDependencia = function(origen) {
+            const selDep = document.getElementById('cronoDependencia');
+            const selSucc = document.getElementById('cronoSucesora');
+            if (!selDep || !selSucc) return;
+
+            if (origen === 'pred' && selDep.value && selDep.value === selSucc.value) selSucc.value = '';
+            if (origen === 'succ' && selSucc.value && selSucc.value === selDep.value) selDep.value = '';
+
+            Array.from(selDep.options).forEach(opt => {
+                opt.disabled = Boolean(opt.value && opt.value === selSucc.value);
+            });
+            Array.from(selSucc.options).forEach(opt => {
+                opt.disabled = Boolean(opt.value && opt.value === selDep.value);
+            });
+        };
+
+        // =========================================================================
+        // MÓDULO: HISTORIAL DE CRONOGRAMAS (MULTI-VERSIÓN SIN PÉRDIDA DE DATOS)
+        // =========================================================================
+        window.listaCronogramas = window.listaCronogramas || [];
+        window.cronogramaActivoId = window.cronogramaActivoId || null;
+        window.vistaCronogramaModo = window.vistaCronogramaModo || 'historial';
+        window._guardandoHistorialCrono = false;
+
+        window.obtenerClaveProyectoCrono = function() {
+            const pid = window.proyectoActualId || window.currentProjectId || localStorage.getItem('proyectoActivoId') || 'BIO_430';
+            return String(pid).replace(/[^a-zA-Z0-9_-]/g, '_');
+        };
+
+        window.obtenerUsuarioActualCrono = function() {
+            const limpiarNombre = (val) => {
+                if (!val) return '';
+                const str = String(val).trim();
+                if (!str || str.toUpperCase() === 'USUARIO') return '';
+                return (str.includes('@') ? str.split('@')[0] : str).toUpperCase();
+            };
+
+            const candidatos = [
+                window.usuarioActualNombre,
+                window.currentUserName,
+                window.usuarioActual?.nombre,
+                window.usuarioActual?.displayName,
+                window.usuarioActual?.email,
+                window.currentUser?.displayName,
+                window.currentUser?.email,
+                window.auth?.currentUser?.displayName,
+                window.auth?.currentUser?.email,
+                (typeof firebase !== 'undefined' && firebase.auth) ? firebase.auth().currentUser?.displayName : '',
+                (typeof firebase !== 'undefined' && firebase.auth) ? firebase.auth().currentUser?.email : '',
+                localStorage.getItem('usuarioNombre'),
+                localStorage.getItem('userName'),
+                localStorage.getItem('usuario'),
+                sessionStorage.getItem('usuarioNombre'),
+                sessionStorage.getItem('usuario')
+            ];
+
+            for (const c of candidatos) {
+                const limpio = limpiarNombre(c);
+                if (limpio) return limpio;
+            }
+
+            // Buscar en objetos JSON guardados en localStorage/sessionStorage
+            for (const store of [localStorage, sessionStorage]) {
+                for (let i = 0; i < store.length; i++) {
+                    const k = store.key(i) || '';
+                    if (/user|usuario|perfil|auth/i.test(k)) {
+                        try {
+                            const raw = store.getItem(k);
+                            if (raw && raw.startsWith('{')) {
+                                const obj = JSON.parse(raw);
+                                const limpio = limpiarNombre(obj.displayName || obj.nombre || obj.name || obj.username || obj.email);
+                                if (limpio) return limpio;
+                            }
+                        } catch (e) {}
+                    }
+                }
+            }
+
+            return 'KALDERETE';
+        };
+
+        window.formatearFechaCortaCrono = function(iso) {
+            if (!iso || !iso.includes('-')) return '--/--/--';
+            const [y, m, d] = iso.split('-');
+            return `${d}/${m}/${y.slice(-2)}`;
+        };
+
+        window.calcularResumenDeTareas = function(tareas) {
+            const lista = Array.isArray(tareas) ? tareas : [];
+            if (lista.length === 0) {
+                return { inicio: '', fin: '', planProgress: 0, progress: 0, delayDays: 0 };
+            }
+            const raices = lista.filter(t => String(t.wbs || '').split('.').length === 1);
+            const base = raices.length > 0 ? raices : lista;
+
+            let minIni = '2099-12-31', maxFin = '2000-01-01';
+            base.forEach(t => {
+                const ini = t.start || t.planStart;
+                const fin = t.end || t.planEnd;
+                if (ini && ini < minIni) minIni = ini;
+                if (fin && fin > maxFin) maxFin = fin;
+            });
+
+            const planProgress = Math.round(base.reduce((acc, t) => acc + (Number(t.planProgress) || 0), 0) / base.length);
+            const progress = Math.round(base.reduce((acc, t) => acc + (Number(t.progress) || 0), 0) / base.length);
+            const delayDays = base.reduce((acc, t) => acc + (Number(t.delayDays) || 0), 0);
+
+            return {
+                inicio: minIni !== '2099-12-31' ? minIni : '',
+                fin: maxFin !== '2000-01-01' ? maxFin : '',
+                planProgress,
+                progress,
+                delayDays
+            };
+        };
+
+        window.persistirListaCronogramas = async function() {
+            if (window._guardandoHistorialCrono) return;
+            window._guardandoHistorialCrono = true;
+            try {
+                const key = 'erp_cronogramas_hist_' + window.obtenerClaveProyectoCrono();
+                const payload = JSON.parse(JSON.stringify(window.listaCronogramas));
+                localStorage.setItem(key, JSON.stringify(payload));
+
+                if (typeof fsDoc === 'function' && typeof fsSetDoc === 'function' && typeof db !== 'undefined') {
+                    const ref = fsDoc(db, 'cronogramas_historial', window.obtenerClaveProyectoCrono());
+                    await fsSetDoc(ref, { items: payload, updatedAt: Date.now() }, { merge: true });
+                }
+            } catch (e) {
+                console.warn('Respaldo local de historial cronogramas:', e);
+            } finally {
+                window._guardandoHistorialCrono = false;
+            }
+        };
+
+        window.cargarListaCronogramas = async function() {
+            const key = 'erp_cronogramas_hist_' + window.obtenerClaveProyectoCrono();
+            let cargados = null;
+
+            try {
+                if (typeof fsDoc === 'function' && typeof fsGetDoc === 'function' && typeof db !== 'undefined') {
+                    const ref = fsDoc(db, 'cronogramas_historial', window.obtenerClaveProyectoCrono());
+                    const snap = await fsGetDoc(ref);
+                    if (snap && snap.exists() && Array.isArray(snap.data().items)) {
+                        cargados = snap.data().items;
+                    }
+                }
+            } catch (e) {}
+
+            if (!cargados) {
+                try {
+                    const raw = localStorage.getItem(key);
+                    if (raw) cargados = JSON.parse(raw);
+                } catch (e) {}
+            }
+
+            if (Array.isArray(cargados) && cargados.length > 0) {
+                window.listaCronogramas = cargados;
+            } else if (Array.isArray(window.tareasCronograma) && window.tareasCronograma.length > 0) {
+                // MIGRACIÓN AUTOMÁTICA: conserva intacto el cronograma actual como primera tarjeta
+                if (typeof window.ordenarYRecalcularCronograma === 'function') {
+                    window.ordenarYRecalcularCronograma();
+                }
+                const hoyIso = new Date().toISOString().split('T')[0];
+                window.listaCronogramas = [{
+                    id: 'CRONO_PRINCIPAL',
+                    nombre: 'Cronograma Contractual (Principal)',
+                    fechaCreacion: hoyIso,
+                    creadoPor: window.obtenerUsuarioActualCrono(),
+                    esVigente: true,
+                    tareas: JSON.parse(JSON.stringify(window.tareasCronograma))
+                }];
+                await window.persistirListaCronogramas();
+            }
+
+            if (!window.cronogramaActivoId && window.listaCronogramas.length > 0) {
+                const vig = window.listaCronogramas.find(c => c.esVigente) || window.listaCronogramas[0];
+                window.cronogramaActivoId = vig.id;
+            }
+        };
+
+        window.sincronizarCronogramaActivoEnHistorial = function() {
+            if (!Array.isArray(window.tareasCronograma) || window.tareasCronograma.length === 0) return;
+
+            // Si Firebase cargó después de iniciar la vista, crea automáticamente la tarjeta con tus datos actuales
+            if (!Array.isArray(window.listaCronogramas) || window.listaCronogramas.length === 0) {
+                const hoyIso = new Date().toISOString().split('T')[0];
+                window.listaCronogramas = [{
+                    id: 'CRONO_PRINCIPAL',
+                    nombre: 'Cronograma Contractual (Principal)',
+                    fechaCreacion: hoyIso,
+                    creadoPor: window.obtenerUsuarioActualCrono(),
+                    esVigente: true,
+                    tareas: JSON.parse(JSON.stringify(window.tareasCronograma))
+                }];
+                window.cronogramaActivoId = 'CRONO_PRINCIPAL';
+                window.persistirListaCronogramas();
+                if (window.vistaCronogramaModo === 'historial') {
+                    window.renderizarHistorialCronogramas();
+                }
+                return;
+            }
+
+            if (!window.cronogramaActivoId) return;
+            const idx = window.listaCronogramas.findIndex(c => c.id === window.cronogramaActivoId);
+            if (idx !== -1) {
+                window.listaCronogramas[idx].tareas = JSON.parse(JSON.stringify(window.tareasCronograma));
+                window.persistirListaCronogramas();
+                if (window.vistaCronogramaModo === 'historial') {
+                    window.renderizarHistorialCronogramas();
+                }
+            }
+        };
+
+        window.actualizarHeaderGanttConHistorial = function(cronoObj) {
+            const splitEl = document.getElementById('contenedorSplitCronograma');
+            if (!splitEl) return;
+            const headerGantt = splitEl.previousElementSibling?.id === 'modalNuevoCronogramaHistorial'
+                ? document.getElementById('vistaHistorialCronogramas')?.previousElementSibling
+                : splitEl.previousElementSibling;
+
+            if (!headerGantt) return;
+
+            // Ocultar el botón "IMPORTAR S10 / EXCEL" en la vista interna del Gantt
+            const btnImportar = Array.from(headerGantt.querySelectorAll('button')).find(b => b.textContent.includes('IMPORTAR S10'));
+            if (btnImportar) btnImportar.classList.add('hidden');
+
+            // Ubicar el indicador de versión en el centro (entre "Cronograma de Obra" a la izq. y los botones a la der.)
+            let barCentro = document.getElementById('barraVolverHistorialCrono');
+            if (!barCentro) {
+                barCentro = document.createElement('div');
+                barCentro.id = 'barraVolverHistorialCrono';
+                barCentro.className = 'flex items-center justify-center gap-2 mx-auto';
+                if (headerGantt.children.length >= 2) {
+                    headerGantt.insertBefore(barCentro, headerGantt.children[1]);
+                } else {
+                    headerGantt.appendChild(barCentro);
+                }
+            }
+
+            const badgeVig = cronoObj?.esVigente
+                ? '<span class="bg-emerald-100 text-emerald-700 border border-emerald-200 text-[10px] font-black px-2.5 py-1 rounded-full uppercase">Vigente</span>'
+                : '<span class="bg-slate-200 text-slate-600 text-[10px] font-black px-2.5 py-1 rounded-full uppercase">Versión Histórica</span>';
+
+            barCentro.innerHTML = `
+                <span class="text-xs font-black text-slate-700 bg-white border border-slate-200 px-3.5 py-1.5 rounded-xl shadow-xs flex items-center">
+                    <i class="fa-solid fa-layer-group text-indigo-500 mr-2"></i>${cronoObj ? cronoObj.nombre : 'Cronograma'}
+                </span>
+                ${badgeVig}
+            `;
+        };
+
+        window.alternarVistaCronograma = function(modo) {
+            window.vistaCronogramaModo = modo;
+            const vistaHist = document.getElementById('vistaHistorialCronogramas');
+            const splitEl = document.getElementById('contenedorSplitCronograma');
+            const headerGantt = document.getElementById('vistaHistorialCronogramas')?.previousElementSibling;
+
+            if (!vistaHist || !splitEl) return;
+
+            // Elimina centrado vertical y espacios vacíos en los contenedores superiores
+            let ancestro = vistaHist.parentElement;
+            for (let i = 0; i < 4 && ancestro; i++) {
+                ancestro.style.justifyContent = 'flex-start';
+                ancestro.style.alignItems = 'stretch';
+                ancestro.style.paddingTop = '0px';
+                ancestro.style.marginTop = '0px';
+                ancestro = ancestro.parentElement;
+            }
+
+            if (modo === 'historial') {
+                let prev = vistaHist.previousElementSibling;
+                while (prev) {
+                    prev.classList.add('hidden');
+                    prev.style.display = 'none';
+                    prev = prev.previousElementSibling;
+                }
+                vistaHist.classList.remove('hidden');
+                vistaHist.style.marginTop = '0px';
+                splitEl.classList.add('hidden');
+                if (headerGantt) {
+                    headerGantt.classList.add('hidden');
+                    headerGantt.style.display = 'none';
+                }
+                window.renderizarHistorialCronogramas();
+
+                // Posiciona el Historial justo debajo de la barra superior ERP COSTOS sin espacios muertos
+                const ajustarPosicionSuperiorHistorial = () => {
+                    if (!vistaHist || vistaHist.classList.contains('hidden') || vistaHist.offsetParent === null) return;
+
+                    vistaHist.style.setProperty('position', 'relative', 'important');
+                    vistaHist.style.setProperty('top', '0px', 'important');
+                    vistaHist.style.setProperty('margin-top', '0px', 'important');
+                    vistaHist.style.setProperty('margin-bottom', '0px', 'important');
+
+                    // Ubicar la barra oscura superior que contiene "ERP" o "COSTOS"
+                    const barraSuperior = Array.from(document.querySelectorAll('header, nav, div')).find(el => {
+                        const r = el.getBoundingClientRect();
+                        return r.top >= 0 && r.top <= 15 && r.height >= 38 && r.height <= 85 &&
+                               r.width > window.innerWidth * 0.7 && /ERP|COSTOS/i.test(el.textContent || '');
+                    });
+                    const limiteSuperior = barraSuperior ? barraSuperior.getBoundingClientRect().bottom : 52;
+
+                    // Quitar centrado vertical y espaciadores vacíos en los contenedores padres
+                    let nodo = vistaHist;
+                    while (nodo && nodo !== document.body) {
+                        const padre = nodo.parentElement;
+                        if (!padre || padre === document.body || (barraSuperior && padre.contains(barraSuperior))) break;
+
+                        padre.style.setProperty('justify-content', 'flex-start', 'important');
+                        padre.style.setProperty('align-items', 'stretch', 'important');
+                        padre.style.setProperty('align-content', 'start', 'important');
+                        padre.style.setProperty('padding-top', '0px', 'important');
+                        padre.style.setProperty('margin-top', '0px', 'important');
+
+                        Array.from(padre.children).forEach(hijo => {
+                            if (hijo === nodo) return;
+                            const hr = hijo.getBoundingClientRect();
+                            if (hr.height > 10 && hr.bottom <= vistaHist.getBoundingClientRect().top + 4 && (!barraSuperior || !hijo.contains(barraSuperior))) {
+                                hijo.style.setProperty('display', 'none', 'important');
+                            }
+                        });
+
+                        nodo = padre;
+                    }
+
+                    // Desplazamiento directo por coordenadas reales si aún queda hueco superior
+                    const posActual = vistaHist.getBoundingClientRect().top;
+                    const espacioSobrante = Math.round(posActual - (limiteSuperior + 16));
+                    if (espacioSobrante > 6) {
+                        if (vistaHist.parentElement) {
+                            vistaHist.parentElement.style.setProperty('overflow', 'visible', 'important');
+                        }
+                        vistaHist.style.setProperty('top', `-${espacioSobrante}px`, 'important');
+                        vistaHist.style.setProperty('margin-bottom', `-${espacioSobrante}px`, 'important');
+                    }
+                };
+
+                requestAnimationFrame(ajustarPosicionSuperiorHistorial);
+                setTimeout(ajustarPosicionSuperiorHistorial, 80);
+                setTimeout(ajustarPosicionSuperiorHistorial, 300);
+
+                if (!vistaHist._obsVisibilidadInstalado) {
+                    vistaHist._obsVisibilidadInstalado = true;
+                    const mo = new MutationObserver(() => {
+                        if (window.vistaCronogramaModo === 'historial' && vistaHist.offsetParent !== null) {
+                            ajustarPosicionSuperiorHistorial();
+                        }
+                    });
+                    let p = vistaHist.parentElement;
+                    while (p && p !== document.body) {
+                        mo.observe(p, { attributes: true, attributeFilter: ['class', 'style'] });
+                        p = p.parentElement;
+                    }
+                }
+            } else {
+                vistaHist.style.marginTop = '0px';
+                let prev = vistaHist.previousElementSibling;
+                while (prev) {
+                    if (prev.id !== 'modalNuevoCronogramaHistorial') {
+                        prev.classList.remove('hidden');
+                        prev.style.display = '';
+                    }
+                    prev = prev.previousElementSibling;
+                }
+                vistaHist.classList.add('hidden');
+                splitEl.classList.remove('hidden');
+                if (headerGantt) {
+                    headerGantt.classList.remove('hidden');
+                    headerGantt.style.display = '';
+                }
+            }
+        };
+
+        window.volverAHistorialCronogramas = function() {
+            window.sincronizarCronogramaActivoEnHistorial();
+            window.alternarVistaCronograma('historial');
+        };
+
+        window.abrirCronogramaDesdeHistorial = function(id) {
+            const crono = window.listaCronogramas.find(c => c.id === id);
+            if (!crono) return;
+
+            window.cronogramaActivoId = crono.id;
+            window.tareasCronograma = JSON.parse(JSON.stringify(crono.tareas || []));
+            window.alternarVistaCronograma('detalle');
+            window.actualizarHeaderGanttConHistorial(crono);
+
+            // Registra estado en el historial del navegador para volver con la flecha atrás (<-)
+            if (!window.history.state || window.history.state.cronoVista !== 'detalle') {
+                window.history.pushState({ cronoVista: 'detalle', id: crono.id }, '');
+            }
+
+            if (typeof window.ordenarYRecalcularCronograma === 'function') {
+                window.ordenarYRecalcularCronograma();
+            }
+            if (typeof window.renderizarCronograma === 'function') {
+                window.renderizarCronograma();
+            }
+            // Fuerza el calibrado de ancho y dibujo inmediato de hitos al abrir desde el Lobby
+            setTimeout(() => {
+                if (window.ganttInstance && typeof window.ganttInstance.change_view_mode === 'function') {
+                    const modoActual = window.ganttInstance.options?.view_mode || 'Day';
+                    window.ganttInstance.change_view_mode(modoActual);
+                }
+                if (typeof window.actualizarCapasGanttExtras === 'function') {
+                    window.actualizarCapasGanttExtras();
+                }
+            }, 60);
+        };
+
+        if (!window._listenerBackCronogramaInstalado) {
+            window._listenerBackCronogramaInstalado = true;
+            window.addEventListener('popstate', () => {
+                if (window.vistaCronogramaModo === 'detalle') {
+                    window.volverAHistorialCronogramas();
+                }
+            });
+        }
+
+        window.abrirModalNuevoCronogramaHistorial = function() {
+            const input = document.getElementById('inputNombreNuevoCrono');
+            if (input) input.value = `Corte / Versión ${window.listaCronogramas.length + 1}`;
+            document.getElementById('modalNuevoCronogramaHistorial')?.classList.remove('hidden');
+        };
+
+        window.crearNuevoCronogramaHistorial = async function(abrirImportadorExcel) {
+            const nombreInput = document.getElementById('inputNombreNuevoCrono')?.value.trim();
+            const nombre = nombreInput || `Cronograma ${window.listaCronogramas.length + 1}`;
+            const esVigente = Boolean(document.getElementById('checkNuevoCronoVigente')?.checked);
+
+            if (esVigente) {
+                window.listaCronogramas.forEach(c => c.esVigente = false);
+            }
+
+            const nuevo = {
+                id: 'CRONO_' + Date.now(),
+                nombre,
+                fechaCreacion: new Date().toISOString().split('T')[0],
+                creadoPor: window.obtenerUsuarioActualCrono(),
+                esVigente: esVigente || window.listaCronogramas.length === 0,
+                tareas: []
+            };
+
+            window.listaCronogramas.push(nuevo);
+            await window.persistirListaCronogramas();
+            document.getElementById('modalNuevoCronogramaHistorial')?.classList.add('hidden');
+
+            window.abrirCronogramaDesdeHistorial(nuevo.id);
+            if (abrirImportadorExcel) {
+                setTimeout(() => {
+                    const btnImp = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('IMPORTAR S10'));
+                    if (btnImp) btnImp.click();
+                }, 150);
+            }
+        };
+
+        window.clonarCronogramaHistorial = async function(id) {
+            const orig = window.listaCronogramas.find(c => c.id === id);
+            if (!orig) return;
+            const nuevoNombre = prompt('Nombre para la nueva versión clonada:', `${orig.nombre} (Rev. ${window.listaCronogramas.length})`);
+            if (!nuevoNombre || !nuevoNombre.trim()) return;
+
+            const clon = {
+                id: 'CRONO_' + Date.now(),
+                nombre: nuevoNombre.trim(),
+                fechaCreacion: new Date().toISOString().split('T')[0],
+                creadoPor: window.obtenerUsuarioActualCrono(),
+                esVigente: false,
+                tareas: JSON.parse(JSON.stringify(orig.tareas || []))
+            };
+
+            window.listaCronogramas.push(clon);
+            await window.persistirListaCronogramas();
+            window.renderizarHistorialCronogramas();
+        };
+
+        // --- GESTIÓN DE HITOS ---
+        window.hitosCronograma = window.hitosCronograma || [];
+        
+        window.cargarHitosCronograma = async function() {
+            const key = 'erp_hitos_crono_' + window.obtenerClaveProyectoCrono();
+            try {
+                if (typeof fsDoc === 'function' && typeof fsGetDoc === 'function' && typeof db !== 'undefined') {
+                    const snap = await fsGetDoc(fsDoc(db, 'cronogramas_hitos', window.obtenerClaveProyectoCrono()));
+                    if (snap && snap.exists() && Array.isArray(snap.data().hitos)) {
+                        window.hitosCronograma = snap.data().hitos;
+                        return;
+                    }
+                }
+                const local = localStorage.getItem(key);
+                if (local) window.hitosCronograma = JSON.parse(local);
+            } catch (e) { console.warn("Error cargando hitos", e); }
+        };
+
+        window.guardarHitosCronograma = async function() {
+            window.hitosCronograma.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+            const key = 'erp_hitos_crono_' + window.obtenerClaveProyectoCrono();
+            localStorage.setItem(key, JSON.stringify(window.hitosCronograma));
+            try {
+                if (typeof fsDoc === 'function' && typeof fsSetDoc === 'function' && typeof db !== 'undefined') {
+                    await fsSetDoc(fsDoc(db, 'cronogramas_hitos', window.obtenerClaveProyectoCrono()), { hitos: window.hitosCronograma }, { merge: true });
+                }
+            } catch (e) {}
+        };
+
+        window.abrirModalHitos = function() {
+            document.getElementById('inputNombreHito').value = '';
+            document.getElementById('inputFechaHito').value = new Date().toISOString().split('T')[0];
+            window.renderizarListaHitos();
+            document.getElementById('modalGestionHitos').classList.remove('hidden');
+        };
+
+        window.agregarHitoCrono = async function() {
+            const nombre = document.getElementById('inputNombreHito').value.trim();
+            const fecha = document.getElementById('inputFechaHito').value;
+            if (!nombre || !fecha) return alert('Ingrese descripción y fecha del hito.');
+            window.hitosCronograma.push({ id: 'H_' + Date.now(), nombre, fecha });
+            await window.guardarHitosCronograma();
+            document.getElementById('inputNombreHito').value = '';
+            window.renderizarListaHitos();
+            window.renderizarHistorialCronogramas();
+            if (window.vistaCronogramaModo === 'detalle' && window.ganttInicializado) window.renderizarCronograma();
+        };
+
+        window.eliminarHitoCrono = async function(id) {
+            window.hitosCronograma = window.hitosCronograma.filter(h => h.id !== id);
+            await window.guardarHitosCronograma();
+            window.renderizarListaHitos();
+            window.renderizarHistorialCronogramas();
+            if (window.vistaCronogramaModo === 'detalle' && window.ganttInicializado) window.renderizarCronograma();
+        };
+
+        window.renderizarListaHitos = function() {
+            const adminList = document.getElementById('listaHitosAdmin');
+            if (!adminList) return;
+            if (window.hitosCronograma.length === 0) {
+                adminList.innerHTML = '<div class="text-sm text-slate-500 italic text-center py-4">No hay hitos programados.</div>';
+                return;
+            }
+            adminList.innerHTML = window.hitosCronograma.map(h => `
+                <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl p-3">
+                    <div>
+                        <div class="text-xs font-black text-slate-800">${h.nombre}</div>
+                        <div class="text-[10px] font-bold text-amber-600"><i class="fa-regular fa-calendar mr-1"></i>${window.formatearFechaCortaCrono(h.fecha)}</div>
+                    </div>
+                    <button onclick="window.eliminarHitoCrono('${h.id}')" class="text-red-400 hover:text-red-600 p-1.5"><i class="fa-solid fa-trash-can text-sm"></i></button>
+                </div>
+            `).join('');
+        };
+
+        // --- FIN GESTION HITOS ---
+
+        window.marcarCronogramaVigente = async function(id) {
+            window.listaCronogramas.forEach(c => c.esVigente = (c.id === id));
+            await window.persistirListaCronogramas();
+            window.renderizarHistorialCronogramas();
+        };
+
+        window.eliminarCronogramaHistorial = async function(id) {
+            if (window.listaCronogramas.length <= 1) {
+                return alert('⚠️ Debe existir al menos un cronograma en el historial.');
+            }
+            const target = window.listaCronogramas.find(c => c.id === id);
+            if (!target || !confirm(`¿Eliminar "${target.nombre}" del historial?`)) return;
+
+            window.listaCronogramas = window.listaCronogramas.filter(c => c.id !== id);
+            if (!window.listaCronogramas.some(c => c.esVigente) && window.listaCronogramas.length > 0) {
+                window.listaCronogramas[0].esVigente = true;
+            }
+            await window.persistirListaCronogramas();
+            window.renderizarHistorialCronogramas();
+        };
+
+        window.renderizarHistorialCronogramas = function() {
+            const grid = document.getElementById('gridTarjetasCronogramas');
+            const chartBox = document.getElementById('graficoEvolucionCronogramas');
+            if (!grid) return;
+
+            // Actualizar usuario real en tarjetas que quedaron con etiqueta genérica
+            const usuarioActivo = window.obtenerUsuarioActualCrono();
+            let huboCambioUsuario = false;
+            window.listaCronogramas.forEach(c => {
+                if (!c.creadoPor || c.creadoPor.toUpperCase() === 'USUARIO') {
+                    c.creadoPor = usuarioActivo;
+                    huboCambioUsuario = true;
+                }
+            });
+            if (huboCambioUsuario) {
+                window.persistirListaCronogramas();
+            }
+
+            // Recalcular resumen actualizado de cada versión
+            const resumenes = window.listaCronogramas.map(c => {
+                const res = window.calcularResumenDeTareas(c.tareas);
+                return { ...c, resumen: res };
+            });
+
+            // KPI Superior (Cronograma Vigente)
+            const vigente = resumenes.find(c => c.esVigente) || resumenes[0];
+            if (vigente) {
+                document.getElementById('kpiCronoAvanceReal').textContent = `${vigente.resumen.progress}%`;
+                document.getElementById('kpiCronoAvanceProg').textContent = `${vigente.resumen.planProgress}%`;
+                document.getElementById('kpiCronoNombreVigente').textContent = `Vigente: ${vigente.nombre}`;
+                document.getElementById('kpiCronoTotalVersiones').textContent = `${resumenes.length} ${resumenes.length === 1 ? 'versión' : 'versiones'}`;
+
+                const varDias = vigente.resumen.delayDays || 0;
+                const badgeEl = document.getElementById('kpiCronoVariacionBadge');
+                if (varDias > 0) {
+                    badgeEl.className = 'text-[10px] font-black px-2.5 py-0.5 rounded-full bg-red-100 text-red-600';
+                    badgeEl.textContent = `+${varDias}d atraso`;
+                } else if (varDias < 0) {
+                    badgeEl.className = 'text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-600';
+                    badgeEl.textContent = `${varDias}d adelanto`;
+                } else {
+                    badgeEl.className = 'text-[10px] font-black px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-500';
+                    badgeEl.textContent = '0d en fecha';
+                }
+            }
+
+            // Grilla de 4 columnas a ancho completo (igual que Historial de Tareos)
+            grid.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5';
+
+            // Gráfico Curva S Comparativa (% Programado vs % Real)
+            if (chartBox) {
+                if (resumenes.length === 0) {
+                    chartBox.innerHTML = '<span class="text-xs text-slate-400 font-semibold">Sin versiones registradas</span>';
+                } else if (resumenes.length === 1) {
+                    const unico = resumenes[0].resumen;
+                    chartBox.innerHTML = `
+                        <div class="w-full space-y-2.5 pt-1">
+                            <div>
+                                <div class="flex justify-between text-[10px] font-black mb-1">
+                                    <span class="text-indigo-600">PROGRAMADO A HOY</span>
+                                    <span class="text-indigo-700">${unico.planProgress}%</span>
+                                </div>
+                                <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                                    <div class="h-full bg-indigo-500 rounded-full transition-all" style="width: ${Math.min(100, unico.planProgress)}%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-[10px] font-black mb-1">
+                                    <span class="text-emerald-600">AVANCE REAL EJECUTADO</span>
+                                    <span class="text-emerald-700">${unico.progress}%</span>
+                                </div>
+                                <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                                    <div class="h-full bg-emerald-500 rounded-full transition-all" style="width: ${Math.min(100, unico.progress)}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    const W = 440, H = 115, padX = 36, padY = 18;
+                    const innerW = W - padX * 2;
+                    const innerH = H - padY * 2;
+                    const n = resumenes.length;
+                    const stepX = innerW / (n - 1);
+
+                    const ptsProg = resumenes.map((item, i) => ({
+                        x: padX + i * stepX,
+                        y: padY + innerH - ((item.resumen.planProgress || 0) / 100) * innerH,
+                        val: item.resumen.planProgress || 0,
+                        label: item.nombre
+                    }));
+                    const ptsReal = resumenes.map((item, i) => ({
+                        x: padX + i * stepX,
+                        y: padY + innerH - ((item.resumen.progress || 0) / 100) * innerH,
+                        val: item.resumen.progress || 0
+                    }));
+
+                    const pathProg = ptsProg.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+                    const pathReal = ptsReal.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+                    const areaReal = `${pathReal} L ${ptsReal[n - 1].x} ${padY + innerH} L ${ptsReal[0].x} ${padY + innerH} Z`;
+
+                    chartBox.innerHTML = `
+                        <svg viewBox="0 0 ${W} ${H}" class="w-full h-28 overflow-visible">
+                            <line x1="${padX}" y1="${padY}" x2="${W - padX}" y2="${padY}" stroke="#f1f5f9" stroke-width="1"/>
+                            <line x1="${padX}" y1="${padY + innerH / 2}" x2="${W - padX}" y2="${padY + innerH / 2}" stroke="#f1f5f9" stroke-width="1"/>
+                            <line x1="${padX}" y1="${padY + innerH}" x2="${W - padX}" y2="${padY + innerH}" stroke="#e2e8f0" stroke-width="1"/>
+                            <path d="${areaReal}" fill="rgba(16, 185, 129, 0.14)" />
+                            <path d="${pathProg}" fill="none" stroke="#6366f1" stroke-width="2" stroke-dasharray="4 3" />
+                            <path d="${pathReal}" fill="none" stroke="#10b981" stroke-width="2.5" />
+                            ${ptsProg.map(p => `
+                                <circle cx="${p.x}" cy="${p.y}" r="3.5" fill="#ffffff" stroke="#6366f1" stroke-width="2"/>
+                                <text x="${p.x}" y="${p.y - 7}" text-anchor="middle" font-size="9" font-weight="800" fill="#4f46e5">${p.val}%</text>
+                                <text x="${p.x}" y="${H - 2}" text-anchor="middle" font-size="9" font-weight="700" fill="#64748b">${p.label.slice(0, 14)}</text>
+                            `).join('')}
+                            ${ptsReal.map(p => `
+                                <circle cx="${p.x}" cy="${p.y}" r="4.2" fill="#ffffff" stroke="#10b981" stroke-width="2.5"/>
+                                <text x="${p.x}" y="${p.y + 13}" text-anchor="middle" font-size="9" font-weight="900" fill="#059669">${p.val}%</text>
+                            `).join('')}
+                        </svg>
+                    `;
+                }
+            }
+
+            // Renderizar mini-resumen de hitos numerados (#1, #2, #3...)
+            const resHitosList = document.getElementById('listaHitosResumen');
+            const resHitosCont = document.getElementById('contadorHitosResumen');
+            if (resHitosList && resHitosCont) {
+                resHitosCont.textContent = window.hitosCronograma.length;
+                if (window.hitosCronograma.length === 0) {
+                    resHitosList.innerHTML = '<div class="text-xs text-slate-400 font-medium italic text-center mt-6">Sin hitos registrados.</div>';
+                } else {
+                    resHitosList.innerHTML = window.hitosCronograma.map((h, idx) => `
+                        <div class="flex items-center justify-between text-xs py-1.5 px-2 rounded-lg hover:bg-amber-50/60 border-b border-slate-100 last:border-0">
+                            <div class="flex items-center gap-2 min-w-0 pr-2">
+                                <span class="w-4 h-4 rounded-full bg-amber-400 text-slate-900 font-black text-[9px] flex items-center justify-center shrink-0">${idx + 1}</span>
+                                <span class="font-bold text-slate-700 truncate" title="${h.nombre}">${h.nombre}</span>
+                            </div>
+                            <span class="font-black text-amber-600 shrink-0">${window.formatearFechaCortaCrono(h.fecha)}</span>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            // Tarjetas por versión (Estilo Historial de Tareos)
+            grid.innerHTML = resumenes.map(item => {
+                const r = item.resumen;
+                const rangoTxt = (r.inicio && r.fin)
+                    ? `Del ${window.formatearFechaCortaCrono(r.inicio)} al ${window.formatearFechaCortaCrono(r.fin)}`
+                    : 'Sin partidas registradas';
+                const varTxt = r.delayDays > 0 ? `+${r.delayDays}d` : (r.delayDays < 0 ? `${r.delayDays}d` : '0d');
+                const varColor = r.delayDays > 0 ? 'text-red-600' : (r.delayDays < 0 ? 'text-emerald-600' : 'text-slate-700');
+
+                return `
+                    <div class="bg-white rounded-2xl border ${item.esVigente ? 'border-emerald-300 ring-2 ring-emerald-500/15' : 'border-slate-200'} shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col justify-between">
+                        <div class="p-5 space-y-4">
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="w-10 h-10 rounded-xl ${item.esVigente ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'} flex items-center justify-center shrink-0">
+                                        <i class="fa-solid fa-bars-staggered text-base"></i>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Cronograma</span>
+                                            ${item.esVigente
+                                                ? '<span class="text-[9px] font-black bg-emerald-100 text-emerald-700 px-2 py-0.2 rounded-full">VIGENTE</span>'
+                                                : `<button onclick="window.marcarCronogramaVigente('${item.id}')" class="text-[9px] font-bold text-slate-400 hover:text-emerald-600 underline" title="Establecer como vigente">Usar vigente</button>`}
+                                        </div>
+                                        <h4 class="font-black text-slate-800 text-sm truncate" title="${item.nombre}">${item.nombre}</h4>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-1 shrink-0">
+                                    <button onclick="window.clonarCronogramaHistorial('${item.id}')" class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition" title="Duplicar / Clonar versión">
+                                        <i class="fa-regular fa-copy text-xs"></i>
+                                    </button>
+                                    <button onclick="window.eliminarCronogramaHistorial('${item.id}')" class="p-1.5 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition" title="Eliminar versión">
+                                        <i class="fa-regular fa-trash-can text-xs"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="border border-dashed border-slate-200 rounded-xl py-2 px-3 text-center text-[11px] font-bold text-slate-600 bg-slate-50/60">
+                                ${rangoTxt}
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2.5">
+                                <div class="bg-slate-50/80 border border-slate-100 rounded-xl p-2.5 text-center">
+                                    <span class="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Avance Real</span>
+                                    <span class="block text-lg font-black text-slate-800 leading-tight mt-0.5">${r.progress}%</span>
+                                    <span class="block text-[9px] font-bold text-indigo-500">Prog: ${r.planProgress}%</span>
+                                </div>
+                                <div class="bg-slate-50/80 border border-slate-100 rounded-xl p-2.5 text-center">
+                                    <span class="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Variación</span>
+                                    <span class="block text-lg font-black ${varColor} leading-tight mt-0.5">${varTxt}</span>
+                                    <span class="block text-[9px] font-bold text-slate-400">${(item.tareas || []).length} partidas</span>
+                                </div>
+                            </div>
+
+                            <div class="text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                POR: <span class="text-emerald-600 font-black">${item.creadoPor || 'USUARIO'}</span>
+                            </div>
+                        </div>
+
+                        <button onclick="window.abrirCronogramaDesdeHistorial('${item.id}')" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-black text-[11px] uppercase tracking-widest py-3 flex items-center justify-center gap-2 transition">
+                            <i class="fa-regular fa-eye"></i> Ver Cronograma
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        // Inicializar Historial e Hitos al cargar la página preservando los datos actuales
+        setTimeout(async () => {
+            await window.cargarListaCronogramas();
+            await window.cargarHitosCronograma();
+            window.alternarVistaCronograma('historial');
+        }, 600);
 
         function empujarSucesores(idPredecesora, offsetDias) {
             window.tareasCronograma.forEach(t => {
@@ -12895,9 +14338,19 @@ window.iniciarNuevoReporte = function() {
                 return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : isoDate;
             };
 
-            // 1. Construir la Tabla Izquierda con WBS
+            if (typeof window.ordenarYRecalcularCronograma === 'function') {
+                window.ordenarYRecalcularCronograma();
+            }
+            if (typeof window.sincronizarCronogramaActivoEnHistorial === 'function') {
+                window.sincronizarCronogramaActivoEnHistorial();
+            }
+
+            // 1. Construir la Tabla Izquierda con WBS (y llenar Predecesoras solo con 3ra jerarquía)
             window.tareasCronograma.forEach((t, index) => {
-                if(selectDep) selectDep.innerHTML += `<option value="${t.id}">${t.name}</option>`;
+                const esTerceraJerarquia = !t.isSummary && (t.level === 2 || String(t.wbs || '').split('.').length === 3);
+                if (selectDep && esTerceraJerarquia) {
+                    selectDep.innerHTML += `<option value="${t.id}">${t.wbs} - ${t.name}</option>`;
+                }
 
                 let isParent = t.isSummary;
                 let bgFila = isParent ? 'bg-slate-100' : 'bg-white';
@@ -12915,7 +14368,7 @@ window.iniciarNuevoReporte = function() {
                     <div class="fila-cronograma flex items-center hover:bg-amber-50 transition group border-b border-slate-200 h-[43px] box-border ${bgFila}">
                         
                         <!-- 🔥 COLUMNA N°: Input WBS Libre de interrupciones -->
-                        <div class="w-10 h-full flex items-center justify-center border-r border-slate-200 text-center font-bold text-slate-500 shrink-0 text-[10px] bg-slate-50 relative z-10 cursor-text">
+                        <div class="w-10 h-full flex items-center justify-center border-r border-slate-300/70 text-center font-bold text-slate-600 shrink-0 text-[10px] bg-black/[0.03] relative z-10 cursor-text">
                             <input type="text" value="${wbsVal}" onchange="window.cambiarWBSManual('${t.id}', this.value)" onfocus="this.select()" class="w-full h-full bg-transparent text-center focus:outline-none focus:bg-white focus:ring-2 focus:ring-amber-500 hover:bg-slate-200 transition-colors" title="Editar número para reubicar jerarquía">
                         </div>
 
@@ -12923,11 +14376,8 @@ window.iniciarNuevoReporte = function() {
                         <div class="flex-1 px-3 h-full flex items-center border-r border-slate-200 truncate ${fontNombre} text-[10px] cursor-pointer hover:text-indigo-600 transition-colors relative" style="padding-left: ${marginLeft + 12}px;" title="Clic para editar: ${t.name}" onclick="window.abrirModalNuevaPartida('${t.id}')">
                             <span class="truncate">${t.name}</span>
                             
-                            <!-- Botonera Mágica (Sangrías flotantes) -->
-                            <div class="absolute right-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition bg-white/95 shadow-md rounded border border-slate-200 px-1 py-0.5 z-20">
-                                <button onclick="event.stopPropagation(); window.cambiarNivelCrono('${t.id}', -1)" class="w-6 h-6 bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 rounded transition flex items-center justify-center" title="Nivel Superior (Padre)"><i class="fa-solid fa-outdent text-[10px]"></i></button>
-                                <button onclick="event.stopPropagation(); window.cambiarNivelCrono('${t.id}', 1)" class="w-6 h-6 bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 rounded transition flex items-center justify-center" title="Nivel Inferior (Hijo)"><i class="fa-solid fa-indent text-[10px]"></i></button>
-                                <!-- Movimos el botón de eliminar aquí, lejos del porcentaje -->
+                            <!-- Botón Eliminar flotante -->
+                            <div class="absolute right-1 flex items-center opacity-0 group-hover:opacity-100 transition bg-white/95 shadow-md rounded border border-slate-200 p-0.5 z-20">
                                 <button onclick="event.stopPropagation(); window.eliminarPartidaCronograma('${t.id}')" class="w-6 h-6 bg-red-50 hover:bg-red-600 hover:text-white text-red-600 rounded transition flex items-center justify-center" title="Eliminar Partida"><i class="fa-solid fa-trash-can text-[10px]"></i></button>
                             </div>
                         </div>
@@ -12942,9 +14392,19 @@ window.iniciarNuevoReporte = function() {
                             ${formDate(t.end)}
                         </div>
 
-                        <!-- 🔥 COLUMNA PORCENTAJE: Ya no hay 'X' rojas interrumpiendo la vista -->
-                        <div class="w-12 h-full flex items-center justify-center text-center font-black ${isParent ? 'text-slate-400' : (t.progress === 100 ? 'text-emerald-600' : 'text-amber-600')} shrink-0">
-                            <span id="label_tabla_prog_${t.id}">${isParent ? '-' : t.progress + '%'}</span>
+                        <!-- COLUMNA % PROGRAMADO -->
+                        <div class="w-12 h-full flex items-center justify-center border-r border-slate-200 text-center font-bold text-indigo-600 text-[11px] shrink-0">
+                            <span>${t.planProgress || 0}%</span>
+                        </div>
+
+                        <!-- COLUMNA % REAL -->
+                        <div class="w-12 h-full flex items-center justify-center border-r border-slate-200 text-center font-black text-[11px] ${isParent ? 'text-slate-800' : (t.progress === 100 ? 'text-emerald-600' : 'text-amber-600')} shrink-0">
+                            <span id="label_tabla_prog_${t.id}">${t.progress || 0}%</span>
+                        </div>
+
+                        <!-- COLUMNA VARIACIÓN DE PLAZO (Estándar MS Project: -d adelanto, +d atraso) -->
+                        <div class="w-16 h-full flex items-center justify-center text-center font-black text-[10px] ${(t.delayDays || 0) > 0 ? 'text-red-600 bg-red-50/80' : ((t.delayDays || 0) < 0 ? 'text-emerald-600 bg-emerald-50/80' : 'text-slate-400')} shrink-0">
+                            <span>${(t.delayDays || 0) > 0 ? '+' + t.delayDays + 'd' : ((t.delayDays || 0) < 0 ? t.delayDays + 'd' : '0d')}</span>
                         </div>
                     </div>
                 `;
@@ -13006,25 +14466,66 @@ window.iniciarNuevoReporte = function() {
                 if (b.innerText.trim() === map[modo]) b.className = "px-3 py-1.5 text-[10px] font-bold bg-amber-100 text-amber-700 rounded-lg shadow-sm cursor-pointer";
             });
             if (typeof window.actualizarHeaderFijoGantt === 'function') window.actualizarHeaderFijoGantt();
+            window.currentGanttView = modo; if (typeof window.actualizarHeaderFijoGantt === 'function') window.actualizarHeaderFijoGantt();
             window.actualizarEtiquetasGantt();
         };
 
         window.abrirModalNuevaPartida = function(id = null) {
             const tit = document.getElementById('tituloModalPartida');
+            const cajaPlan = document.getElementById('cronoPlanInicio')?.closest('.bg-indigo-50');
+            const cajaReal = document.getElementById('cronoInicio')?.closest('.bg-amber-50');
+            const cajaProg = document.getElementById('cronoProgreso')?.closest('.grid');
+
+            let aviso = document.getElementById('avisoJerarquiaResumen');
+            if (!aviso && cajaPlan) {
+                aviso = document.createElement('div');
+                aviso.id = 'avisoJerarquiaResumen';
+                aviso.className = 'hidden bg-slate-100 border border-slate-300 text-slate-600 text-xs font-semibold rounded-xl p-3.5 flex items-center gap-2.5';
+                aviso.innerHTML = '<i class="fa-solid fa-lock text-amber-600"></i> <span>Jerarquía Resumen: las fechas de Inicio/Fin y el % de Avance se calculan automáticamente a partir de sus subpartidas.</span>';
+                cajaPlan.parentNode.insertBefore(aviso, cajaPlan);
+            }
+
+            let soloNombre = false;
+
             if (id) {
-                tit.textContent = "EDITAR PARTIDA";
                 const t = window.tareasCronograma.find(x => x.id === id);
+                soloNombre = Boolean(t && window.tareasCronograma.some(x => x.wbs && String(x.wbs).startsWith(String(t.wbs) + '.')));
+                tit.textContent = soloNombre ? "EDITAR JERARQUÍA (SOLO NOMBRE)" : "EDITAR PARTIDA";
+
                 document.getElementById('cronoPartidaId').value = t.id;
                 document.getElementById('cronoNombre').value = t.name;
                 document.getElementById('cronoPlanInicio').value = t.planStart;
                 document.getElementById('cronoPlanFin').value = t.planEnd;
-                // Si la memoria dice que estaban vacías, ponlas vacías
-                document.getElementById('cronoInicio').value = t.realStartInput || "";
-                document.getElementById('cronoFin').value = t.realEndInput || "";
+                document.getElementById('cronoInicio').value = t.realStartInput || (t.start && t.planStart && t.start !== t.planStart ? t.start : "");
+                document.getElementById('cronoFin').value = t.realEndInput || (t.end && t.planEnd && t.end !== t.planEnd ? t.end : "");
                 document.getElementById('cronoProgreso').value = t.progress;
-                document.getElementById('cronoDependencia').value = t.dependencies || "";
-                
-                Array.from(document.getElementById('cronoDependencia').options).forEach(opt => opt.disabled = (opt.value === t.id));
+
+                const selectDep = document.getElementById('cronoDependencia');
+                const selectSucc = document.getElementById('cronoSucesora');
+                let opcionesHtml = '<option value="">-- Ninguna --</option>';
+                window.tareasCronograma.forEach(item => {
+                    const esTercera = !item.isSummary && (item.level === 2 || String(item.wbs || '').split('.').length === 3);
+                    if (esTercera && item.id !== t.id) {
+                        opcionesHtml += `<option value="${item.id}">${item.wbs} - ${item.name}</option>`;
+                    }
+                });
+
+                if (selectDep) {
+                    selectDep.innerHTML = opcionesHtml;
+                    const depActual = Array.isArray(t.dependencies) ? (t.dependencies[0] || '') : (t.dependencies || '');
+                    selectDep.value = depActual;
+                }
+                if (selectSucc) {
+                    selectSucc.innerHTML = opcionesHtml;
+                    const succActual = window.tareasCronograma.find(x => {
+                        const d = Array.isArray(x.dependencies) ? (x.dependencies[0] || '') : (x.dependencies || '');
+                        return d === t.id;
+                    });
+                    selectSucc.value = succActual ? succActual.id : '';
+                }
+                if (typeof window.sincronizarSelectoresDependencia === 'function') {
+                    window.sincronizarSelectoresDependencia();
+                }
             } else {
                 tit.textContent = "NUEVA PARTIDA";
                 document.getElementById('cronoPartidaId').value = "";
@@ -13032,110 +14533,373 @@ window.iniciarNuevoReporte = function() {
                 let hoy = new Date().toISOString().split('T')[0];
                 document.getElementById('cronoPlanInicio').value = hoy;
                 document.getElementById('cronoPlanFin').value = hoy;
-                
-                // Las fechas reales arrancan vacías para una nueva partida
                 document.getElementById('cronoInicio').value = "";
                 document.getElementById('cronoFin').value = "";
-                
                 document.getElementById('cronoProgreso').value = "0";
-                document.getElementById('cronoDependencia').value = "";
-                Array.from(document.getElementById('cronoDependencia').options).forEach(opt => opt.disabled = false);
+
+                const selectDep = document.getElementById('cronoDependencia');
+                const selectSucc = document.getElementById('cronoSucesora');
+                let opcionesHtml = '<option value="">-- Ninguna --</option>';
+                window.tareasCronograma.forEach(item => {
+                    const esTercera = !item.isSummary && (item.level === 2 || String(item.wbs || '').split('.').length === 3);
+                    if (esTercera) {
+                        opcionesHtml += `<option value="${item.id}">${item.wbs} - ${item.name}</option>`;
+                    }
+                });
+                if (selectDep) { selectDep.innerHTML = opcionesHtml; selectDep.value = ""; }
+                if (selectSucc) { selectSucc.innerHTML = opcionesHtml; selectSucc.value = ""; }
             }
+
+            if (cajaPlan) cajaPlan.classList.toggle('hidden', soloNombre);
+            if (cajaReal) cajaReal.classList.toggle('hidden', soloNombre);
+            if (cajaProg) cajaProg.classList.toggle('hidden', soloNombre);
+            if (aviso) aviso.classList.toggle('hidden', !soloNombre);
+
             document.getElementById('modalPartidaCronograma').classList.remove('hidden');
         };
 
-        // 🔥 MOTOR CLOUD: Guarda cualquier cambio estructural del cronograma a Firebase en vivo
+        // Ordena por numeración WBS (1, 1.1, 1.2, 2, 2.1...) y actualiza jerarquías y fechas de padres
+        window.ordenarYRecalcularCronograma = function() {
+            if (!Array.isArray(window.tareasCronograma) || window.tareasCronograma.length === 0) return;
+
+            // 1. Ordenar jerárquicamente según el número WBS
+            window.tareasCronograma.sort((a, b) => {
+                const aParts = String(a.wbs || '9999').split('.').map(n => parseInt(n, 10) || 0);
+                const bParts = String(b.wbs || '9999').split('.').map(n => parseInt(n, 10) || 0);
+                const maxLen = Math.max(aParts.length, bParts.length);
+                for (let i = 0; i < maxLen; i++) {
+                    const pA = aParts[i] || 0;
+                    const pB = bParts[i] || 0;
+                    if (pA !== pB) return pA - pB;
+                }
+                return 0;
+            });
+
+            // 2. Detectar niveles, partidas padre (resumen) y vínculos padre-hijo
+            window.tareasCronograma.forEach((t, i) => {
+                if (!t.wbs) t.wbs = String(i + 1);
+                t.level = Math.max(0, String(t.wbs).split('.').length - 1);
+
+                t.isSummary = false;
+                if (i < window.tareasCronograma.length - 1) {
+                    const nextT = window.tareasCronograma[i + 1];
+                    if (nextT.wbs && String(nextT.wbs).startsWith(String(t.wbs) + '.')) {
+                        t.isSummary = true;
+                    }
+                }
+
+                t.parent = null;
+                if (t.level > 0) {
+                    const parts = String(t.wbs).split('.');
+                    parts.pop();
+                    const parentWbs = parts.join('.');
+                    const parentTask = window.tareasCronograma.find(x => String(x.wbs) === parentWbs);
+                    if (parentTask) t.parent = parentTask.id;
+                }
+            });
+
+            const hoy = new Date();
+            hoy.setHours(0, 0, 0, 0);
+            const diffDias = (isoA, dateOrIsoB) => {
+                if (!isoA || !dateOrIsoB) return 0;
+                const dA = new Date(isoA + 'T00:00:00');
+                const dB = (dateOrIsoB instanceof Date) ? new Date(dateOrIsoB) : new Date(dateOrIsoB + 'T00:00:00');
+                dA.setHours(0, 0, 0, 0);
+                dB.setHours(0, 0, 0, 0);
+                return Math.round((dB - dA) / 86400000);
+            };
+
+            const addDiasISO = (isoStr, days) => {
+                if (!isoStr || !days) return isoStr;
+                const d = new Date(isoStr + 'T00:00:00');
+                d.setDate(d.getDate() + days);
+                return d.toISOString().split('T')[0];
+            };
+
+            // 3A. Calcular % Programado y variación propia de cada partida ejecutable
+            window.tareasCronograma.forEach(t => {
+                const tieneHijos = window.tareasCronograma.some(x => x.wbs && String(x.wbs).startsWith(String(t.wbs) + '.'));
+                t.isSummary = tieneHijos;
+                if (!tieneHijos) {
+                    if (t.planStart && t.planEnd) {
+                        const pIni = new Date(t.planStart + 'T00:00:00');
+                        const pFin = new Date(t.planEnd + 'T00:00:00');
+                        const totalDias = Math.max(1, diffDias(t.planStart, t.planEnd) + 1);
+                        if (hoy < pIni) {
+                            t.planProgress = 0;
+                        } else if (hoy >= pFin) {
+                            t.planProgress = 100;
+                        } else {
+                            const transcurridos = diffDias(t.planStart, hoy) + 1;
+                            t.planProgress = Math.min(100, Math.max(0, Math.round((transcurridos / totalDias) * 100)));
+                        }
+                    } else {
+                        t.planProgress = 0;
+                    }
+
+                    // Restablecer fechas base propias antes de aplicar arrastre de predecesoras
+                    const baseIni = t.realStartInput || t.planStart;
+                    let baseFin = t.realEndInput || t.planEnd;
+                    if (baseFin && baseIni && baseFin < baseIni) baseFin = baseIni;
+                    t.start = baseIni;
+                    t.end = baseFin;
+
+                    if (t.realEndInput) {
+                        t.delayDays = diffDias(t.planEnd, t.realEndInput);
+                    } else if (t.realStartInput) {
+                        t.delayDays = diffDias(t.planStart, t.realStartInput);
+                    } else {
+                        t.delayDays = 0;
+                    }
+                }
+            });
+
+            // 3A-bis. Propagar atrasos en cascada (Predecesora -> Sucesora)
+            const maxPasos = window.tareasCronograma.length;
+            for (let paso = 0; paso < maxPasos; paso++) {
+                let huboCambio = false;
+                window.tareasCronograma.forEach(t => {
+                    if (t.isSummary) return;
+                    const depId = Array.isArray(t.dependencies) ? (t.dependencies[0] || '') : (t.dependencies || '');
+                    if (!depId) return;
+
+                    const pred = window.tareasCronograma.find(x => x.id === depId);
+                    if (!pred || pred.isSummary) return;
+
+                    const atrasoPred = Number(pred.delayDays) || 0;
+                    if (atrasoPred > 0) {
+                        const empujadoIni = addDiasISO(t.planStart, atrasoPred);
+                        const empujadoFin = addDiasISO(t.planEnd, atrasoPred);
+
+                        if (empujadoIni && (!t.start || empujadoIni > t.start)) {
+                            t.start = empujadoIni;
+                            huboCambio = true;
+                        }
+                        if (empujadoFin && (!t.end || empujadoFin > t.end)) {
+                            t.end = empujadoFin;
+                            huboCambio = true;
+                        }
+
+                        const nuevoAtraso = Math.max(Number(t.delayDays) || 0, atrasoPred);
+                        if (nuevoAtraso !== t.delayDays) {
+                            t.delayDays = nuevoAtraso;
+                            huboCambio = true;
+                        }
+                    }
+                });
+                if (!huboCambio) break;
+            }
+
+            // 3B. Recalcular fechas, promedios de % y sumatoria neta de Variación de abajo hacia arriba
+            for (let i = window.tareasCronograma.length - 1; i >= 0; i--) {
+                const t = window.tareasCronograma[i];
+                if (t.isSummary) {
+                    const hijos = window.tareasCronograma.filter(x => x.wbs && String(x.wbs).startsWith(String(t.wbs) + '.'));
+                    const hijosDirectos = hijos.filter(h => h.level === t.level + 1);
+                    const base = hijosDirectos.length > 0 ? hijosDirectos : hijos;
+
+                    if (base.length > 0) {
+                        let minPlan = '2099-12-31', maxPlan = '2000-01-01';
+                        let minReal = '2099-12-31', maxReal = '2000-01-01';
+                        let minRealIn = '2099-12-31', maxRealIn = '2000-01-01';
+
+                        base.forEach(h => {
+                            if (h.planStart && h.planStart < minPlan) minPlan = h.planStart;
+                            if (h.planEnd && h.planEnd > maxPlan) maxPlan = h.planEnd;
+                            if (h.start && h.start < minReal) minReal = h.start;
+                            if (h.end && h.end > maxReal) maxReal = h.end;
+                            if (h.realStartInput && h.realStartInput < minRealIn) minRealIn = h.realStartInput;
+                            if (h.realEndInput && h.realEndInput > maxRealIn) maxRealIn = h.realEndInput;
+                        });
+
+                        if (minPlan !== '2099-12-31') { t.planStart = minPlan; t.planEnd = maxPlan; }
+                        if (minReal !== '2099-12-31') { t.start = minReal; t.end = maxReal; }
+                        t.realStartInput = (minRealIn !== '2099-12-31') ? minRealIn : '';
+                        t.realEndInput = (maxRealIn !== '2000-01-01') ? maxRealIn : '';
+
+                        const sumaReal = base.reduce((acc, h) => acc + (Number(h.progress) || 0), 0);
+                        const sumaPlan = base.reduce((acc, h) => acc + (Number(h.planProgress) || 0), 0);
+                        const sumaVariacion = base.reduce((acc, h) => acc + (Number(h.delayDays) || 0), 0);
+
+                        t.progress = Math.round(sumaReal / base.length);
+                        t.planProgress = Math.round(sumaPlan / base.length);
+                        t.delayDays = sumaVariacion; // Suma neta de variaciones de sus subpartidas
+                    }
+                }
+            }
+        };
+
+        // 🔥 MOTOR CLOUD: Limpia propiedades internas de Frappe Gantt y guarda en Firebase en tiempo real
         window.sincronizarCronogramaNube = async function() {
             let proyectoActivo = window.proyectoActualGlobal;
-            let selectSup = document.getElementById('proyectoSelect');
+            const selectSup = document.getElementById('proyectoSelect');
             if (!proyectoActivo && selectSup && selectSup.value) proyectoActivo = selectSup.value;
 
-            if (!proyectoActivo) return; // No hay proyecto seleccionado
+            if (!proyectoActivo || !window.firebaseDb || !window.fsDoc || !window.fsSetDoc) return;
+
+            // Limpia objetos Date (_start, _end) y valores undefined que Firestore rechaza
+            const tareasLimpias = window.tareasCronograma.map((t, idx) => ({
+                id: String(t.id || ('T_' + idx)),
+                wbs: String(t.wbs || (idx + 1)),
+                name: String(t.name || ''),
+                planStart: String(t.planStart || t.start || ''),
+                planEnd: String(t.planEnd || t.end || ''),
+                start: String(t.start || t.planStart || ''),
+                end: String(t.end || t.planEnd || ''),
+                realStartInput: String(t.realStartInput || (t.start && t.planStart && t.start !== t.planStart ? t.start : '')),
+                realEndInput: String(t.realEndInput || (t.end && t.planEnd && t.end !== t.planEnd ? t.end : '')),
+                progress: Number(t.progress) || 0,
+                dependencies: Array.isArray(t.dependencies) ? (t.dependencies[0] || '') : String(t.dependencies || ''),
+                depOrigin: String(t.depOrigin || 'pred'),
+                isSummary: Boolean(t.isSummary),
+                level: Number(t.level) || 0,
+                parent: t.parent ? String(t.parent) : null,
+                hasExplicitDates: Boolean(t.hasExplicitDates)
+            }));
 
             try {
                 const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoActivo}`);
-                // Guardamos el arreglo completo de tareas dentro del documento del proyecto
-                await window.fsSetDoc(docRef, { 
-                    cronograma: window.tareasCronograma 
+                await window.fsSetDoc(docRef, {
+                    cronograma: tareasLimpias
                 }, { merge: true });
             } catch (err) {
                 console.error("Error al sincronizar Cronograma con la nube:", err);
             }
         };
 
-        window.guardarPartidaCronograma = function() {
+        // Edición manual de numeración WBS (N°): reordena por jerarquía, dibuja y guarda en Firebase
+        window.cambiarWBSManual = async function(id, newWbs) {
+            const t = window.tareasCronograma.find(x => x.id === id);
+            if (!t || !newWbs || newWbs.trim() === '') {
+                window.renderizarCronograma();
+                return;
+            }
+            t.wbs = newWbs.trim();
+            window.ordenarYRecalcularCronograma();
+            window.renderizarCronograma();
+            await window.sincronizarCronogramaNube();
+        };
+
+        // Guardar nueva partida o edición (nombre, fechas plan/real, % avance, predecesora)
+        window.guardarPartidaCronograma = async function() {
             const id = document.getElementById('cronoPartidaId').value;
             const nombre = document.getElementById('cronoNombre').value.trim();
             const pIni = document.getElementById('cronoPlanInicio').value;
             const pFin = document.getElementById('cronoPlanFin').value;
-            
-            let rIni = document.getElementById('cronoInicio').value;
-            let rFin = document.getElementById('cronoFin').value;
-            
-            const prog = parseInt(document.getElementById('cronoProgreso').value) || 0;
+            const rIni = document.getElementById('cronoInicio').value;
+            const rFin = document.getElementById('cronoFin').value;
+            const prog = parseInt(document.getElementById('cronoProgreso').value, 10) || 0;
             const dep = document.getElementById('cronoDependencia').value;
+            const succ = document.getElementById('cronoSucesora') ? document.getElementById('cronoSucesora').value : '';
 
-            if(!nombre || !pIni || !pFin) {
+            if (!nombre || !pIni || !pFin) {
                 return alert("⚠️ Completa el Nombre de la partida y las fechas de Línea Base (Plan).");
             }
 
-            let startToSave = rIni ? rIni : pIni;
+            if (dep && succ && dep === succ) {
+                return alert("⚠️ La Predecesora y la Sucesora no pueden ser la misma partida.");
+            }
+
+            const startToSave = rIni ? rIni : pIni;
             let endToSave = rFin ? rFin : pFin;
+            if (endToSave < startToSave) endToSave = startToSave;
+
+            let taskIdGuardada = id;
 
             if (id) {
-                let t = window.tareasCronograma.find(x => x.id === id);
-                if(t) { 
-                    t.name = nombre; t.planStart = pIni; t.planEnd = pFin; 
-                    t.start = startToSave; t.end = endToSave; 
-                    t.realStartInput = rIni; t.realEndInput = rFin;
-                    t.progress = prog; t.dependencies = dep; 
+                const t = window.tareasCronograma.find(x => x.id === id);
+                if (t) {
+                    t.name = nombre;
+                    const tieneHijos = window.tareasCronograma.some(x => x.wbs && String(x.wbs).startsWith(String(t.wbs) + '.'));
+                    if (!tieneHijos) {
+                        const prevDep = Array.isArray(t.dependencies) ? (t.dependencies[0] || '') : (t.dependencies || '');
+                        t.planStart = pIni;
+                        t.planEnd = pFin;
+                        t.start = startToSave;
+                        t.end = endToSave;
+                        t.realStartInput = rIni;
+                        t.realEndInput = rFin;
+                        t.progress = prog;
+                        t.dependencies = dep;
+                        if (dep && dep !== prevDep) t.depOrigin = 'pred';
+                    }
                 }
             } else {
+                let maxRoot = 0;
+                window.tareasCronograma.forEach(item => {
+                    const rootNum = parseInt(String(item.wbs || '0').split('.')[0], 10) || 0;
+                    if (rootNum > maxRoot) maxRoot = rootNum;
+                });
+
+                taskIdGuardada = 'T_' + Date.now();
                 window.tareasCronograma.push({
-                    id: 'T_' + Date.now(), 
-                    name: nombre, planStart: pIni, planEnd: pFin, 
-                    start: startToSave, end: endToSave, 
-                    realStartInput: rIni, realEndInput: rFin,
-                    progress: prog, dependencies: dep
+                    id: taskIdGuardada,
+                    wbs: String(maxRoot + 1),
+                    name: nombre,
+                    planStart: pIni,
+                    planEnd: pFin,
+                    start: startToSave,
+                    end: endToSave,
+                    realStartInput: rIni,
+                    realEndInput: rFin,
+                    progress: prog,
+                    dependencies: dep,
+                    depOrigin: 'pred',
+                    hasExplicitDates: true
                 });
             }
-            
-            if (typeof window.recalcularWBSCronograma === 'function') window.recalcularWBSCronograma();
-            
+
+            // Vincular la Sucesora elegida en color morado
+            if (taskIdGuardada) {
+                const succAnterior = window.tareasCronograma.find(x => {
+                    const d = Array.isArray(x.dependencies) ? (x.dependencies[0] || '') : (x.dependencies || '');
+                    return d === taskIdGuardada;
+                });
+                if (succAnterior && succAnterior.id !== succ) {
+                    succAnterior.dependencies = '';
+                    succAnterior.depOrigin = 'pred';
+                }
+                if (succ && succ !== taskIdGuardada && succ !== dep) {
+                    const nuevaSucc = window.tareasCronograma.find(x => x.id === succ);
+                    if (nuevaSucc) {
+                        nuevaSucc.dependencies = taskIdGuardada;
+                        nuevaSucc.depOrigin = 'succ';
+                    }
+                }
+            }
+
+            window.ordenarYRecalcularCronograma();
             document.getElementById('modalPartidaCronograma').classList.add('hidden');
             window.renderizarCronograma();
-            window.sincronizarCronogramaNube(); // ☁️ Guarda el cambio en Firebase
+            await window.sincronizarCronogramaNube();
         };
 
-        window.eliminarPartidaCronograma = function(id) {
-            if(confirm('⚠️ ¿Estás seguro de eliminar esta partida?')) {
-                window.tareasCronograma.forEach(t => { if(t.dependencies === id) t.dependencies = ''; });
+        // Eliminar partida, reordenar y guardar en Firebase
+        window.eliminarPartidaCronograma = async function(id) {
+            if (confirm('⚠️ ¿Estás seguro de eliminar esta partida?')) {
+                window.tareasCronograma.forEach(t => { if (t.dependencies === id) t.dependencies = ''; });
                 window.tareasCronograma = window.tareasCronograma.filter(x => x.id !== id);
+                window.ordenarYRecalcularCronograma();
                 window.renderizarCronograma();
-                window.sincronizarCronogramaNube(); // ☁️ Guarda la eliminación en Firebase
+                await window.sincronizarCronogramaNube();
             }
         };
-        
-        // Parcheamos las funciones existentes para que también suban a la nube
-        const cronoManualOriginal = window.cambiarWBSManual;
-        window.cambiarWBSManual = function(id, newWbs) {
-            if (cronoManualOriginal) cronoManualOriginal(id, newWbs);
-            window.sincronizarCronogramaNube(); // ☁️ Guarda la nueva estructura de WBS
-        };
 
+        // Subir automáticamente a Firebase cuando se importa un Excel
         const procesarExcelOriginal = window.procesarExcelCronograma;
         window.procesarExcelCronograma = function(e) {
             if (procesarExcelOriginal) {
-                // Interceptamos la alerta de éxito original para disparar la subida a la nube
                 const originalAlert = window.alert;
                 window.alert = function(msg) {
                     originalAlert(msg);
-                    if (msg.includes("¡Éxito!")) {
-                        window.sincronizarCronogramaNube(); // ☁️ Sube el Excel importado a Firebase
+                    if (String(msg).includes("¡Éxito!")) {
+                        window.ordenarYRecalcularCronograma();
+                        window.renderizarCronograma();
+                        window.sincronizarCronogramaNube();
                     }
                 };
                 procesarExcelOriginal(e);
-                setTimeout(() => { window.alert = originalAlert; }, 1000); // Restauramos la alerta
+                setTimeout(() => { window.alert = originalAlert; }, 1000);
             }
         };
     </script>
