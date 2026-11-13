@@ -346,8 +346,8 @@
     <!-- PANTALLA DE HISTORIAL DEL PROYECTO -->
     <!-- ========================================== -->
     <div id="vistaHistorial" class="hidden flex-1 w-full bg-slate-50">
-        <!-- 🔥 FIX: Padding superior reducido para que los módulos suban pegados al header -->
-        <div class="w-full px-6 lg:px-12 pt-6 pb-12">
+        <!-- Padding superior mínimo para aprovechar toda la pantalla -->
+        <div class="w-full px-6 lg:px-12 pt-2 pb-2">
             
             <!-- ========================================== -->
             <!-- LOBBY DE MÓDULOS DEL PROYECTO -->
@@ -6451,7 +6451,7 @@ window.iniciarNuevoReporte = function() {
                 if(oldRdiBtn) oldRdiBtn.classList.remove('hidden');
 
                 if(typeof window.cargarMatrizRDI === 'function') window.cargarMatrizRDI(window.proyectoActualGlobal);
-            } else if (modulo === 'CRONOGRAMA') { 
+            } else if (modulo === 'CRONOGRAMA') {
                 if (pushHistory) history.pushState({ vista: 'modulo_cronograma', proyecto: window.proyectoActualGlobal }, '', '#modulo-cronograma');
                 if (modCrono) modCrono.classList.remove('hidden');
                 if (modRDI) modRDI.classList.add('hidden');
@@ -6459,6 +6459,27 @@ window.iniciarNuevoReporte = function() {
                 if (modRO) modRO.classList.add('hidden');
                 if (btnNuevoRO) btnNuevoRO.classList.add('hidden');
                 
+                // 🔥 MULTIJUGADOR: Escuchar los cambios del cronograma en tiempo real para este proyecto
+                if (window.cronogramaUnsubscribe) { window.cronogramaUnsubscribe(); }
+                const docRef = window.fsDoc(window.firebaseDb, `proyectos/${window.proyectoActualGlobal}`);
+                
+                window.cronogramaUnsubscribe = window.fsOnSnapshot(docRef, (docSnap) => {
+                    if (docSnap.exists() && docSnap.data().cronograma) {
+                        const nubeData = docSnap.data().cronograma;
+                        // Prevenir renderizados si la data es idéntica
+                        if (JSON.stringify(window.tareasCronograma) !== JSON.stringify(nubeData)) {
+                            window.tareasCronograma = nubeData;
+                            if (window.ganttInicializado) {
+                                window.renderizarCronograma(); 
+                            }
+                        }
+                    } else if (window.ganttInicializado && window.tareasCronograma.length > 0) {
+                        // Si borraron el proyecto en la nube, limpiamos
+                        window.tareasCronograma = [];
+                        window.renderizarCronograma();
+                    }
+                });
+
                 if (!window.ganttInicializado) {
                     window.inicializarCronograma();
                     window.ganttInicializado = true;
@@ -12162,9 +12183,9 @@ window.iniciarNuevoReporte = function() {
             <!-- ========================================== -->
             <!-- CONTENEDOR MÓDULO CRONOGRAMA (GANTT) -->
             <!-- ========================================== -->
-            <div id="moduloProyectoCronograma" class="hidden w-full flex-col h-[calc(100vh-80px)]">
+            <div id="moduloProyectoCronograma" class="hidden w-full flex-col mt-0 pt-0">
                 <!-- Barra de Acciones Superior -->
-                <div class="flex justify-between items-center mb-4 w-full gap-4 shrink-0">
+                <div class="flex justify-between items-center mb-2 w-full gap-4 shrink-0">
                     <div>
                         <h2 class="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3">
                             <div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
@@ -12174,7 +12195,14 @@ window.iniciarNuevoReporte = function() {
                         </h2>
                         <p class="text-slate-500 text-sm mt-1 ml-13">Vista MS Project: Partidas a la izquierda, Gantt sincronizado a la derecha.</p>
                     </div>
-                    <div class="flex gap-3">
+                    <div class="flex items-center gap-3">
+                        <!-- Selector de escala fuera de la fila de fechas -->
+                        <div id="selectorVistaGantt" class="flex gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
+                            <button onclick="window.cambiarVistaGantt('Day')" class="px-3 py-1.5 text-[10px] font-bold bg-amber-100 text-amber-700 rounded-lg shadow-sm cursor-pointer">Días</button>
+                            <button onclick="window.cambiarVistaGantt('Week')" class="px-3 py-1.5 text-[10px] font-bold text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg cursor-pointer">Semanas</button>
+                            <button onclick="window.cambiarVistaGantt('Month')" class="px-3 py-1.5 text-[10px] font-bold text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg cursor-pointer">Meses</button>
+                        </div>
+
                         <!-- Input oculto para subir el Excel -->
                         <input type="file" id="inputImportarCronograma" accept=".xls,.xlsx" class="hidden" onchange="window.procesarExcelCronograma(event)">
                         
@@ -12187,42 +12215,47 @@ window.iniciarNuevoReporte = function() {
                     </div>
                 </div>
 
-                <!-- Diseño Dividido: Tabla (Izquierda) | Gantt (Derecha) -->
-                <div class="flex flex-row w-full flex-1 bg-white rounded-2xl shadow-sm border border-slate-300 overflow-hidden min-h-[500px]">
-                    
-                    <!-- Tabla MS Project (Fija a la Izquierda) -->
-                    <!-- 🔥 PANEL REDIMENSIONABLE -->
-                    <div id="panelTablaCronograma" style="width: 450px; min-width: 300px;" class="shrink-0 flex flex-col border-r border-slate-300 bg-slate-50 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] relative group">
+                <!-- Aprovecha todo el alto disponible hasta el pie de ventana -->
+                <div class="flex flex-col w-full bg-white rounded-2xl shadow-sm border border-slate-300 overflow-hidden" style="height: calc(100vh - 145px); min-height: 400px;">
+                    <!-- ÚNICO SCROLL VERTICAL PARA DATOS Y GRÁFICA -->
+                    <div id="cronogramaScrollUnificado" class="flex-1 overflow-y-auto overflow-x-hidden relative custom-scrollbar">
                         
-                        <!-- 🔥 BARRA PARA AGRANDAR LA COLUMNA -->
-                        <div class="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize z-50 hover:bg-blue-500 transition-colors" onmousedown="window.iniciarResizePanelCronograma(event)"></div>
-
-                        <!-- Cabecera de Tabla -->
-                        <div class="bg-slate-800 text-white text-[10px] font-bold uppercase tracking-widest flex items-center shrink-0 h-[50px]">
-                            <div class="w-12 h-full flex items-center justify-center border-r border-slate-600">N°</div>
-                            <div class="flex-1 h-full flex items-center px-3 border-r border-slate-600">Partida</div>
-                            <div class="w-20 h-full flex items-center justify-center border-r border-slate-600 text-center">Inicio</div>
-                            <div class="w-20 h-full flex items-center justify-center border-r border-slate-600 text-center">Fin</div>
-                            <div class="w-12 h-full flex items-center justify-center text-center">%</div>
+                        <!-- CABECERA STICKY INMOVILIZADA ARRIBA -->
+                        <div class="sticky top-0 z-30 flex flex-row w-full bg-slate-800 border-b border-slate-600 shadow-sm" style="height: 59px; min-height: 59px; max-height: 59px;">
+                            <div id="headerTablaCronograma" style="width: 450px; min-width: 300px;" class="shrink-0 bg-slate-800 text-white text-[10px] font-bold uppercase tracking-widest flex items-center border-r border-slate-600 box-border h-full">
+                                <div class="w-12 h-full flex items-center justify-center border-r border-slate-600">N°</div>
+                                <div class="flex-1 h-full flex items-center px-3 border-r border-slate-600">Partida</div>
+                                <div class="w-20 h-full flex items-center justify-center border-r border-slate-600 text-center">Inicio</div>
+                                <div class="w-20 h-full flex items-center justify-center border-r border-slate-600 text-center">Fin</div>
+                                <div class="w-12 h-full flex items-center justify-center text-center">%</div>
+                            </div>
+                            <div id="ganttHeaderViewport" class="flex-1 overflow-hidden bg-slate-800 h-full relative">
+                                <svg id="gantt_header_svg" style="height: 58px; display: block;"></svg>
+                            </div>
                         </div>
-                        <!-- Filas de Tabla -->
-                        <div id="tablaPartidasCronograma" class="overflow-y-hidden overflow-x-hidden flex-1 text-xs bg-white pb-20">
-                            <!-- JS inyectará las filas aquí -->
+
+                        <!-- CUERPO SINCRONIZADO (FILAS + BARRAS AL MISMO NIVEL) -->
+                        <div class="flex flex-row w-full items-start relative">
+                            <div id="panelTablaCronograma" style="width: 450px; min-width: 300px;" class="shrink-0 flex flex-col border-r border-slate-300 bg-white z-20 relative">
+                                <div class="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize z-40 hover:bg-blue-500 transition-colors" onmousedown="window.iniciarResizePanelCronograma(event)"></div>
+                                <div id="tablaPartidasCronograma" class="w-full text-xs bg-white">
+                                    <!-- JS inyectará las filas aquí -->
+                                </div>
+                            </div>
+
+                            <div id="gantt_container" class="flex-1 overflow-hidden bg-white relative">
+                                <div id="gantt_chart_wrapper" style="overflow: hidden; width: max-content;">
+                                    <svg id="gantt_chart" style="margin-top: -58px; display: block;"></svg>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Lienzo Frappe Gantt (Derecha) -->
-                    <div class="flex-1 relative flex flex-col bg-white overflow-hidden">
-                        <div class="absolute top-2 right-2 z-10 flex gap-1 bg-white p-1 rounded-lg border border-slate-200 shadow-sm opacity-80 hover:opacity-100 transition">
-                            <button onclick="window.cambiarVistaGantt('Quarter Day')" class="px-2 py-1 text-[10px] font-bold text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded cursor-pointer">Horas</button>
-                            <button onclick="window.cambiarVistaGantt('Day')" class="px-2 py-1 text-[10px] font-bold bg-amber-100 text-amber-700 rounded shadow-sm cursor-pointer">Días</button>
-                            <button onclick="window.cambiarVistaGantt('Week')" class="px-2 py-1 text-[10px] font-bold text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded cursor-pointer">Semanas</button>
-                            <button onclick="window.cambiarVistaGantt('Month')" class="px-2 py-1 text-[10px] font-bold text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded cursor-pointer">Meses</button>
-                        </div>
-                        
-                        <!-- Contenedor scrollable del Gráfico -->
-                        <div id="gantt_container" class="flex-1 overflow-auto custom-scrollbar w-full">
-                            <svg id="gantt_chart" class="min-w-full"></svg>
+                    <!-- BARRA DE SCROLL HORIZONTAL SIEMPRE VISIBLE EN LA VENTANA -->
+                    <div class="sticky bottom-0 flex flex-row w-full bg-slate-100 border-t border-slate-300 shrink-0 z-30 shadow-[0_-2px_6px_rgba(0,0,0,0.06)]">
+                        <div id="spacerScrollCronograma" style="width: 450px; min-width: 300px;" class="shrink-0 border-r border-slate-300 bg-slate-50"></div>
+                        <div id="ganttHScrollBar" class="flex-1 overflow-x-auto overflow-y-hidden" style="height: 14px;">
+                            <div id="ganttHScrollSpacer" style="height: 1px;"></div>
                         </div>
                     </div>
                 </div>
@@ -12302,18 +12335,34 @@ window.iniciarNuevoReporte = function() {
                 /* Estilos del Gantt - Ejecución Real */
                 .gantt .bar-progress { fill: #ea580c; } 
                 .gantt .bar { fill: #fef3c7; stroke: #f59e0b; stroke-width: 1px; } 
-                .gantt .grid-header { fill: #f8fafc; font-weight: bold; }
+                .gantt-container { overflow: visible !important; }
+                .gantt .grid-header { fill: #1e293b !important; fill-opacity: 1 !important; height: 58px !important; stroke: #475569; stroke-width: 1px; font-weight: bold; }
+                .gantt .tick { stroke: #e2e8f0 !important; stroke-width: 1px; }
+                .gantt .tick.thick { stroke: #cbd5e1 !important; stroke-width: 1.2px; }
+                .gantt .today-highlight {
+                    fill: #fde047 !important;
+                    opacity: 0.65 !important;
+                    stroke: #eab308 !important;
+                    stroke-width: 1.5px !important;
+                }
                 .gantt .arrow { stroke: #ef4444; stroke-width: 2px; }
                 
-                /* 🔥 SEGURIDAD TOTAL: BLOQUEO DEL MOUSE PARA ARRASTRES Y TIRADORES */
-                .gantt .bar-wrapper {
-                    pointer-events: none !important; /* Nadie puede hacer clic, mover o arrastrar las barras */
-                }
-                .gantt .handle {
-                    display: none !important; /* Desaparecen todos los tiradores visualmente */
+                /* 🔥 2. MAGIA STICKY: Mueve los textos y fondo usando una variable conectada al scroll */
+                .gantt .grid-header, 
+                .gantt .date, 
+                .gantt .grid-ticks {
+                    transform: translateY(var(--gantt-scroll-y, 0px));
                 }
                 
-                /* 🔥 MAGIA MS PROJECT: Estilos para Partidas Padre (Jerarquías) */
+                /* Limpieza Visual */
+                .gantt .bar-wrapper { pointer-events: none !important; }
+                .gantt .handle { display: none !important; } 
+                .gantt .bar-wrapper image, .gantt .bar-wrapper object { display: none !important; } 
+                
+                #gantt_chart { display: block; }
+                .scrollbar-hide::-webkit-scrollbar { display: none; }
+                .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+                
                 .gantt .bar-summary .bar { fill: #334155 !important; stroke: #0f172a !important; }
                 .gantt .bar-summary .bar-progress { fill: #94a3b8 !important; }
             </style>
@@ -12326,17 +12375,183 @@ window.iniciarNuevoReporte = function() {
         window.ganttInstancia = null;
         window.scrollSincronizado = false;
 
+        window.actualizarHeaderFijoGantt = function() {
+            const svgChart = document.getElementById('gantt_chart');
+            const headerSvg = document.getElementById('gantt_header_svg');
+            const hSpacer = document.getElementById('ganttHScrollSpacer');
+            if (!svgChart || !headerSvg) return;
+
+            const headerBg = svgChart.querySelector('rect.grid-header');
+            const dateGroup = svgChart.querySelector('g.date');
+            if (headerBg) headerBg.style.display = 'none';
+            if (dateGroup) dateGroup.style.display = 'none';
+
+            const ticks = svgChart.querySelectorAll('.tick');
+            const tickXs = [];
+            ticks.forEach(tick => {
+                if (tick.hasAttribute('x1')) {
+                    tickXs.push(parseFloat(tick.getAttribute('x1')));
+                } else {
+                    const match = (tick.getAttribute('d') || '').match(/M\s*([-\d.]+)/i);
+                    if (match) tickXs.push(parseFloat(match[1]));
+                }
+            });
+
+            const dates = (window.ganttInstancia && window.ganttInstancia.dates) ? window.ganttInstancia.dates : [];
+            const colW = (window.ganttInstancia && window.ganttInstancia.options) ? window.ganttInstancia.options.column_width : 30;
+            const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            const modo = window.currentGanttView || 'Day';
+            const headerH = 58;
+
+            if (tickXs.length === 0 && dates.length > 0) {
+                for (let i = 0; i < dates.length; i++) tickXs.push(i * colW);
+            }
+
+            let maxWidth = (headerBg ? parseFloat(headerBg.getAttribute('width')) : 0) || (tickXs.length * colW) || 1200;
+            if (tickXs.length > 0) {
+                const lastEnd = tickXs[tickXs.length - 1] + colW;
+                if (lastEnd > maxWidth) maxWidth = lastEnd;
+            }
+
+            headerSvg.innerHTML = '';
+            headerSvg.setAttribute('width', maxWidth);
+            headerSvg.setAttribute('height', headerH);
+            if (hSpacer) hSpacer.style.width = maxWidth + 'px';
+            const chartWrapper = document.getElementById('gantt_chart_wrapper');
+            if (chartWrapper) chartWrapper.style.width = maxWidth + 'px';
+
+            for (let i = 0; i < tickXs.length; i++) {
+                const x0 = tickXs[i];
+                const x1 = (i + 1 < tickXs.length) ? tickXs[i + 1] : (x0 + colW);
+                const w = Math.max(1, x1 - x0);
+                const cx = x0 + (w / 2);
+
+                const hoy = new Date();
+                hoy.setHours(0, 0, 0, 0);
+
+                const d = dates[i] ? new Date(dates[i]) : null;
+                const prevD = (i > 0 && dates[i - 1]) ? new Date(dates[i - 1]) : null;
+                const nextD = (i + 1 < dates.length && dates[i + 1]) ? new Date(dates[i + 1]) : null;
+                if (d) d.setHours(0, 0, 0, 0);
+                if (nextD) nextD.setHours(0, 0, 0, 0);
+
+                const cambioMes = d && (!prevD || d.getMonth() !== prevD.getMonth());
+                const esHoy = d && (
+                    nextD
+                        ? (hoy >= d && hoy < nextD)
+                        : (d.getFullYear() === hoy.getFullYear() && d.getMonth() === hoy.getMonth() && d.getDate() === hoy.getDate())
+                );
+
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', x0);
+                rect.setAttribute('y', '0');
+                rect.setAttribute('width', w);
+                rect.setAttribute('height', headerH);
+                rect.setAttribute('fill', esHoy ? '#d97706' : '#1e293b');
+                headerSvg.appendChild(rect);
+
+                const vLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                vLine.setAttribute('x1', x0);
+                vLine.setAttribute('y1', '0');
+                vLine.setAttribute('x2', x0);
+                vLine.setAttribute('y2', headerH);
+                vLine.setAttribute('stroke', cambioMes ? '#64748b' : '#475569');
+                vLine.setAttribute('stroke-width', '1');
+                headerSvg.appendChild(vLine);
+
+                if (d) {
+                    const label = (modo === 'Month')
+                        ? `${meses[d.getMonth()]}-${d.getFullYear()}`
+                        : `${String(d.getDate()).padStart(2, '0')}-${meses[d.getMonth()]}`;
+
+                    const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    txt.setAttribute('x', cx);
+                    txt.setAttribute('y', headerH / 2);
+                    txt.setAttribute('text-anchor', 'middle');
+                    txt.setAttribute('dominant-baseline', 'central');
+                    txt.setAttribute('transform', `rotate(-90, ${cx}, ${headerH / 2})`);
+                    txt.setAttribute('fill', '#ffffff');
+                    txt.setAttribute('font-size', '10');
+                    txt.setAttribute('font-weight', '700');
+                    txt.textContent = label;
+                    headerSvg.appendChild(txt);
+                }
+            }
+
+            // Sincronizar el desplazamiento horizontal de Frappe Gantt con la cabecera y el scroll inferior
+            const frappeCont = svgChart.closest('.gantt-container');
+            const hScroll = document.getElementById('ganttHScrollBar');
+            const headerVp = document.getElementById('ganttHeaderViewport');
+            const ganttCont = document.getElementById('gantt_container');
+
+            if (frappeCont && frappeCont.scrollLeft > 0) {
+                const targetScroll = frappeCont.scrollLeft;
+                frappeCont.scrollLeft = 0;
+                if (hScroll) hScroll.scrollLeft = targetScroll;
+                if (headerVp) headerVp.scrollLeft = targetScroll;
+                if (ganttCont) ganttCont.scrollLeft = targetScroll;
+            } else if (hScroll) {
+                if (headerVp) headerVp.scrollLeft = hScroll.scrollLeft;
+                if (ganttCont) ganttCont.scrollLeft = hScroll.scrollLeft;
+            }
+        };
+
         window.inicializarCronograma = function() {
             window.renderizarCronograma();
             if (!window.scrollSincronizado) {
-                const tablaCont = document.getElementById('tablaPartidasCronograma');
+                const hScroll = document.getElementById('ganttHScrollBar');
+                const headerVp = document.getElementById('ganttHeaderViewport');
                 const ganttCont = document.getElementById('gantt_container');
-                if (tablaCont && ganttCont) {
-                    ganttCont.addEventListener('scroll', () => { tablaCont.scrollTop = ganttCont.scrollTop; });
-                    tablaCont.addEventListener('scroll', () => { ganttCont.scrollTop = tablaCont.scrollTop; });
+
+                if (hScroll && headerVp && ganttCont) {
+                    hScroll.addEventListener('scroll', () => {
+                        headerVp.scrollLeft = hScroll.scrollLeft;
+                        ganttCont.scrollLeft = hScroll.scrollLeft;
+                    });
+                    // Permite desplazamiento horizontal con trackpad o Shift + rueda sobre la gráfica
+                    [ganttCont, headerVp].forEach(el => {
+                        el.addEventListener('wheel', (e) => {
+                            const delta = e.deltaX !== 0 ? e.deltaX : (e.shiftKey ? e.deltaY : 0);
+                            if (delta !== 0) {
+                                e.preventDefault();
+                                hScroll.scrollLeft += delta;
+                            }
+                        }, { passive: false });
+                    });
                     window.scrollSincronizado = true;
                 }
             }
+            window.actualizarHeaderFijoGantt();
+        };
+
+        window.iniciarResizePanelCronograma = function(e) {
+            e.preventDefault();
+            const panel = document.getElementById('panelTablaCronograma');
+            if (!panel) return;
+            let startX = e.clientX;
+            let startWidth = panel.offsetWidth;
+
+            document.body.classList.add('cursor-col-resize');
+
+            function onMouseMove(e) {
+                let newWidth = startWidth + (e.clientX - startX);
+                if (newWidth < 300) newWidth = 300;
+                if (newWidth > 800) newWidth = 800;
+                panel.style.width = newWidth + 'px';
+                const headerIzq = document.getElementById('headerTablaCronograma');
+                const spacerIzq = document.getElementById('spacerScrollCronograma');
+                if (headerIzq) headerIzq.style.width = newWidth + 'px';
+                if (spacerIzq) spacerIzq.style.width = newWidth + 'px';
+            }
+
+            function onMouseUp() {
+                document.body.classList.remove('cursor-col-resize');
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            }
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
         };
 
         window.actualizarEtiquetasGantt = function() {
@@ -12351,6 +12566,7 @@ window.iniciarNuevoReporte = function() {
                         label.style.fontWeight = '800';
                     }
                 });
+                if (typeof window.actualizarHeaderFijoGantt === 'function') window.actualizarHeaderFijoGantt();
             }, 50);
         };
 
@@ -12364,200 +12580,6 @@ window.iniciarNuevoReporte = function() {
                 }
             });
         }
-
-        // ==========================================
-        // MOTOR WBS Y DRAG & DROP PARA CRONOGRAMA
-        // ==========================================
-
-        window.inicializarCronograma = function() {
-            window.renderizarCronograma();
-            if (!window.scrollSincronizado) {
-                const tablaCont = document.getElementById('tablaPartidasCronograma');
-                const ganttCont = document.getElementById('gantt_container');
-                if (tablaCont && ganttCont) {
-                    ganttCont.addEventListener('scroll', () => { tablaCont.scrollTop = ganttCont.scrollTop; });
-                    tablaCont.addEventListener('scroll', () => { ganttCont.scrollTop = tablaCont.scrollTop; });
-                    window.scrollSincronizado = true;
-                }
-            }
-        };
-
-        window.iniciarResizePanelCronograma = function(e) {
-            e.preventDefault();
-            const panel = document.getElementById('panelTablaCronograma');
-            let startX = e.clientX;
-            let startWidth = panel.offsetWidth;
-            
-            document.body.classList.add('cursor-col-resize');
-            
-            function onMouseMove(e) {
-                let newWidth = startWidth + (e.clientX - startX);
-                if (newWidth < 300) newWidth = 300; 
-                if (newWidth > 800) newWidth = 800; // Límite máximo para no aplastar el gráfico
-                panel.style.width = newWidth + 'px';
-            }
-            
-            function onMouseUp(e) {
-                document.body.classList.remove('cursor-col-resize');
-                document.removeEventListener('mousemove', onMouseMove);
-                document.removeEventListener('mouseup', onMouseUp);
-            }
-            
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
-        };
-
-        // Recalcular WBS (1.1, 1.2, etc.) en base al nivel de jerarquía
-        window.recalcularWBSCronograma = function() {
-            let counters = [0];
-            let lastLevel = 0;
-            
-            window.tareasCronograma.forEach((t, i) => {
-                if (t.level === undefined) t.level = t.hasExplicitDates ? 1 : 0;
-                
-                if (t.level > lastLevel) {
-                    while(counters.length <= t.level) counters.push(1);
-                } else if (t.level < lastLevel) {
-                    counters = counters.slice(0, t.level + 1);
-                    counters[t.level]++;
-                } else {
-                    if (counters.length === 0) counters = [1];
-                    else counters[t.level]++;
-                }
-                
-                t.wbs = counters.join('.');
-                lastLevel = t.level;
-                
-                if (t.level > 0) {
-                    for(let k = i - 1; k >= 0; k--) {
-                        if (window.tareasCronograma[k].level < t.level) {
-                            t.parent = window.tareasCronograma[k].id;
-                            break;
-                        }
-                    }
-                } else {
-                    t.parent = null;
-                }
-                
-                t.isSummary = (t.level === 0 || window.tareasCronograma.some((child, idx) => idx > i && child.level > t.level && idx === i + 1));
-            });
-        };
-
-        // Eventos de Drag & Drop (Arreglados y estabilizados)
-        window.dragStartCrono = function(e, id) {
-            e.dataTransfer.setData("text/plain", id);
-            e.dataTransfer.effectAllowed = "move";
-            setTimeout(() => { if (e.target) e.target.style.opacity = "0.4"; }, 10);
-        };
-        
-        window.dropCrono = function(e, targetId) {
-            e.preventDefault();
-            const sourceId = e.dataTransfer.getData("text/plain");
-            if (sourceId === targetId || !sourceId) return;
-
-            const sourceIndex = window.tareasCronograma.findIndex(t => t.id === sourceId);
-            const targetIndex = window.tareasCronograma.findIndex(t => t.id === targetId);
-            
-            if (sourceIndex === -1 || targetIndex === -1) return;
-
-            const [movedItem] = window.tareasCronograma.splice(sourceIndex, 1);
-            const targetItem = window.tareasCronograma[targetIndex]; 
-            
-            if (targetItem && targetItem.isSummary) {
-                movedItem.level = targetItem.level + 1; // Si sueltas en carpeta, se vuelve hijo
-            } else if (targetItem) {
-                movedItem.level = targetItem.level; // Si sueltas en archivo, se vuelve hermano
-            }
-
-            window.tareasCronograma.splice(targetIndex, 0, movedItem);
-            window.recalcularWBSCronograma();
-            window.renderizarCronograma();
-        };
-
-        // Edición Manual WBS (Inteligencia de Reubicación)
-        window.cambiarWBSManual = function(id, newWbs) {
-            let t = window.tareasCronograma.find(x => x.id === id);
-            if (!t || !newWbs || newWbs.trim() === '') return window.renderizarCronograma();
-            
-            // 1. Guardamos exactamente el número que el usuario digitó (Ej: "1.1")
-            t.wbs = newWbs.trim();
-            
-            // 2. Reordenamos TODO el cronograma para que las tareas se coloquen en el orden correcto de WBS
-            window.tareasCronograma.sort((a, b) => {
-                let aParts = (a.wbs || '').split('.').map(Number);
-                let bParts = (b.wbs || '').split('.').map(Number);
-                for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
-                    let pA = aParts[i] || 0;
-                    let pB = bParts[i] || 0;
-                    if (pA !== pB) return pA - pB;
-                }
-                return 0;
-            });
-            
-            // 3. Recalculamos quién es padre de quién basados en la nueva estructura ingresada
-            window.recalcularWBSCronograma();
-            window.renderizarCronograma();
-        };
-
-        // Recalcular WBS basado ESTRICTAMENTE en la columna N° que edita el usuario
-        window.recalcularWBSCronograma = function() {
-            window.tareasCronograma.forEach((t, i) => {
-                // Si no tiene número escrito, se le asigna su posición en la fila por defecto
-                if (!t.wbs) t.wbs = String(i + 1);
-                
-                // A. El nivel de sangría lo determina la cantidad de puntos (Ej: "1.1" -> 1 punto -> Nivel 1)
-                t.level = Math.max(0, t.wbs.split('.').length - 1);
-                
-                // B. Detectamos si es "Padre" (Carpeta): Lo es si la fila que sigue inmediatamente abajo empieza con su código
-                t.isSummary = false;
-                if (i < window.tareasCronograma.length - 1) {
-                    let nextT = window.tareasCronograma[i + 1];
-                    if (nextT.wbs && nextT.wbs.startsWith(t.wbs + '.')) {
-                        t.isSummary = true;
-                    }
-                }
-                
-                // C. Vinculamos al Padre correcto en la memoria para que el Gráfico Gantt no falle
-                t.parent = null;
-                if (t.level > 0) {
-                    let parts = t.wbs.split('.');
-                    parts.pop(); 
-                    let parentWbs = parts.join('.'); // Ej: De "1.2.1" extrae "1.2"
-                    
-                    let parentTask = window.tareasCronograma.find(x => x.wbs === parentWbs);
-                    if (parentTask) {
-                        t.parent = parentTask.id;
-                    }
-                }
-            });
-        };
-
-        // Botones manuales de Sangría (Indent / Outdent)
-        window.cambiarNivelCrono = function(id, cambio) {
-            const t = window.tareasCronograma.find(x => x.id === id);
-            if (!t) return;
-            
-            // Calculamos el nuevo nivel deseado
-            let nuevoNivel = Math.max(0, (t.level || 0) + cambio);
-            if (nuevoNivel === t.level) return;
-
-            // Tratamos de encontrar al hermano o padre más cercano para darle sentido al nuevo número
-            let currentIndex = window.tareasCronograma.findIndex(x => x.id === id);
-            if (currentIndex > 0) {
-                let taskArriba = window.tareasCronograma[currentIndex - 1];
-                
-                if (cambio > 0) { // Indent (Meter) -> Se convierte en hijo del de arriba
-                    t.wbs = taskArriba.wbs + '.1'; 
-                } else { // Outdent (Sacar) -> Se alinea al nivel del abuelo
-                    let partesArriba = taskArriba.wbs.split('.');
-                    partesArriba.pop();
-                    let prefix = partesArriba.slice(0, nuevoNivel).join('.');
-                    t.wbs = prefix ? prefix + '.' + Date.now().toString().slice(-4) : Date.now().toString().slice(-4);
-                }
-            }
-            
-            window.cambiarWBSManual(t.id, t.wbs);
-        };
 
         window.renderizarCronograma = function() {
             const tbody = document.getElementById('tablaPartidasCronograma');
@@ -12579,86 +12601,68 @@ window.iniciarNuevoReporte = function() {
 
             window.tareasCronograma.forEach((t, index) => {
                 let isParent = t.isSummary;
-                let bgFila = isParent ? 'bg-slate-100 border-t-2 border-slate-300' : 'bg-white';
+                let bgFila = isParent ? 'bg-slate-100' : 'bg-white';
                 let paddingL = (t.level || 0) * 16 + 8;
-                let fontNombre = isParent ? 'font-black text-slate-900 uppercase' : 'font-semibold text-slate-700';
+                let fontNombre = isParent ? 'font-black text-slate-900 uppercase text-[10px]' : 'font-semibold text-slate-700 text-[10px]';
                 
                 let wbsVal = t.wbs || (index + 1);
 
+                // 🔥 ALINEACIÓN PERFECTA: Filas de exactamente 38px de alto, bloqueadas con CSS flex
                 tbody.innerHTML += `
-                    <div class="fila-cronograma flex items-center hover:bg-amber-50 transition group border-b border-slate-200 box-border ${bgFila}" 
-                         style="height: 38px; min-height: 38px; max-height: 38px;"
-                         draggable="true" 
-                         ondragstart="window.dragStartCrono(event, '${t.id}')" 
-                         ondragend="this.style.opacity='1'"
-                         ondragover="event.preventDefault(); this.classList.add('border-b-4', 'border-b-indigo-500')" 
-                         ondragleave="this.classList.remove('border-b-4', 'border-b-indigo-500')" 
-                         ondrop="event.preventDefault(); this.classList.remove('border-b-4', 'border-b-indigo-500'); window.dropCrono(event, '${t.id}')">
+                    <div class="flex items-center hover:bg-amber-50 transition group border-b border-slate-200 box-border ${bgFila}" 
+                         style="height: 38px; min-height: 38px; max-height: 38px; width: 100%; overflow: hidden;">
                         
-                        <!-- 🔥 COLUMNA N°: Input WBS 100% Funcional -->
-                        <div class="w-12 h-full flex items-center justify-center border-r border-slate-200 text-center font-bold text-slate-500 shrink-0 text-[10px] bg-slate-50">
-                            <input type="text" value="${wbsVal}" onchange="window.cambiarWBSManual('${t.id}', this.value)" onfocus="this.select()" class="w-full h-full bg-transparent text-center focus:outline-none focus:bg-white focus:ring-2 focus:ring-amber-500 cursor-text hover:bg-slate-200 transition-colors" title="Editar número para reubicar jerarquía">
+                        <div class="w-12 h-full flex items-center justify-center border-r border-slate-200 text-center font-bold text-slate-500 shrink-0 text-[10px] bg-slate-50 relative z-10 cursor-text">
+                            <input type="text" value="${wbsVal}" onchange="window.cambiarWBSManual('${t.id}', this.value)" onfocus="this.select()" class="w-full h-full bg-transparent text-center focus:outline-none focus:bg-white focus:ring-2 focus:ring-amber-500 hover:bg-slate-200 transition-colors" title="Editar número">
                         </div>
                         
-                        <!-- 🔥 COLUMNA PARTIDA: Se movieron los botones aquí (Borrar, Sangría) -->
-                        <div class="flex-1 px-2 h-full flex items-center border-r border-slate-200 ${fontNombre} relative" style="padding-left: ${paddingL}px;">
-                            <i class="fa-solid fa-grip-vertical text-slate-300 hover:text-indigo-500 cursor-grab mr-2"></i>
-                            ${isParent ? '<i class="fa-solid fa-folder-open text-amber-500 mr-2 shrink-0"></i>' : '<i class="fa-regular fa-file text-slate-400 mr-2 shrink-0"></i>'} 
-                            <span class="truncate flex-1" title="${t.name}">${t.name}</span>
+                        <div class="flex-1 px-3 h-full flex items-center border-r border-slate-200 truncate ${fontNombre} cursor-pointer hover:text-indigo-600 transition-colors relative" style="padding-left: ${paddingL}px;" title="Clic para editar: ${t.name}" onclick="window.abrirModalNuevaPartida('${t.id}')">
+                            <span class="truncate">${t.name}</span>
                             
-                            <!-- Botonera Mágica (Eliminar y Sangrías flotantes a la derecha) -->
-                            <div class="absolute right-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition bg-white/95 shadow-md rounded border border-slate-200 px-1 py-0.5">
-                                <button onclick="window.cambiarNivelCrono('${t.id}', -1)" class="w-6 h-6 bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 rounded transition flex items-center justify-center" title="Nivel Superior (Padre)"><i class="fa-solid fa-outdent text-[10px]"></i></button>
-                                <button onclick="window.cambiarNivelCrono('${t.id}', 1)" class="w-6 h-6 bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 rounded transition flex items-center justify-center" title="Nivel Inferior (Hijo)"><i class="fa-solid fa-indent text-[10px]"></i></button>
-                                <button onclick="window.eliminarPartidaCronograma('${t.id}')" class="w-6 h-6 bg-red-50 hover:bg-red-600 hover:text-white text-red-600 rounded transition flex items-center justify-center" title="Eliminar"><i class="fa-solid fa-trash-can text-[10px]"></i></button>
+                            <div class="absolute right-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition bg-white/95 shadow-md rounded border border-slate-200 px-1 py-0.5 z-20">
+                                <button onclick="event.stopPropagation(); window.cambiarNivelCrono('${t.id}', -1)" class="w-6 h-6 bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 rounded transition flex items-center justify-center"><i class="fa-solid fa-outdent text-[10px]"></i></button>
+                                <button onclick="event.stopPropagation(); window.cambiarNivelCrono('${t.id}', 1)" class="w-6 h-6 bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 rounded transition flex items-center justify-center"><i class="fa-solid fa-indent text-[10px]"></i></button>
+                                <button onclick="event.stopPropagation(); window.eliminarPartidaCronograma('${t.id}')" class="w-6 h-6 bg-red-50 hover:bg-red-600 hover:text-white text-red-600 rounded transition flex items-center justify-center"><i class="fa-solid fa-trash-can text-[10px]"></i></button>
                             </div>
                         </div>
                         
-                        <!-- COLUMNA INICIO -->
-                        <div class="w-20 h-full flex items-center justify-center border-r border-slate-200 text-center font-mono font-bold text-slate-700 text-[10px] shrink-0">
-                            ${formDate(t.start)}
-                        </div>
-                        
-                        <!-- COLUMNA FIN -->
-                        <div class="w-20 h-full flex items-center justify-center border-r border-slate-200 text-center font-mono font-bold text-slate-700 text-[10px] shrink-0">
-                            ${formDate(t.end)}
-                        </div>
-                        
-                        <!-- 🔥 COLUMNA PORCENTAJE (Limpia y Libre) -->
-                        <div class="w-12 h-full flex items-center justify-center text-center font-black ${isParent ? 'text-slate-400' : (t.progress === 100 ? 'text-emerald-600' : 'text-amber-600')} shrink-0">
-                            <span id="label_tabla_prog_${t.id}">${isParent ? '-' : t.progress + '%'}</span>
-                        </div>
+                        <div class="w-20 h-full flex items-center justify-center border-r border-slate-200 text-center font-mono font-bold text-slate-700 text-[10px] shrink-0">${formDate(t.start)}</div>
+                        <div class="w-20 h-full flex items-center justify-center border-r border-slate-200 text-center font-mono font-bold text-slate-700 text-[10px] shrink-0">${formDate(t.end)}</div>
+                        <div class="w-12 h-full flex items-center justify-center text-center font-black ${isParent ? 'text-slate-400' : (t.progress === 100 ? 'text-emerald-600' : 'text-amber-600')} shrink-0"><span id="label_tabla_prog_${t.id}">${isParent ? '-' : t.progress + '%'}</span></div>
                     </div>
                 `;
             });
 
             window.tareasCronograma.forEach(t => t.custom_class = t.isSummary ? 'bar-summary' : '');
+            
             document.getElementById('gantt_chart').innerHTML = '';
             
-            // 🔥 ALINEACIÓN PERFECTA Y GANTT ESTRICTAMENTE DE SOLO LECTURA
+            // 🔥 CÁLCULO DE ALTURA EXACTA (65px de cabecera + 38px por fila)
+            const requiredHeight = 65 + (window.tareasCronograma.length * 38) + 20;
+            document.getElementById('gantt_chart').style.height = requiredHeight + 'px';
+
             window.ganttInstancia = new Gantt("#gantt_chart", window.tareasCronograma, {
-                header_height: 50, 
+                header_height: 65,
                 column_width: 30, 
                 step: 24,
-                view_modes: ['Quarter Day', 'Half Day', 'Day', 'Week', 'Month'],
-                bar_height: 22,    
+                view_modes: ['Day', 'Week', 'Month'], 
+                // 🔥 ALINEACIÓN PERFECTA GANTT: bar_height (22) + padding (16) = 38px exactos.
+                bar_height: 22, 
                 bar_corner_radius: 6, 
                 arrow_curve: 5, 
                 padding: 16,       
-                view_mode: 'Day', 
+                view_mode: window.currentGanttView || 'Day', 
                 date_format: 'YYYY-MM-DD', 
                 language: 'es',
                 
-                // 🔥 BLOQUEO DE SEGURIDAD TOTAL: 
-                // Esto impide arrastrar barras, cambiar fechas, crear dependencias o cambiar progreso con el mouse.
                 readonly: true,
+                order_branch: false,
+                order_branch_free: false,
 
                 custom_popup_html: function(task) {
                     let t = window.tareasCronograma.find(x => x.id === task.id);
                     let estaAtrasado = (t.start > t.planStart) || (t.end > t.planEnd);
                     let badgeAtraso = t.isSummary ? '<span class="bg-slate-600 text-white text-[9px] px-1 rounded uppercase">Jerarquía</span>' : (estaAtrasado ? '<span class="bg-red-500 text-white text-[9px] px-1 rounded uppercase">Atraso</span>' : '<span class="bg-blue-500 text-white text-[9px] px-1 rounded uppercase">En Plan</span>');
-
-                    // Mostrar si la ejecución real aún no inicia
                     let textoReal = t.realStartInput ? `R: ${formDate(task.start)} ➔ ${formDate(task.end)}` : 'No iniciada';
 
                     return `<div class="p-3 bg-slate-800 text-white rounded-lg shadow-xl text-xs border border-slate-600 z-50">
@@ -12672,7 +12676,7 @@ window.iniciarNuevoReporte = function() {
                 }
             });
 
-            window.actualizarEtiquetasGantt();
+            if(typeof window.actualizarEtiquetasGantt === 'function') window.actualizarEtiquetasGantt();
         };
         
         // ==========================================
@@ -12896,13 +12900,12 @@ window.iniciarNuevoReporte = function() {
                 if(selectDep) selectDep.innerHTML += `<option value="${t.id}">${t.name}</option>`;
 
                 let isParent = t.isSummary;
-                let bgFila = isParent ? 'bg-slate-100 border-t-2 border-slate-300' : 'bg-white';
+                let bgFila = isParent ? 'bg-slate-100' : 'bg-white';
                 
                 // 🔥 SANGRIAS SEGÚN NIVEL DE WBS
                 let level = (t.wbs ? t.wbs.split('.').length : 1) - 1;
                 let marginLeft = level * 16; 
-                let fontNombre = isParent ? 'font-black text-slate-900 uppercase' : 'font-semibold text-slate-700';
-
+                let fontNombre = isParent ? 'font-black text-slate-900 uppercase text-[10px]' : 'font-semibold text-slate-700 text-[10px]';
                 // Usamos t.wbs si existe, sino index + 1
                 let wbsVal = t.wbs || (index + 1);
 
@@ -12917,8 +12920,8 @@ window.iniciarNuevoReporte = function() {
                         </div>
 
                         <!-- 🔥 COLUMNA PARTIDA: Aquí es donde das clic para abrir el modal -->
-                        <div class="flex-1 px-3 h-full flex items-center border-r border-slate-200 truncate ${fontNombre} cursor-pointer hover:text-indigo-600 transition-colors relative" style="padding-left: ${marginLeft + 12}px;" title="Clic para editar: ${t.name}" onclick="window.abrirModalNuevaPartida('${t.id}')">
-                            ${isParent ? '<i class="fa-solid fa-folder-open text-amber-500 mr-2"></i>' : '<i class="fa-regular fa-file text-slate-400 mr-2"></i>'} ${t.name}
+                        <div class="flex-1 px-3 h-full flex items-center border-r border-slate-200 truncate ${fontNombre} text-[10px] cursor-pointer hover:text-indigo-600 transition-colors relative" style="padding-left: ${marginLeft + 12}px;" title="Clic para editar: ${t.name}" onclick="window.abrirModalNuevaPartida('${t.id}')">
+                            <span class="truncate">${t.name}</span>
                             
                             <!-- Botonera Mágica (Sangrías flotantes) -->
                             <div class="absolute right-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition bg-white/95 shadow-md rounded border border-slate-200 px-1 py-0.5 z-20">
@@ -12950,7 +12953,13 @@ window.iniciarNuevoReporte = function() {
             window.tareasCronograma.forEach(t => t.custom_class = t.isSummary ? 'bar-summary' : '');
 
             // 2. Construir el Gráfico Gantt Estático
-            document.getElementById('gantt_chart').innerHTML = '';
+            const ganttSvg = document.getElementById('gantt_chart');
+            ganttSvg.innerHTML = '';
+            ganttSvg.style.height = '';
+
+            // Cada fila de la tabla (h-[43px]) y del Gantt (bar_height: 25 + padding: 18) mide 43px exactos
+            const wrapper = document.getElementById('gantt_chart_wrapper');
+            if (wrapper) wrapper.style.height = (window.tareasCronograma.length * 43) + 'px';
             
             window.ganttInstancia = new Gantt("#gantt_chart", window.tareasCronograma, {
                 header_height: 50, column_width: 30, step: 24,
@@ -12982,18 +12991,21 @@ window.iniciarNuevoReporte = function() {
                 }
             });
 
-            // 3. Reemplazar los textos de las barras por los porcentajes
+            // 3. Dibujar cabecera fija de fechas y reemplazar textos de barras por porcentajes
+            if (typeof window.actualizarHeaderFijoGantt === 'function') window.actualizarHeaderFijoGantt();
             window.actualizarEtiquetasGantt();
         };
 
         window.cambiarVistaGantt = function(modo) {
+            window.currentGanttView = modo;
             if(window.ganttInstancia) window.ganttInstancia.change_view_mode(modo);
-            const btns = document.getElementById('moduloProyectoCronograma').querySelectorAll('.absolute.top-2.right-2 button');
+            const btns = document.querySelectorAll('#selectorVistaGantt button');
             btns.forEach(b => {
-                b.className = "px-2 py-1 text-[10px] font-bold text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded transition cursor-pointer";
-                let map = { 'Quarter Day':'Horas', 'Day':'Días', 'Week':'Semanas', 'Month':'Meses' };
-                if (b.innerText === map[modo]) b.className = "px-2 py-1 text-[10px] font-bold bg-amber-100 text-amber-700 rounded shadow-sm cursor-pointer";
+                b.className = "px-3 py-1.5 text-[10px] font-bold text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition cursor-pointer";
+                let map = { 'Day':'Días', 'Week':'Semanas', 'Month':'Meses' };
+                if (b.innerText.trim() === map[modo]) b.className = "px-3 py-1.5 text-[10px] font-bold bg-amber-100 text-amber-700 rounded-lg shadow-sm cursor-pointer";
             });
+            if (typeof window.actualizarHeaderFijoGantt === 'function') window.actualizarHeaderFijoGantt();
             window.actualizarEtiquetasGantt();
         };
 
@@ -13032,13 +13044,31 @@ window.iniciarNuevoReporte = function() {
             document.getElementById('modalPartidaCronograma').classList.remove('hidden');
         };
 
+        // 🔥 MOTOR CLOUD: Guarda cualquier cambio estructural del cronograma a Firebase en vivo
+        window.sincronizarCronogramaNube = async function() {
+            let proyectoActivo = window.proyectoActualGlobal;
+            let selectSup = document.getElementById('proyectoSelect');
+            if (!proyectoActivo && selectSup && selectSup.value) proyectoActivo = selectSup.value;
+
+            if (!proyectoActivo) return; // No hay proyecto seleccionado
+
+            try {
+                const docRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoActivo}`);
+                // Guardamos el arreglo completo de tareas dentro del documento del proyecto
+                await window.fsSetDoc(docRef, { 
+                    cronograma: window.tareasCronograma 
+                }, { merge: true });
+            } catch (err) {
+                console.error("Error al sincronizar Cronograma con la nube:", err);
+            }
+        };
+
         window.guardarPartidaCronograma = function() {
             const id = document.getElementById('cronoPartidaId').value;
             const nombre = document.getElementById('cronoNombre').value.trim();
             const pIni = document.getElementById('cronoPlanInicio').value;
             const pFin = document.getElementById('cronoPlanFin').value;
             
-            // Fechas reales (Pueden estar en blanco)
             let rIni = document.getElementById('cronoInicio').value;
             let rFin = document.getElementById('cronoFin').value;
             
@@ -13049,36 +13079,24 @@ window.iniciarNuevoReporte = function() {
                 return alert("⚠️ Completa el Nombre de la partida y las fechas de Línea Base (Plan).");
             }
 
-            // Si las fechas reales están en blanco, las igualamos al plan para que el Gantt no colapse al dibujar.
-            // (Pero en el formulario seguirán viéndose vacías si no las llenaste)
             let startToSave = rIni ? rIni : pIni;
             let endToSave = rFin ? rFin : pFin;
 
             if (id) {
                 let t = window.tareasCronograma.find(x => x.id === id);
                 if(t) { 
-                    t.name = nombre; 
-                    t.planStart = pIni; 
-                    t.planEnd = pFin; 
-                    t.start = startToSave; 
-                    t.end = endToSave; 
-                    t.realStartInput = rIni; // Guardamos el estado real (vacío o lleno)
-                    t.realEndInput = rFin;
-                    t.progress = prog; 
-                    t.dependencies = dep; 
+                    t.name = nombre; t.planStart = pIni; t.planEnd = pFin; 
+                    t.start = startToSave; t.end = endToSave; 
+                    t.realStartInput = rIni; t.realEndInput = rFin;
+                    t.progress = prog; t.dependencies = dep; 
                 }
             } else {
                 window.tareasCronograma.push({
                     id: 'T_' + Date.now(), 
-                    name: nombre, 
-                    planStart: pIni, 
-                    planEnd: pFin, 
-                    start: startToSave, 
-                    end: endToSave, 
-                    realStartInput: rIni,
-                    realEndInput: rFin,
-                    progress: prog, 
-                    dependencies: dep
+                    name: nombre, planStart: pIni, planEnd: pFin, 
+                    start: startToSave, end: endToSave, 
+                    realStartInput: rIni, realEndInput: rFin,
+                    progress: prog, dependencies: dep
                 });
             }
             
@@ -13086,6 +13104,7 @@ window.iniciarNuevoReporte = function() {
             
             document.getElementById('modalPartidaCronograma').classList.add('hidden');
             window.renderizarCronograma();
+            window.sincronizarCronogramaNube(); // ☁️ Guarda el cambio en Firebase
         };
 
         window.eliminarPartidaCronograma = function(id) {
@@ -13093,6 +13112,30 @@ window.iniciarNuevoReporte = function() {
                 window.tareasCronograma.forEach(t => { if(t.dependencies === id) t.dependencies = ''; });
                 window.tareasCronograma = window.tareasCronograma.filter(x => x.id !== id);
                 window.renderizarCronograma();
+                window.sincronizarCronogramaNube(); // ☁️ Guarda la eliminación en Firebase
+            }
+        };
+        
+        // Parcheamos las funciones existentes para que también suban a la nube
+        const cronoManualOriginal = window.cambiarWBSManual;
+        window.cambiarWBSManual = function(id, newWbs) {
+            if (cronoManualOriginal) cronoManualOriginal(id, newWbs);
+            window.sincronizarCronogramaNube(); // ☁️ Guarda la nueva estructura de WBS
+        };
+
+        const procesarExcelOriginal = window.procesarExcelCronograma;
+        window.procesarExcelCronograma = function(e) {
+            if (procesarExcelOriginal) {
+                // Interceptamos la alerta de éxito original para disparar la subida a la nube
+                const originalAlert = window.alert;
+                window.alert = function(msg) {
+                    originalAlert(msg);
+                    if (msg.includes("¡Éxito!")) {
+                        window.sincronizarCronogramaNube(); // ☁️ Sube el Excel importado a Firebase
+                    }
+                };
+                procesarExcelOriginal(e);
+                setTimeout(() => { window.alert = originalAlert; }, 1000); // Restauramos la alerta
             }
         };
     </script>
