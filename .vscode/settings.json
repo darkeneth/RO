@@ -1,3 +1,8 @@
 {
-    "liveServer.settings.port": 5500
+    "liveServer.settings.port": 5500,
+    "editor.formatOnSave": false,
+    "editor.codeActionsOnSave": {},
+    "html.validate.scripts": false,
+    "html.validate.styles": false,
+    "files.autoSave": "off"
 }
