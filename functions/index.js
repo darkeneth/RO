@@ -7,7 +7,11 @@ const APIPERU_TOKEN = defineSecret("APIPERU_TOKEN");
 
 exports.consultarSunat = onRequest(
   {
-    cors: ["https://erp-controlcostos.web.app", "https://erp-controlcostos.firebaseapp.com"],
+    cors: [
+  "https://darkeneth.github.io",
+  "https://erp-controlcostos.web.app",
+  "https://erp-controlcostos.firebaseapp.com"
+],
     secrets: [APIPERU_TOKEN],
     maxInstances: 10
   },
