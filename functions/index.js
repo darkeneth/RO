@@ -8,10 +8,10 @@ const APIPERU_TOKEN = defineSecret("APIPERU_TOKEN");
 exports.consultarSunat = onRequest(
   {
     cors: [
-  "https://darkeneth.github.io",
-  "https://erp-controlcostos.web.app",
-  "https://erp-controlcostos.firebaseapp.com"
-],
+      "https://darkeneth.github.io",
+      "https://erp-controlcostos.web.app",
+      "https://erp-controlcostos.firebaseapp.com"
+    ],
     secrets: [APIPERU_TOKEN],
     maxInstances: 10
   },
@@ -56,16 +56,23 @@ exports.consultarSunat = onRequest(
         return res.status(404).json({ error: "RUC no encontrado" });
       }
 
-      const reps = Array.isArray(jsonRep?.data)
+      const listaCruda = Array.isArray(jsonRep?.data)
         ? jsonRep.data
-            .map(item => ({
-              nombre: String(item.nombre || item.nombres || "").replace(/\s+/g, " ").trim(),
-              cargo: String(item.cargo || "Apoderado").trim(),
-              tipoDoc: String(item.tipo_documento || item.tipoDocumento || "DNI").toUpperCase(),
-              numDoc: String(item.numero_documento || item.numeroDocumento || "").trim()
-            }))
-            .filter(x => x.nombre)
-        : [];
+        : (Array.isArray(jsonRep?.data?.representantes) ? jsonRep.data.representantes : []);
+
+      const reps = listaCruda
+        .map(item => ({
+          nombre: String(item.nombre || item.nombres || "").replace(/\s+/g, " ").trim(),
+          cargo: String(item.cargo || "Apoderado").trim(),
+          tipoDoc: String(item.tipo_de_documento || item.tipo_documento || item.tipoDocumento || "DNI").toUpperCase(),
+          numDoc: String(item.numero_de_documento || item.numero_documento || item.numeroDocumento || item.num_documento || "").trim()
+        }))
+        .filter(x => x.nombre);
+
+      reps.sort((a, b) => {
+        const score = (c) => /GERENTE GENERAL/i.test(c) ? 1 : (/APODERADO/i.test(c) ? 2 : 3);
+        return score(a.cargo) - score(b.cargo);
+      });
 
       return res.status(200).json({ data: jsonRuc.data, representantes: reps });
     } catch (err) {
