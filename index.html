@@ -6613,7 +6613,7 @@
 
                 // --- 1. CONFIGURACIÓN DE EL COMITENTE Y ENDPOINT SEGURO DE SUNAT (BACKEND) ---
                 // Cuando despliegues la Cloud Function, pega aquí su URL HTTPS:
-                window.SUNAT_PROXY_URL = window.SUNAT_PROXY_URL || '';
+                window.SUNAT_PROXY_URL = window.SUNAT_PROXY_URL || 'https://us-central1-erp-controlcostos.cloudfunctions.net/consultarSunat';
 
                 window.cargarConfigComitenteContrato = async function(proyecto) {
                     try {
