@@ -121,7 +121,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- SheetJS Library (Versión fija 0.20.3 para evitar riesgo de cadena de suministro) -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-    <!-- ExcelJS & FileSaver para exportación con diseño y estilos -->
+    <!-- JSZip, ExcelJS & FileSaver para exportación con diseño y estilos -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <!-- MOTOR CRONOGRAMA (Frappe Gantt) -->
@@ -5819,12 +5820,14 @@
                         if (oculto) {
                             sec.classList.remove('hidden');
                             lbl.textContent = '− Ocultar Conversión de Acero';
+                            if (window.adicionalEditandoActual) window.adicionalEditandoActual.aceroActivo = true;
                             if (window.adicionalEditandoActual.aceroSustento.length === 0) {
                                 window.agregarFilaAceroAdicional();
                             }
                         } else {
                             sec.classList.add('hidden');
                             lbl.textContent = '+ Activar Conversión de Acero (Opcional)';
+                            if (window.adicionalEditandoActual) window.adicionalEditandoActual.aceroActivo = false;
                         }
                     }
                 };
@@ -6337,24 +6340,39 @@
                     }
 
                     const wb = new ExcelJS.Workbook();
-                    const meta = window.configAdicionalesMeta || {};
-                    const borderThin = { top: { style: 'thin', color: { argb: 'FF404040' } }, bottom: { style: 'thin', color: { argb: 'FF404040' } }, left: { style: 'thin', color: { argb: 'FF404040' } }, right: { style: 'thin', color: { argb: 'FF404040' } } };
-                    const fillDark = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3B3838' } };
-                    const fillSubDark = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF595959' } };
-                    const fillOlive = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF548235' } };
-                    const fillZebra = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9FAFB' } };
-                    const fontWhiteBold = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
-                    const fontBase = { name: 'Calibri', size: 10, color: { argb: 'FF1E293B' } };
+                    wb.creator = 'ERP COSTOS — Oficina Técnica & Obra';
+                    wb.created = new Date();
 
-                    const drawBoxBorder = (sheet, startCol, startRow, endCol, endRow, style = 'medium') => {
+                    const meta = window.configAdicionalesMeta || {};
+                    const FONT_FAMILY = 'Arial Narrow';
+
+                    // Paleta oficial exacta (#545246 -> RGB 84, 82, 70)
+                    const fillHeader = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF545246' } };
+                    const fillSubHeader = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6E6B5C' } };
+                    const fillZebra = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFAF9F6' } };
+
+                    const borderThin = {
+                        top: { style: 'thin', color: { argb: 'FF545246' } },
+                        bottom: { style: 'thin', color: { argb: 'FF545246' } },
+                        left: { style: 'thin', color: { argb: 'FF545246' } },
+                        right: { style: 'thin', color: { argb: 'FF545246' } }
+                    };
+
+                    const fontBanner = { name: FONT_FAMILY, size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+                    const fontWhiteBold = { name: FONT_FAMILY, size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+                    const fontLabelBold = { name: FONT_FAMILY, size: 10, bold: true, color: { argb: 'FF1E293B' } };
+                    const fontBase = { name: FONT_FAMILY, size: 10, color: { argb: 'FF1E293B' } };
+                    const fontBaseBold = { name: FONT_FAMILY, size: 10, bold: true, color: { argb: 'FF0F172A' } };
+
+                    const drawBoxBorder = (sheet, startCol, startRow, endCol, endRow, style = 'thin') => {
                         for (let r = startRow; r <= endRow; r++) {
                             for (let c = startCol; c <= endCol; c++) {
                                 const cell = sheet.getCell(r, c);
                                 const b = { ...(cell.border || {}) };
-                                if (r === startRow) b.top = { style, color: { argb: 'FF1E293B' } };
-                                if (r === endRow) b.bottom = { style, color: { argb: 'FF1E293B' } };
-                                if (c === startCol) b.left = { style, color: { argb: 'FF1E293B' } };
-                                if (c === endCol) b.right = { style, color: { argb: 'FF1E293B' } };
+                                if (r === startRow) b.top = { style: 'thin', color: { argb: 'FF545246' } };
+                                if (r === endRow) b.bottom = { style: 'thin', color: { argb: 'FF545246' } };
+                                if (c === startCol) b.left = { style: 'thin', color: { argb: 'FF545246' } };
+                                if (c === endCol) b.right = { style: 'thin', color: { argb: 'FF545246' } };
                                 cell.border = b;
                             }
                         }
@@ -6377,253 +6395,52 @@
                         return '';
                     };
 
-                    // Pre-cargar Logos Izquierdo y Derecho si fueron configurados en Ajustes
                     const b64LogoIzq = await urlToBase64(meta.logoIzqUrl || '');
                     const b64LogoDer = await urlToBase64(meta.logoDerUrl || '');
                     const logoIzqId = b64LogoIzq ? wb.addImage({ base64: b64LogoIzq, extension: 'png' }) : null;
                     const logoDerId = b64LogoDer ? wb.addImage({ base64: b64LogoDer, extension: 'png' }) : null;
 
-                    // 1. HOJA RESUMEN (SIN CUADRÍCULAS Y TABLAS BIEN DIFERENCIADAS)
+                    let wsRes = null;
                     if (!soloId) {
-                        const wsRes = wb.addWorksheet('Resumen', { views: [{ showGridLines: false }] });
-                        wsRes.columns = [
-                            { width: 3 },  // A
-                            { width: 15 }, // B (ITEM / PROPIETARIO:)
-                            { width: 34 }, // C (CONCEPTO)
-                            { width: 52 }, // D (DESCRIPCIÓN)
-                            { width: 22 }, // E (CAUSAL)
-                            { width: 17 }, // F (SUBTOTAL S/)
-                            { width: 16 }, // G (SUBTOTAL $)
-                            { width: 15 }, // H (TIPO)
-                            { width: 4 },  // I (Separador)
-                            { width: 24 }, // J (CONCEPTO LATERAL)
-                            { width: 12 }, // K (CANTIDAD)
-                            { width: 17 }, // L (SUBTOTAL S/)
-                            { width: 16 }  // M (SUBTOTAL $)
-                        ];
-
-                        wsRes.getRow(2).height = 28;
-                        wsRes.mergeCells('B2:H2');
-                        const titRes = wsRes.getCell('B2');
-                        titRes.value = 'CUADRO RESUMEN';
-                        titRes.fill = fillDark;
-                        titRes.font = { name: 'Calibri', size: 13, bold: true, color: { argb: 'FFFFFFFF' } };
-                        titRes.alignment = { horizontal: 'center', vertical: 'middle' };
-
-                        [3, 4, 5].forEach(r => { wsRes.getRow(r).height = 20; });
-                        wsRes.getCell('B3').value = 'PROYECTO :'; wsRes.getCell('B3').font = { name: 'Calibri', size: 10, bold: true };
-                        wsRes.mergeCells('C3:E3'); wsRes.getCell('C3').value = meta.proyecto || window.obtenerProyectoActivoAdicionales(); wsRes.getCell('C3').font = fontBase;
-                        wsRes.getCell('F3').value = 'SUPERVISOR :'; wsRes.getCell('F3').font = { name: 'Calibri', size: 10, bold: true };
-                        wsRes.mergeCells('G3:H3'); wsRes.getCell('G3').value = meta.supervisor || ''; wsRes.getCell('G3').font = fontBase;
-
-                        wsRes.getCell('B4').value = 'PROPIETARIO :'; wsRes.getCell('B4').font = { name: 'Calibri', size: 10, bold: true };
-                        wsRes.mergeCells('C4:E4'); wsRes.getCell('C4').value = meta.propietario || ''; wsRes.getCell('C4').font = fontBase;
-                        wsRes.getCell('F4').value = 'FECHA :'; wsRes.getCell('F4').font = { name: 'Calibri', size: 10, bold: true };
-                        wsRes.mergeCells('G4:H4'); wsRes.getCell('G4').value = meta.fecha || ''; wsRes.getCell('G4').font = fontBase;
-
-                        wsRes.getCell('B5').value = 'CONTRATISTA :'; wsRes.getCell('B5').font = { name: 'Calibri', size: 10, bold: true };
-                        wsRes.mergeCells('C5:E5'); wsRes.getCell('C5').value = meta.contratista || ''; wsRes.getCell('C5').font = fontBase;
-                        wsRes.getCell('F5').value = 'TC (S/ x $) :'; wsRes.getCell('F5').font = { name: 'Calibri', size: 10, bold: true };
-                        wsRes.mergeCells('G5:H5'); wsRes.getCell('G5').value = Number(meta.tc) || 3.50; wsRes.getCell('G5').font = { name: 'Calibri', size: 10, bold: true }; wsRes.getCell('G5').alignment = { horizontal: 'left' };
-
-                        drawBoxBorder(wsRes, 2, 2, 8, 5, 'medium');
-
-                        // Encabezado tabla principal (B7:H8)
-                        wsRes.getRow(7).height = 20;
-                        wsRes.getRow(8).height = 20;
-                        wsRes.mergeCells('B7:B8'); wsRes.getCell('B7').value = 'ITEM';
-                        wsRes.mergeCells('C7:C8'); wsRes.getCell('C7').value = 'CONCEPTO';
-                        wsRes.mergeCells('D7:D8'); wsRes.getCell('D7').value = 'DESCRIPCIÓN';
-                        wsRes.mergeCells('E7:E8'); wsRes.getCell('E7').value = 'CONCEPTO';
-                        wsRes.mergeCells('F7:G7'); wsRes.getCell('F7').value = 'SUBTOTAL (INCL. IGV)';
-                        wsRes.getCell('F8').value = 'S/';
-                        wsRes.getCell('G8').value = '$';
-                        wsRes.mergeCells('H7:H8'); wsRes.getCell('H7').value = 'TIPO';
-
-                        for (let r = 7; r <= 8; r++) {
-                            for (let c = 2; c <= 8; c++) {
-                                const cell = wsRes.getCell(r, c);
-                                cell.fill = fillDark;
-                                cell.font = fontWhiteBold;
-                                cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-                                cell.border = borderThin;
-                            }
-                        }
-
-                        // Encabezado cuadro lateral por causal (J7:M8)
-                        wsRes.mergeCells('J7:J8'); wsRes.getCell('J7').value = 'CONCEPTO';
-                        wsRes.mergeCells('K7:K8'); wsRes.getCell('K7').value = 'CANTIDAD';
-                        wsRes.mergeCells('L7:M7'); wsRes.getCell('L7').value = 'SUBTOTAL (INCL. IGV)';
-                        wsRes.getCell('L8').value = 'S/';
-                        wsRes.getCell('M8').value = '$';
-                        for (let r = 7; r <= 8; r++) {
-                            for (let c = 10; c <= 13; c++) {
-                                const cell = wsRes.getCell(r, c);
-                                cell.fill = fillDark;
-                                cell.font = fontWhiteBold;
-                                cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-                                cell.border = borderThin;
-                            }
-                        }
-
-                        const causalMap = {};
-                        let rowIdx = 9;
-                        let sumTotS = 0, sumTotU = 0;
-
-                        listaExportar.forEach((item, idxItem) => {
-                            const m = window.calcularMontosAdicional(item);
-                            sumTotS += m.totS;
-                            sumTotU += m.totU;
-                            const cKey = item.causal || 'Modificación de planos';
-                            if (!causalMap[cKey]) causalMap[cKey] = { cant: 0, s: 0, u: 0 };
-                            causalMap[cKey].cant++;
-                            causalMap[cKey].s += m.totS;
-                            causalMap[cKey].u += m.totU;
-
-                            const descLen = String(item.descripcion || '').length;
-                            const titLen = String(item.titulo || '').length;
-                            wsRes.getRow(rowIdx).height = Math.max(34, Math.ceil(Math.max(descLen / 46, titLen / 28)) * 16);
-
-                            wsRes.getCell(rowIdx, 2).value = item.numero;
-                            wsRes.getCell(rowIdx, 2).font = { name: 'Calibri', size: 10, bold: true };
-                            wsRes.getCell(rowIdx, 2).alignment = { horizontal: 'center', vertical: 'middle' };
-
-                            wsRes.getCell(rowIdx, 3).value = item.titulo;
-                            wsRes.getCell(rowIdx, 3).font = { name: 'Calibri', size: 10, bold: true };
-                            wsRes.getCell(rowIdx, 3).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-
-                            wsRes.getCell(rowIdx, 4).value = item.descripcion;
-                            wsRes.getCell(rowIdx, 4).font = fontBase;
-                            wsRes.getCell(rowIdx, 4).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
-
-                            wsRes.getCell(rowIdx, 5).value = cKey;
-                            wsRes.getCell(rowIdx, 5).font = fontBase;
-                            wsRes.getCell(rowIdx, 5).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-
-                            wsRes.getCell(rowIdx, 6).value = m.totS;
-                            wsRes.getCell(rowIdx, 6).numFmt = '"S/"#,##0.00';
-                            wsRes.getCell(rowIdx, 6).font = { name: 'Calibri', size: 10, bold: true };
-                            wsRes.getCell(rowIdx, 6).alignment = { horizontal: 'right', vertical: 'middle' };
-
-                            wsRes.getCell(rowIdx, 7).value = m.totU;
-                            wsRes.getCell(rowIdx, 7).numFmt = '"$"#,##0.00';
-                            wsRes.getCell(rowIdx, 7).font = { name: 'Calibri', size: 10, bold: true };
-                            wsRes.getCell(rowIdx, 7).alignment = { horizontal: 'right', vertical: 'middle' };
-
-                            wsRes.getCell(rowIdx, 8).value = m.tipo;
-                            wsRes.getCell(rowIdx, 8).font = { name: 'Calibri', size: 10, bold: true, color: { argb: m.tipo === 'Deductivo' ? 'FF991B1B' : 'FF0F172A' } };
-                            wsRes.getCell(rowIdx, 8).alignment = { horizontal: 'center', vertical: 'middle' };
-
-                            for (let c = 2; c <= 7; c++) {
-                                wsRes.getCell(rowIdx, c).border = borderThin;
-                                if (idxItem % 2 === 1) wsRes.getCell(rowIdx, c).fill = fillZebra;
-                            }
-                            wsRes.getCell(rowIdx, 8).border = borderThin;
-                            wsRes.getCell(rowIdx, 8).fill = {
-                                type: 'pattern',
-                                pattern: 'solid',
-                                fgColor: { argb: m.tipo === 'Deductivo' ? 'FFFECACA' : 'FF9BC2E6' }
-                            };
-                            rowIdx++;
-                        });
-
-                        // Fila Total Resumen
-                        wsRes.getRow(rowIdx).height = 24;
-                        wsRes.mergeCells(`B${rowIdx}:E${rowIdx}`);
-                        wsRes.getCell(rowIdx, 2).value = 'TOTAL NETO ADICIONALES / DEDUCTIVOS';
-                        wsRes.getCell(rowIdx, 2).alignment = { horizontal: 'center', vertical: 'middle' };
-                        wsRes.getCell(rowIdx, 6).value = sumTotS;
-                        wsRes.getCell(rowIdx, 6).numFmt = '"S/"#,##0.00';
-                        wsRes.getCell(rowIdx, 6).alignment = { horizontal: 'right', vertical: 'middle' };
-                        wsRes.getCell(rowIdx, 7).value = sumTotU;
-                        wsRes.getCell(rowIdx, 7).numFmt = '"$"#,##0.00';
-                        wsRes.getCell(rowIdx, 7).alignment = { horizontal: 'right', vertical: 'middle' };
-                        for (let c = 2; c <= 8; c++) {
-                            const cell = wsRes.getCell(rowIdx, c);
-                            cell.fill = fillDark;
-                            cell.font = fontWhiteBold;
-                            cell.border = borderThin;
-                        }
-                        drawBoxBorder(wsRes, 2, 7, 8, rowIdx, 'medium');
-
-                        // Llenar cuadro lateral por causal
-                        let rCau = 9;
-                        Object.entries(causalMap).forEach(([k, v]) => {
-                            if (wsRes.getRow(rCau).height < 28) wsRes.getRow(rCau).height = 28;
-                            wsRes.getCell(rCau, 10).value = k;
-                            wsRes.getCell(rCau, 10).font = { name: 'Calibri', size: 10, bold: true };
-                            wsRes.getCell(rCau, 10).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-
-                            wsRes.getCell(rCau, 11).value = v.cant;
-                            wsRes.getCell(rCau, 11).font = fontBase;
-                            wsRes.getCell(rCau, 11).alignment = { horizontal: 'center', vertical: 'middle' };
-
-                            wsRes.getCell(rCau, 12).value = v.s;
-                            wsRes.getCell(rCau, 12).numFmt = '"S/"#,##0.00';
-                            wsRes.getCell(rCau, 12).font = fontBase;
-                            wsRes.getCell(rCau, 12).alignment = { horizontal: 'right', vertical: 'middle' };
-
-                            wsRes.getCell(rCau, 13).value = v.u;
-                            wsRes.getCell(rCau, 13).numFmt = '"$"#,##0.00';
-                            wsRes.getCell(rCau, 13).font = fontBase;
-                            wsRes.getCell(rCau, 13).alignment = { horizontal: 'right', vertical: 'middle' };
-
-                            for (let c = 10; c <= 13; c++) wsRes.getCell(rCau, c).border = borderThin;
-                            rCau++;
-                        });
-
-                        // Fila Total Lateral
-                        if (wsRes.getRow(rCau).height < 24) wsRes.getRow(rCau).height = 24;
-                        wsRes.getCell(rCau, 10).value = 'TOTAL';
-                        wsRes.getCell(rCau, 10).alignment = { horizontal: 'center', vertical: 'middle' };
-                        wsRes.getCell(rCau, 11).value = listaExportar.length;
-                        wsRes.getCell(rCau, 11).alignment = { horizontal: 'center', vertical: 'middle' };
-                        wsRes.getCell(rCau, 12).value = sumTotS;
-                        wsRes.getCell(rCau, 12).numFmt = '"S/"#,##0.00';
-                        wsRes.getCell(rCau, 12).alignment = { horizontal: 'right', vertical: 'middle' };
-                        wsRes.getCell(rCau, 13).value = sumTotU;
-                        wsRes.getCell(rCau, 13).numFmt = '"$"#,##0.00';
-                        wsRes.getCell(rCau, 13).alignment = { horizontal: 'right', vertical: 'middle' };
-                        for (let c = 10; c <= 13; c++) {
-                            const cell = wsRes.getCell(rCau, c);
-                            cell.fill = fillDark;
-                            cell.font = fontWhiteBold;
-                            cell.border = borderThin;
-                        }
-                        drawBoxBorder(wsRes, 10, 7, 13, rCau, 'medium');
+                        wsRes = wb.addWorksheet('Resumen', { views: [{ showGridLines: false }] });
                     }
 
-                    // 2. UNA PESTAÑA POR CADA ADICIONAL / DEDUCTIVO (1, 2, 3...)
+                    const refsTotalesPorId = {};
+
+                    // =========================================================================
+                    // PESTAÑAS INDIVIDUALES DE ADICIONALES / DEDUCTIVOS (CON FÓRMULAS EXCEL)
+                    // =========================================================================
                     for (const item of listaExportar) {
                         const m = window.calcularMontosAdicional(item);
-                        const sheetName = String(item.numero || '1').slice(0, 31);
+                        const sheetName = String(item.numero || '1').replace(/[\\/?*:[\]]/g, '').slice(0, 31) || '1';
                         const ws = wb.addWorksheet(sheetName, { views: [{ showGridLines: false }] });
+
                         ws.columns = [
                             { width: 3 },  // A
-                            { width: 16 }, // B (ITEM / ETIQUETAS)
-                            { width: 48 }, // C (DESCRIPCIÓN)
-                            { width: 12 }, // D (UNIDAD)
-                            { width: 13 }, // E (METRADO)
-                            { width: 15 }, // F (PRECIO S/)
-                            { width: 16 }, // G (PARCIAL S/)
-                            { width: 14 }, // H (PRECIO $)
-                            { width: 16 }, // I (PARCIAL $)
-                            { width: 14 }, // J
-                            { width: 14 }, // K
+                            { width: 18 }, // B (ITEM / ETIQUETAS)
+                            { width: 50 }, // C (DESCRIPCIÓN)
+                            { width: 13 }, // D (UNIDAD)
+                            { width: 14 }, // E (METRADO)
+                            { width: 18 }, // F (PRECIO S/ / ESPECIALIDAD :)
+                            { width: 17 }, // G (PARCIAL S/)
+                            { width: 15 }, // H (PRECIO $)
+                            { width: 17 }, // I (PARCIAL $)
+                            { width: 15 }, // J
+                            { width: 15 }, // K
                             { width: 14 }, // L
-                            { width: 14 }, // M
+                            { width: 15 }, // M
                             { width: 15 }, // N
-                            { width: 16 }, // O
+                            { width: 17 }, // O
                             { width: 12 }  // P
                         ];
 
-                        // Banner Superior con Logos Izquierdo y Derecho (B2:I2)
+                        // Banner Superior con Logos (B2:I2)
                         ws.getRow(2).height = 38;
                         ws.mergeCells('B2:I2');
                         const banner = ws.getCell('B2');
                         banner.value = `${m.tipo.toUpperCase()} N° ${item.numero}`;
-                        banner.fill = fillDark;
-                        banner.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+                        banner.fill = fillHeader;
+                        banner.font = fontBanner;
                         banner.alignment = { horizontal: 'center', vertical: 'middle' };
 
                         if (logoIzqId !== null) {
@@ -6641,86 +6458,90 @@
                             });
                         }
 
-                        // Fila 3: CONCEPTO (Franja gris oscura con texto blanco)
-                        ws.getRow(3).height = 22;
+                        // Fila 3: CONCEPTO
+                        ws.getRow(3).height = 24;
                         ws.getCell('B3').value = 'CONCEPTO :';
-                        ws.getCell('B3').fill = fillSubDark;
+                        ws.getCell('B3').fill = fillSubHeader;
                         ws.getCell('B3').font = fontWhiteBold;
-                        ws.getCell('B3').alignment = { vertical: 'middle' };
+                        ws.getCell('B3').alignment = { vertical: 'middle', indent: 1 };
 
                         ws.mergeCells('C3:I3');
-                        ws.getCell('C3').value = item.titulo;
-                        ws.getCell('C3').fill = fillSubDark;
+                        ws.getCell('C3').value = item.titulo || '';
+                        ws.getCell('C3').fill = fillSubHeader;
                         ws.getCell('C3').font = fontWhiteBold;
                         ws.getCell('C3').alignment = { vertical: 'middle', wrapText: true };
 
-                        // Filas 4 a 6: Metadatos de Obra
-                        [4, 5, 6].forEach(r => { ws.getRow(r).height = 19; });
-                        ws.getCell('B4').value = 'PROYECTO :'; ws.getCell('B4').font = { name: 'Calibri', size: 10, bold: true };
-                        ws.mergeCells('C4:E4'); ws.getCell('C4').value = meta.proyecto || window.obtenerProyectoActivoAdicionales(); ws.getCell('C4').font = fontBase;
-                        ws.getCell('F4').value = 'SUPERVISOR :'; ws.getCell('F4').font = { name: 'Calibri', size: 10, bold: true };
-                        ws.mergeCells('G4:I4'); ws.getCell('G4').value = meta.supervisor || ''; ws.getCell('G4').font = fontBase;
+                        // Filas 4 a 6: Metadatos
+                        [4, 5, 6].forEach(r => { ws.getRow(r).height = 20; });
+                        ws.getCell('B4').value = 'PROYECTO :'; ws.getCell('B4').font = fontLabelBold; ws.getCell('B4').alignment = { vertical: 'middle' };
+                        ws.mergeCells('C4:E4'); ws.getCell('C4').value = meta.proyecto || window.obtenerProyectoActivoAdicionales(); ws.getCell('C4').font = fontBase; ws.getCell('C4').alignment = { vertical: 'middle' };
+                        ws.getCell('F4').value = 'SUPERVISOR :'; ws.getCell('F4').font = fontLabelBold; ws.getCell('F4').alignment = { vertical: 'middle' };
+                        ws.mergeCells('G4:I4'); ws.getCell('G4').value = meta.supervisor || ''; ws.getCell('G4').font = fontBase; ws.getCell('G4').alignment = { vertical: 'middle' };
 
-                        ws.getCell('B5').value = 'PROPIETARIO :'; ws.getCell('B5').font = { name: 'Calibri', size: 10, bold: true };
-                        ws.mergeCells('C5:E5'); ws.getCell('C5').value = meta.propietario || ''; ws.getCell('C5').font = fontBase;
-                        ws.getCell('F5').value = 'FECHA :'; ws.getCell('F5').font = { name: 'Calibri', size: 10, bold: true };
-                        ws.mergeCells('G5:I5'); ws.getCell('G5').value = item.fecha || ''; ws.getCell('G5').font = fontBase;
+                        ws.getCell('B5').value = 'PROPIETARIO :'; ws.getCell('B5').font = fontLabelBold; ws.getCell('B5').alignment = { vertical: 'middle' };
+                        ws.mergeCells('C5:E5'); ws.getCell('C5').value = meta.propietario || ''; ws.getCell('C5').font = fontBase; ws.getCell('C5').alignment = { vertical: 'middle' };
+                        ws.getCell('F5').value = 'FECHA :'; ws.getCell('F5').font = fontLabelBold; ws.getCell('F5').alignment = { vertical: 'middle' };
+                        ws.mergeCells('G5:I5'); ws.getCell('G5').value = item.fecha || ''; ws.getCell('G5').font = fontBase; ws.getCell('G5').alignment = { vertical: 'middle' };
 
-                        ws.getCell('B6').value = 'CONTRATISTA :'; ws.getCell('B6').font = { name: 'Calibri', size: 10, bold: true };
-                        ws.mergeCells('C6:E6'); ws.getCell('C6').value = meta.contratista || ''; ws.getCell('C6').font = fontBase;
-                        ws.getCell('F6').value = 'ESPECIALIDAD :'; ws.getCell('F6').font = { name: 'Calibri', size: 10, bold: true };
-                        ws.mergeCells('G6:I6'); ws.getCell('G6').value = item.especialidad || ''; ws.getCell('G6').font = fontBase;
+                        ws.getCell('B6').value = 'CONTRATISTA :'; ws.getCell('B6').font = fontLabelBold; ws.getCell('B6').alignment = { vertical: 'middle' };
+                        ws.mergeCells('C6:E6'); ws.getCell('C6').value = meta.contratista || ''; ws.getCell('C6').font = fontBase; ws.getCell('C6').alignment = { vertical: 'middle' };
+                        ws.getCell('F6').value = 'ESPECIALIDAD :'; ws.getCell('F6').font = fontLabelBold; ws.getCell('F6').alignment = { vertical: 'middle' };
+                        ws.mergeCells('G6:I6'); ws.getCell('G6').value = item.especialidad || ''; ws.getCell('G6').font = fontBase; ws.getCell('G6').alignment = { vertical: 'middle' };
 
                         drawBoxBorder(ws, 2, 2, 9, 6, 'medium');
 
                         // Sección DESGLOSE
-                        ws.getRow(8).height = 20;
+                        ws.getRow(8).height = 22;
                         ws.getCell('B8').value = 'DESGLOSE:';
-                        ws.getCell('B8').font = { name: 'Calibri', size: 10, bold: true };
+                        ws.getCell('B8').font = fontLabelBold;
+                        ws.getCell('B8').alignment = { vertical: 'middle' };
 
-                        ws.getRow(9).height = 22;
+                        ws.getRow(9).height = 24;
                         const headersDesg = ['ITEM', 'DESCRIPCIÓN', 'UNIDAD', 'METRADO', 'PRECIO', 'PARCIAL', 'PRECIO ($)', 'PARCIAL ($)'];
                         headersDesg.forEach((h, i) => {
                             const cell = ws.getCell(9, i + 2);
                             cell.value = h;
-                            cell.fill = fillDark;
+                            cell.fill = fillHeader;
                             cell.font = fontWhiteBold;
                             cell.alignment = { horizontal: 'center', vertical: 'middle' };
                             cell.border = borderThin;
                         });
 
-                        // Fila 10: Capítulo 01 | Título del Adicional
-                        ws.getRow(10).height = 20;
+                        // Fila 10: Capítulo 01
+                        ws.getRow(10).height = 22;
                         ws.getCell(10, 2).value = '01';
-                        ws.getCell(10, 2).fill = fillSubDark;
+                        ws.getCell(10, 2).fill = fillSubHeader;
                         ws.getCell(10, 2).font = fontWhiteBold;
-                        ws.getCell(10, 2).alignment = { horizontal: 'left', vertical: 'middle' };
+                        ws.getCell(10, 2).alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
                         ws.getCell(10, 2).border = borderThin;
 
                         ws.mergeCells('C10:I10');
-                        ws.getCell(10, 3).value = item.titulo;
-                        ws.getCell(10, 3).fill = fillSubDark;
+                        ws.getCell(10, 3).value = item.titulo || '';
+                        ws.getCell(10, 3).fill = fillSubHeader;
                         ws.getCell(10, 3).font = fontWhiteBold;
-                        ws.getCell(10, 3).alignment = { horizontal: 'left', vertical: 'middle' };
+                        ws.getCell(10, 3).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
                         for (let c = 3; c <= 9; c++) ws.getCell(10, c).border = borderThin;
 
-                        let r = 11;
-                        (item.partidas || []).forEach((p, idx) => {
+                        const partidasArr = Array.isArray(item.partidas) ? item.partidas : [];
+                        const rDesgIni = 11;
+                        let r = rDesgIni;
+
+                        partidasArr.forEach((p, idx) => {
                             const met = parseFloat(p.metrado) || 0;
                             const pS = parseFloat(p.precioS) || 0;
                             const pU = parseFloat(p.precioU) || 0;
                             const dLen = String(p.descripcion || '').length;
-                            ws.getRow(r).height = Math.max(20, Math.ceil(dLen / 46) * 15);
+                            ws.getRow(r).height = Math.max(22, Math.ceil(dLen / 46) * 16);
 
                             ws.getCell(r, 2).value = `01.${String(idx + 1).padStart(2, '0')}`;
                             ws.getCell(r, 2).font = fontBase;
-                            ws.getCell(r, 2).alignment = { horizontal: 'left', vertical: 'middle' };
+                            ws.getCell(r, 2).alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
 
-                            ws.getCell(r, 3).value = p.descripcion;
+                            ws.getCell(r, 3).value = p.descripcion || '';
                             ws.getCell(r, 3).font = fontBase;
                             ws.getCell(r, 3).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
 
-                            ws.getCell(r, 4).value = p.unidad;
+                            ws.getCell(r, 4).value = p.unidad || '';
                             ws.getCell(r, 4).font = fontBase;
                             ws.getCell(r, 4).alignment = { horizontal: 'center', vertical: 'middle' };
 
@@ -6734,9 +6555,9 @@
                             ws.getCell(r, 6).font = fontBase;
                             ws.getCell(r, 6).alignment = { horizontal: 'right', vertical: 'middle' };
 
-                            ws.getCell(r, 7).value = met * pS;
+                            ws.getCell(r, 7).value = { formula: `ROUND(E${r}*F${r},2)`, result: Math.round(met * pS * 100) / 100 };
                             ws.getCell(r, 7).numFmt = '"S/"#,##0.00';
-                            ws.getCell(r, 7).font = fontBase;
+                            ws.getCell(r, 7).font = fontBaseBold;
                             ws.getCell(r, 7).alignment = { horizontal: 'right', vertical: 'middle' };
 
                             ws.getCell(r, 8).value = pU;
@@ -6744,238 +6565,407 @@
                             ws.getCell(r, 8).font = fontBase;
                             ws.getCell(r, 8).alignment = { horizontal: 'right', vertical: 'middle' };
 
-                            ws.getCell(r, 9).value = met * pU;
+                            ws.getCell(r, 9).value = { formula: `ROUND(E${r}*H${r},2)`, result: Math.round(met * pU * 100) / 100 };
                             ws.getCell(r, 9).numFmt = '"$"#,##0.00';
-                            ws.getCell(r, 9).font = fontBase;
+                            ws.getCell(r, 9).font = fontBaseBold;
                             ws.getCell(r, 9).alignment = { horizontal: 'right', vertical: 'middle' };
 
-                            for (let c = 2; c <= 9; c++) ws.getCell(r, c).border = borderThin;
+                            const esPrimeraFila = (idx === 0);
+                            const esUltimaFila = (idx === partidasArr.length - 1);
+                            for (let c = 2; c <= 9; c++) {
+                                ws.getCell(r, c).border = {
+                                    top: { style: esPrimeraFila ? 'thin' : 'dotted', color: { argb: 'FF545246' } },
+                                    bottom: { style: esUltimaFila ? 'thin' : 'dotted', color: { argb: 'FF545246' } },
+                                    left: { style: 'thin', color: { argb: 'FF545246' } },
+                                    right: { style: 'thin', color: { argb: 'FF545246' } }
+                                };
+                            }
                             r++;
                         });
 
-                        drawBoxBorder(ws, 2, 9, 9, Math.max(10, r - 1), 'medium');
+                        const rDesgFin = Math.max(rDesgIni, r - 1);
+                        drawBoxBorder(ws, 2, 9, 9, rDesgFin, 'medium');
 
-                        // Pie de totales de la ficha (C:I)
+                        // Pie Económico con Fórmulas (Costo Directo, GG, Utilidad, Subtotal, IGV 18%, Total)
                         const rowPieInicio = r;
-                        const resumenPie = [
-                            ['COSTO DIRECTO', m.cdS, m.cdU, true],
-                            ['GASTOS GENERALES', m.ggS, m.ggU, false],
-                            ['UTILIDAD', m.utilS, m.utilU, false],
-                            ['SUBTOTAL', m.subS, m.subU, true],
-                            ['IGV (18%)', m.igvS, m.igvU, false],
-                            ['TOTAL', m.totS, m.totU, true]
+                        const rCD = r;
+                        const rGG = r + 1;
+                        const rUtil = r + 2;
+                        const rSub = r + 3;
+                        const rIgv = r + 4;
+                        const rTot = r + 5;
+
+                        const ggPctVal = (item.ggActivo && item.ggModo !== 'monto') ? ((Number(item.ggValor) || 0) / 100) : null;
+                        const utilPctVal = (item.utilActivo && item.utilModo !== 'monto') ? ((Number(item.utilValor) || 0) / 100) : null;
+                        const igvActivo = item.igvActivo !== false;
+
+                        const filasPieDef = [
+                            {
+                                row: rCD, lbl: 'COSTO DIRECTO', oscuro: true, pct: null,
+                                valS: partidasArr.length > 0 ? { formula: `SUM(G${rDesgIni}:G${rDesgFin})`, result: m.cdS } : 0,
+                                valU: partidasArr.length > 0 ? { formula: `SUM(I${rDesgIni}:I${rDesgFin})`, result: m.cdU } : 0
+                            },
+                            {
+                                row: rGG, lbl: 'GASTOS GENERALES', oscuro: false, pct: ggPctVal,
+                                valS: !item.ggActivo ? 0 : (item.ggModo === 'monto' ? m.ggS : { formula: `ROUND(G${rCD}*F${rGG},2)`, result: m.ggS }),
+                                valU: !item.ggActivo ? 0 : (item.ggModo === 'monto' ? 0 : { formula: `ROUND(I${rCD}*F${rGG},2)`, result: m.ggU })
+                            },
+                            {
+                                row: rUtil, lbl: 'UTILIDAD', oscuro: false, pct: utilPctVal,
+                                valS: !item.utilActivo ? 0 : (item.utilModo === 'monto' ? m.utilS : { formula: `ROUND(G${rCD}*F${rUtil},2)`, result: m.utilS }),
+                                valU: !item.utilActivo ? 0 : (item.utilModo === 'monto' ? 0 : { formula: `ROUND(I${rCD}*F${rUtil},2)`, result: m.utilU })
+                            },
+                            {
+                                row: rSub, lbl: 'SUBTOTAL', oscuro: true, pct: null,
+                                valS: { formula: `SUM(G${rCD}:G${rUtil})`, result: m.subS },
+                                valU: { formula: `SUM(I${rCD}:I${rUtil})`, result: m.subU }
+                            },
+                            {
+                                row: rIgv, lbl: 'IGV (18%)', oscuro: false, pct: igvActivo ? 0.18 : 0,
+                                valS: igvActivo ? { formula: `ROUND(G${rSub}*F${rIgv},2)`, result: m.igvS } : 0,
+                                valU: igvActivo ? { formula: `ROUND(I${rSub}*F${rIgv},2)`, result: m.igvU } : 0
+                            },
+                            {
+                                row: rTot, lbl: 'TOTAL', oscuro: true, pct: null,
+                                valS: { formula: `G${rSub}+G${rIgv}`, result: m.totS },
+                                valU: { formula: `I${rSub}+I${rIgv}`, result: m.totU }
+                            }
                         ];
-                        resumenPie.forEach(([lbl, vS, vU, oscuro]) => {
-                            ws.getRow(r).height = 20;
-                            ws.mergeCells(`C${r}:F${r}`);
-                            const cLbl = ws.getCell(r, 3);
-                            cLbl.value = lbl;
+
+                        filasPieDef.forEach(fp => {
+                            ws.getRow(fp.row).height = 21;
+                            if (fp.pct !== null) {
+                                ws.mergeCells(`C${fp.row}:E${fp.row}`);
+                                const cPct = ws.getCell(fp.row, 6);
+                                cPct.value = fp.pct;
+                                cPct.numFmt = '0.00%';
+                                cPct.alignment = { horizontal: 'center', vertical: 'middle' };
+                            } else {
+                                ws.mergeCells(`C${fp.row}:F${fp.row}`);
+                            }
+
+                            const cLbl = ws.getCell(fp.row, 3);
+                            cLbl.value = fp.lbl;
                             cLbl.alignment = { horizontal: 'center', vertical: 'middle' };
 
-                            const cS = ws.getCell(r, 7);
-                            cS.value = vS;
+                            const cS = ws.getCell(fp.row, 7);
+                            cS.value = fp.valS;
                             cS.numFmt = '"S/"#,##0.00';
                             cS.alignment = { horizontal: 'right', vertical: 'middle' };
 
-                            const cU = ws.getCell(r, 9);
-                            cU.value = vU;
+                            const cU = ws.getCell(fp.row, 9);
+                            cU.value = fp.valU;
                             cU.numFmt = '"$"#,##0.00';
                             cU.alignment = { horizontal: 'right', vertical: 'middle' };
 
                             for (let c = 3; c <= 9; c++) {
-                                const cell = ws.getCell(r, c);
+                                const cell = ws.getCell(fp.row, c);
                                 cell.border = borderThin;
-                                cell.font = oscuro ? fontWhiteBold : { name: 'Calibri', size: 10, bold: true };
-                                if (oscuro) cell.fill = fillDark;
+                                cell.font = fp.oscuro ? fontWhiteBold : fontBaseBold;
+                                if (fp.oscuro) cell.fill = fillHeader;
                             }
-                            r++;
                         });
+
+                        refsTotalesPorId[item.id] = { sheetName, rTot };
+                        r = rTot + 1;
                         drawBoxBorder(ws, 3, rowPieInicio, 9, r - 1, 'medium');
 
-                        // Sustento de Metrado si tiene filas
+                        // Sustento de Metrado con Fórmulas + Enlace al Desglose
                         if (Array.isArray(item.metradosSustento) && item.metradosSustento.length > 0) {
                             r += 1;
-                            ws.getRow(r).height = 20;
+                            ws.getRow(r).height = 22;
                             ws.getCell(r, 2).value = 'METRADO:';
-                            ws.getCell(r, 2).font = { name: 'Calibri', size: 10, bold: true };
+                            ws.getCell(r, 2).font = fontLabelBold;
+                            ws.getCell(r, 2).alignment = { vertical: 'middle' };
                             r++;
 
                             const rowMetIni = r;
-                            ws.getRow(r).height = 22;
+                            ws.getRow(r).height = 28;
                             ['DESCRIPCIÓN / CORTE', 'LONGITUD / BASE (m)', 'ALTO / ALTURA (m)', 'ANCHO / ESPESOR (m)', 'VECES', 'UNIDAD', 'TOTAL METRADO'].forEach((h, i) => {
                                 const c = ws.getCell(r, i + 3);
                                 c.value = h;
-                                c.fill = fillDark;
+                                c.fill = fillHeader;
                                 c.font = fontWhiteBold;
                                 c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
                                 c.border = borderThin;
                             });
                             r++;
 
+                            const filasMetPorPartida = {};
                             item.metradosSustento.forEach(ms => {
-                                ws.getRow(r).height = 20;
+                                ws.getRow(r).height = 21;
+                                const lVal = Number(ms.longitud ?? ms.area) || 0;
+                                const hVal = Number(ms.alto) || 0;
+                                const aVal = Number(ms.ancho) || 0;
+                                const vVal = (ms.veces === '' || ms.veces === null || ms.veces === undefined) ? 1 : (Number(ms.veces) || 1);
+                                const totVal = Number(ms.total) || 0;
+
                                 ws.getCell(r, 3).value = ms.descripcion || '';
-                                ws.getCell(r, 3).font = { name: 'Calibri', size: 10, bold: true };
-                                ws.getCell(r, 4).value = Number(ms.longitud ?? ms.area) || 0;
-                                ws.getCell(r, 4).numFmt = '#,##0.000';
-                                ws.getCell(r, 5).value = Number(ms.alto) || 0;
-                                ws.getCell(r, 5).numFmt = '#,##0.000';
-                                ws.getCell(r, 6).value = Number(ms.ancho) || 0;
-                                ws.getCell(r, 6).numFmt = '#,##0.000';
-                                ws.getCell(r, 7).value = Number(ms.veces) || 1;
+                                ws.getCell(r, 3).font = fontBaseBold;
+                                ws.getCell(r, 3).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+
+                                ws.getCell(r, 4).value = lVal; ws.getCell(r, 4).numFmt = '#,##0.000'; ws.getCell(r, 4).font = fontBase;
+                                ws.getCell(r, 5).value = hVal; ws.getCell(r, 5).numFmt = '#,##0.000'; ws.getCell(r, 5).font = fontBase;
+                                ws.getCell(r, 6).value = aVal; ws.getCell(r, 6).numFmt = '#,##0.000'; ws.getCell(r, 6).font = fontBase;
+                                ws.getCell(r, 7).value = vVal; ws.getCell(r, 7).numFmt = '#,##0.00'; ws.getCell(r, 7).font = fontBase;
                                 ws.getCell(r, 8).value = ms.unidadDeducida || '';
+                                ws.getCell(r, 8).font = fontBaseBold;
                                 ws.getCell(r, 8).alignment = { horizontal: 'center', vertical: 'middle' };
-                                ws.getCell(r, 9).value = Number(ms.total) || 0;
+
+                                ws.getCell(r, 9).value = {
+                                    formula: `IF(AND(D${r}=0,E${r}=0,F${r}=0),0,ROUND(IF(D${r}<>0,D${r},1)*IF(E${r}<>0,E${r},1)*IF(F${r}<>0,F${r},1)*G${r},3))`,
+                                    result: totVal
+                                };
                                 ws.getCell(r, 9).numFmt = '#,##0.000';
-                                ws.getCell(r, 9).font = { name: 'Calibri', size: 10, bold: true };
+                                ws.getCell(r, 9).font = fontBaseBold;
+                                ws.getCell(r, 9).alignment = { horizontal: 'right', vertical: 'middle' };
+
                                 for (let c = 3; c <= 9; c++) ws.getCell(r, c).border = borderThin;
+
+                                const pDest = Number(ms.partidaDestinoIdx);
+                                if (pDest >= 0 && partidasArr[pDest]) {
+                                    if (!filasMetPorPartida[pDest]) filasMetPorPartida[pDest] = [];
+                                    filasMetPorPartida[pDest].push({ row: r, val: totVal });
+                                }
                                 r++;
                             });
                             drawBoxBorder(ws, 3, rowMetIni, 9, r - 1, 'medium');
+
+                            Object.entries(filasMetPorPartida).forEach(([pIdxStr, refs]) => {
+                                const pIdx = Number(pIdxStr);
+                                const rowPartida = rDesgIni + pIdx;
+                                const sumaMet = Math.round(refs.reduce((s, x) => s + x.val, 0) * 100) / 100;
+                                const metActual = parseFloat(partidasArr[pIdx]?.metrado) || 0;
+                                if (Math.abs(sumaMet - metActual) < 0.02) {
+                                    const listaCeldas = refs.map(x => `I${x.row}`).join(',');
+                                    ws.getCell(rowPartida, 5).value = {
+                                        formula: `ROUND(SUM(${listaCeldas}),2)`,
+                                        result: metActual
+                                    };
+                                }
+                            });
                         }
 
-                        // Conversión de Acero (Cuadro de Pesos Lineales + Planilla de Acero)
-                        if (Array.isArray(item.aceroSustento) && item.aceroSustento.length > 0) {
+                        // Conversión de Acero (Cuadro de Pesos Lineales + Planilla con Fórmulas HLOOKUP)
+                        const secAceroDomVisible = (window.adicionalEditandoActual?.id === item.id)
+                            && !document.getElementById('seccionAceroAdicional')?.classList.contains('hidden');
+                        const tieneAcero = (Array.isArray(item.aceroSustento) && item.aceroSustento.length > 0)
+                            || Boolean(item.aceroActivo)
+                            || secAceroDomVisible;
+
+                        if (tieneAcero) {
                             r += 1;
-                            // Cuadro de Referencia de Pesos Lineales
-                            const rowRefIni = r;
                             ws.getRow(r).height = 22;
+                            ws.getCell(r, 2).value = 'SUSTENTO DE ACERO:';
+                            ws.getCell(r, 2).font = fontLabelBold;
+                            ws.getCell(r, 2).alignment = { vertical: 'middle' };
+                            r++;
+
+                            const rowRefIni = r;
+                            ws.getRow(r).height = 24;
                             ws.mergeCells(`C${r}:L${r}`);
                             ws.getCell(r, 3).value = 'CUADRO DE PESOS POR METRO LINEAL EN FUNCIÓN DIÁMETRO DEL ACERO';
-                            ws.getCell(r, 3).fill = fillDark;
+                            ws.getCell(r, 3).fill = fillHeader;
                             ws.getCell(r, 3).font = fontWhiteBold;
                             ws.getCell(r, 3).alignment = { horizontal: 'center', vertical: 'middle' };
                             r++;
 
                             const diamsList = ['1/4"', '8mm', '3/8"', '12mm', '1/2"', '5/8"', '3/4"', '1"', '1 3/8"'];
                             const pesosMlList = [0.222, 0.395, 0.560, 0.888, 0.994, 1.552, 2.235, 3.973, 7.907];
-                            const pesos9mList = [1.998, 3.555, 5.040, 7.992, 8.946, 13.968, 20.115, 35.757, 71.163];
 
-                            ws.getRow(r).height = 20;
+                            const rowRefDiam = r;
+                            ws.getRow(r).height = 21;
                             ws.getCell(r, 3).value = 'DIAMETROS';
-                            ws.getCell(r, 3).fill = fillSubDark;
+                            ws.getCell(r, 3).fill = fillSubHeader;
                             ws.getCell(r, 3).font = fontWhiteBold;
+                            ws.getCell(r, 3).alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
                             diamsList.forEach((d, idx) => {
                                 const c = ws.getCell(r, idx + 4);
-                                c.value = d; c.fill = fillSubDark; c.font = fontWhiteBold; c.alignment = { horizontal: 'center', vertical: 'middle' };
+                                c.value = d;
+                                c.fill = fillSubHeader;
+                                c.font = fontWhiteBold;
+                                c.alignment = { horizontal: 'center', vertical: 'middle' };
                             });
                             r++;
 
-                            ws.getRow(r).height = 19;
+                            const rowRefPeso = r;
+                            ws.getRow(r).height = 21;
                             ws.getCell(r, 3).value = 'PESO Kg x ML';
-                            ws.getCell(r, 3).fill = fillSubDark;
+                            ws.getCell(r, 3).fill = fillSubHeader;
                             ws.getCell(r, 3).font = fontWhiteBold;
+                            ws.getCell(r, 3).alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
                             pesosMlList.forEach((v, idx) => {
                                 const c = ws.getCell(r, idx + 4);
-                                c.value = v; c.fill = fillSubDark; c.font = fontWhiteBold; c.numFmt = '0.000'; c.alignment = { horizontal: 'center', vertical: 'middle' };
+                                c.value = v;
+                                c.fill = fillSubHeader;
+                                c.font = fontWhiteBold;
+                                c.numFmt = '0.000';
+                                c.alignment = { horizontal: 'center', vertical: 'middle' };
                             });
                             r++;
 
-                            ws.getRow(r).height = 19;
+                            const rowRef9m = r;
+                            ws.getRow(r).height = 21;
                             ws.getCell(r, 3).value = 'Peso Acero(kg.) Varillas 9m';
-                            ws.getCell(r, 3).font = { name: 'Calibri', size: 10, bold: true };
-                            pesos9mList.forEach((v, idx) => {
+                            ws.getCell(r, 3).font = fontLabelBold;
+                            ws.getCell(r, 3).alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+                            pesosMlList.forEach((v, idx) => {
+                                const colLet = String.fromCharCode(68 + idx);
                                 const c = ws.getCell(r, idx + 4);
-                                c.value = v; c.font = fontBase; c.numFmt = '0.000'; c.alignment = { horizontal: 'center', vertical: 'middle' };
+                                c.value = { formula: `ROUND(${colLet}${rowRefPeso}*9,3)`, result: Math.round(v * 9 * 1000) / 1000 };
+                                c.font = fontBase;
+                                c.numFmt = '0.000';
+                                c.alignment = { horizontal: 'center', vertical: 'middle' };
                             });
-                            for (let rr = rowRefIni; rr <= r; rr++) {
+
+                            for (let rr = rowRefIni; rr <= rowRef9m; rr++) {
                                 for (let cc = 3; cc <= 12; cc++) ws.getCell(rr, cc).border = borderThin;
                             }
-                            drawBoxBorder(ws, 3, rowRefIni, 12, r, 'medium');
+                            drawBoxBorder(ws, 3, rowRefIni, 12, rowRef9m, 'medium');
                             r += 2;
 
-                            // Sobre-encabezados de tramos a, b, c
-                            const rowAceIni = r;
+                            const rowAceIni = r - 1;
                             ws.getRow(r).height = 28;
-                            ws.getCell(r, 6).value = 'Doblado de Estribos para X, Anclaje para Y';
-                            ws.getCell(r, 7).value = 'Longitud';
-                            ws.getCell(r, 8).value = 'Ancho';
-                            [6, 7, 8].forEach(c => {
-                                const cell = ws.getCell(r, c);
-                                cell.fill = fillOlive;
-                                cell.font = fontWhiteBold;
-                                cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-                                cell.border = borderThin;
-                            });
-                            r++;
-
-                            ws.getRow(r).height = 30;
-                            const headersAcero = ['PARTE DE LA ESTRUCTURA', 'N° DE ELEM. IGUALES', 'FORMA', 'a', 'b', 'c', 'LONG. POR CADA EMPALME', 'NÚMERO DE EMPALMES', 'CANTIDAD POR ELEMENTO', 'CANTIDAD TOTAL DE PZAS.', 'DIÁMETRO', 'LONGITUD PIEZA', 'LONGITUD TOTAL', 'PESO TOTAL DE ACERO', 'UNIDAD'];
+                            const headersAcero = [
+                                'PARTE DE LA ESTRUCTURA', 'N° ELEM.', 'FORMA',
+                                'a (m)', 'b (m)', 'c (m)',
+                                'L. EMP. (m)', 'N° EMP.',
+                                'CANT/ELEM', 'TOT. PZAS',
+                                'DIÁMETRO', 'LONG. PIEZA (m)', 'LONG. TOTAL (m)',
+                                'PESO TOTAL (kg)', 'UNIDAD'
+                            ];
                             headersAcero.forEach((h, i) => {
                                 const c = ws.getCell(r, i + 2);
                                 c.value = h;
-                                c.fill = fillDark;
+                                c.fill = fillHeader;
                                 c.font = fontWhiteBold;
                                 c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
                                 c.border = borderThin;
                             });
                             r++;
 
+                            const filasAcero = (Array.isArray(item.aceroSustento) && item.aceroSustento.length > 0)
+                                ? item.aceroSustento
+                                : [{ parte: '', nElem: 0, forma: '', a: 0, b: 0, c: 0, longEmp: 0, numEmp: 0, cantElem: 0, diametro: '1/2"', longPieza: 0, longTotal: 0, pesoTotal: 0 }];
+
+                            const rowAceDataIni = r;
                             let sumaPesoExcel = 0;
-                            item.aceroSustento.forEach(ac => {
-                                ws.getRow(r).height = 20;
+
+                            filasAcero.forEach(ac => {
+                                ws.getRow(r).height = 21;
                                 const nEl = Number(ac.nElem) || 0;
                                 const cEl = Number(ac.cantElem) || 0;
                                 const totP = nEl * cEl;
-                                const pesoF = Number(ac.pesoTotal) || 0;
+                                const aVal = Number(ac.a) || 0;
+                                const bVal = Number(ac.b) || 0;
+                                const cVal = Number(ac.c) || 0;
+                                const lEmp = Number(ac.longEmp) || 0;
+                                const nEmp = Number(ac.numEmp) || 0;
+                                const lPieza = aVal + bVal + cVal + (lEmp * nEmp);
+                                const lTot = totP * lPieza;
+                                const cleanD = String(ac.diametro || '1/2"').trim();
+                                const diamNorm = diamsList.includes(cleanD) ? cleanD : (diamsList.includes(cleanD + '"') ? cleanD + '"' : '1/2"');
+                                const factor = window.PESOS_ACERO_ML?.[diamNorm] || 0.994;
+                                const pesoF = Math.round(lTot * factor * 100) / 100;
                                 sumaPesoExcel += pesoF;
 
                                 ws.getCell(r, 2).value = ac.parte || '';
-                                ws.getCell(r, 2).font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFF0000' } };
-                                ws.getCell(r, 2).alignment = { horizontal: 'center', vertical: 'middle' };
+                                ws.getCell(r, 2).font = { name: FONT_FAMILY, size: 10, bold: true, color: { argb: 'FFDC2626' } };
+                                ws.getCell(r, 2).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
 
-                                ws.getCell(r, 3).value = nEl; ws.getCell(r, 3).numFmt = '#,##0.00';
-                                ws.getCell(r, 4).value = ac.forma || ''; ws.getCell(r, 4).alignment = { horizontal: 'center', vertical: 'middle' };
-                                ws.getCell(r, 5).value = Number(ac.a) || 0; ws.getCell(r, 5).numFmt = '0.00';
-                                ws.getCell(r, 6).value = Number(ac.b) || 0; ws.getCell(r, 6).numFmt = '0.00';
-                                ws.getCell(r, 7).value = Number(ac.c) || 0; ws.getCell(r, 7).numFmt = '0.00';
-                                ws.getCell(r, 8).value = Number(ac.longEmp) || 0; ws.getCell(r, 8).numFmt = '0.00';
-                                ws.getCell(r, 9).value = Number(ac.numEmp) || 0;
-                                ws.getCell(r, 10).value = cEl;
-                                ws.getCell(r, 11).value = totP;
-                                ws.getCell(r, 12).value = ac.diametro || ''; ws.getCell(r, 12).font = { name: 'Calibri', size: 10, bold: true }; ws.getCell(r, 12).alignment = { horizontal: 'center', vertical: 'middle' };
-                                ws.getCell(r, 13).value = Number(ac.longPieza) || 0; ws.getCell(r, 13).numFmt = '0.00';
-                                ws.getCell(r, 14).value = Number(ac.longTotal) || 0; ws.getCell(r, 14).numFmt = '0.00'; ws.getCell(r, 14).font = { name: 'Calibri', size: 10, bold: true };
-                                ws.getCell(r, 15).value = pesoF; ws.getCell(r, 15).numFmt = '#,##0.00'; ws.getCell(r, 15).font = { name: 'Calibri', size: 10, bold: true };
-                                ws.getCell(r, 16).value = 'kg.'; ws.getCell(r, 16).font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFF0000' } }; ws.getCell(r, 16).alignment = { horizontal: 'center', vertical: 'middle' };
+                                ws.getCell(r, 3).value = nEl; ws.getCell(r, 3).numFmt = '#,##0.00'; ws.getCell(r, 3).font = fontBase;
+                                ws.getCell(r, 4).value = ac.forma || ''; ws.getCell(r, 4).font = fontBase; ws.getCell(r, 4).alignment = { horizontal: 'center', vertical: 'middle' };
+                                ws.getCell(r, 5).value = aVal; ws.getCell(r, 5).numFmt = '0.00'; ws.getCell(r, 5).font = fontBase;
+                                ws.getCell(r, 6).value = bVal; ws.getCell(r, 6).numFmt = '0.00'; ws.getCell(r, 6).font = fontBase;
+                                ws.getCell(r, 7).value = cVal; ws.getCell(r, 7).numFmt = '0.00'; ws.getCell(r, 7).font = fontBase;
+                                ws.getCell(r, 8).value = lEmp; ws.getCell(r, 8).numFmt = '0.00'; ws.getCell(r, 8).font = fontBase;
+                                ws.getCell(r, 9).value = nEmp; ws.getCell(r, 9).font = fontBase;
+                                ws.getCell(r, 10).value = cEl; ws.getCell(r, 10).font = fontBase;
+
+                                ws.getCell(r, 11).value = { formula: `C${r}*J${r}`, result: totP };
+                                ws.getCell(r, 11).font = fontBaseBold;
+                                ws.getCell(r, 11).alignment = { horizontal: 'center', vertical: 'middle' };
+
+                                ws.getCell(r, 12).value = diamNorm;
+                                ws.getCell(r, 12).font = fontBaseBold;
+                                ws.getCell(r, 12).alignment = { horizontal: 'center', vertical: 'middle' };
+
+                                ws.getCell(r, 13).value = { formula: `E${r}+F${r}+G${r}+(H${r}*I${r})`, result: lPieza };
+                                ws.getCell(r, 13).numFmt = '0.00';
+                                ws.getCell(r, 13).font = fontBase;
+
+                                ws.getCell(r, 14).value = { formula: `K${r}*M${r}`, result: lTot };
+                                ws.getCell(r, 14).numFmt = '0.00';
+                                ws.getCell(r, 14).font = fontBaseBold;
+
+                                ws.getCell(r, 15).value = {
+                                    formula: `ROUND(N${r}*HLOOKUP(L${r},$D$${rowRefDiam}:$L$${rowRefPeso},2,FALSE),2)`,
+                                    result: pesoF
+                                };
+                                ws.getCell(r, 15).numFmt = '#,##0.00';
+                                ws.getCell(r, 15).font = fontBaseBold;
+
+                                ws.getCell(r, 16).value = 'kg.';
+                                ws.getCell(r, 16).font = { name: FONT_FAMILY, size: 10, bold: true, color: { argb: 'FFDC2626' } };
+                                ws.getCell(r, 16).alignment = { horizontal: 'center', vertical: 'middle' };
 
                                 for (let c = 2; c <= 16; c++) ws.getCell(r, c).border = borderThin;
                                 r++;
                             });
 
-                            // Fila Total Peso Acero
-                            ws.getRow(r).height = 22;
-                            ws.getCell(r, 15).value = sumaPesoExcel;
-                            ws.getCell(r, 15).numFmt = '#,##0.00';
-                            ws.getCell(r, 15).font = { name: 'Calibri', size: 11, bold: true };
-                            ws.getCell(r, 15).border = borderThin;
-                            ws.getCell(r, 16).value = 'kg.';
-                            ws.getCell(r, 16).font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFF0000' } };
-                            ws.getCell(r, 16).alignment = { horizontal: 'center', vertical: 'middle' };
-                            ws.getCell(r, 16).border = borderThin;
-                            drawBoxBorder(ws, 2, rowAceIni + 1, 16, r - 1, 'medium');
-                            r++;
+                            const rowAceDataFin = r - 1;
+                            const rowTotAcero = r;
+
+                            ws.getRow(rowTotAcero).height = 23;
+                            ws.getCell(rowTotAcero, 15).value = {
+                                formula: `SUM(O${rowAceDataIni}:O${rowAceDataFin})`,
+                                result: Math.round(sumaPesoExcel * 100) / 100
+                            };
+                            ws.getCell(rowTotAcero, 15).numFmt = '#,##0.00';
+                            ws.getCell(rowTotAcero, 15).font = { name: FONT_FAMILY, size: 11, bold: true };
+                            ws.getCell(rowTotAcero, 15).border = borderThin;
+
+                            ws.getCell(rowTotAcero, 16).value = 'kg.';
+                            ws.getCell(rowTotAcero, 16).font = { name: FONT_FAMILY, size: 10, bold: true, color: { argb: 'FFDC2626' } };
+                            ws.getCell(rowTotAcero, 16).alignment = { horizontal: 'center', vertical: 'middle' };
+                            ws.getCell(rowTotAcero, 16).border = borderThin;
+
+                            drawBoxBorder(ws, 2, rowAceIni + 1, 16, rowAceDataFin, 'medium');
+
+                            partidasArr.forEach((p, idx) => {
+                                const esAcero = /acero|fierro|armadura/i.test(p.descripcion || '') || String(p.unidad || '').toLowerCase().trim() === 'kg';
+                                const metActual = parseFloat(p.metrado) || 0;
+                                if (esAcero && sumaPesoExcel > 0 && Math.abs(metActual - sumaPesoExcel) < 0.05) {
+                                    ws.getCell(rDesgIni + idx, 5).value = {
+                                        formula: `ROUND(O${rowTotAcero},2)`,
+                                        result: metActual
+                                    };
+                                }
+                            });
+
+                            r = rowTotAcero + 1;
                         }
 
-                        // Incrustar imágenes de Descripción Gráfica (Antes / Después en marcos limpios)
+                        // Descripción Gráfica (Plano Licitación vs Plano Obra)
                         const imgsAntes = item.imagenesAntes || [];
                         const imgsDespues = item.imagenesDespues || [];
                         if (imgsAntes.length > 0 || imgsDespues.length > 0) {
                             r += 1;
-                            ws.getRow(r).height = 20;
+                            ws.getRow(r).height = 22;
                             ws.getCell(r, 2).value = 'DESCRIPCIÓN GRÁFICA:';
-                            ws.getCell(r, 2).font = { name: 'Calibri', size: 10, bold: true };
+                            ws.getCell(r, 2).font = fontLabelBold;
+                            ws.getCell(r, 2).alignment = { vertical: 'middle' };
                             r++;
 
                             ws.getRow(r).height = 22;
                             ws.mergeCells(`B${r}:E${r}`);
                             ws.getCell(r, 2).value = 'PLANO LICITACIÓN';
-                            ws.getCell(r, 2).font = { name: 'Calibri', size: 11, bold: true };
+                            ws.getCell(r, 2).font = { name: FONT_FAMILY, size: 11, bold: true };
                             ws.getCell(r, 2).alignment = { horizontal: 'center', vertical: 'middle' };
 
                             ws.mergeCells(`G${r}:J${r}`);
                             ws.getCell(r, 7).value = 'PLANO OBRA';
-                            ws.getCell(r, 7).font = { name: 'Calibri', size: 11, bold: true };
+                            ws.getCell(r, 7).font = { name: FONT_FAMILY, size: 11, bold: true };
                             ws.getCell(r, 7).alignment = { horizontal: 'center', vertical: 'middle' };
                             r++;
 
@@ -7004,6 +6994,243 @@
                                 r = rowImgFin + 2;
                             }
                         }
+                    }
+
+                    // =========================================================================
+                    // HOJA RESUMEN CON FÓRMULAS ENLAZADAS A CADA FICHA
+                    // =========================================================================
+                    if (wsRes) {
+                        wsRes.columns = [
+                            { width: 3 },  // A
+                            { width: 16 }, // B
+                            { width: 34 }, // C
+                            { width: 54 }, // D
+                            { width: 24 }, // E
+                            { width: 18 }, // F
+                            { width: 16 }, // G
+                            { width: 15 }, // H
+                            { width: 4 },  // I
+                            { width: 24 }, // J
+                            { width: 13 }, // K
+                            { width: 18 }, // L
+                            { width: 16 }  // M
+                        ];
+
+                        wsRes.getRow(2).height = 30;
+                        wsRes.mergeCells('B2:H2');
+                        const titRes = wsRes.getCell('B2');
+                        titRes.value = 'CUADRO RESUMEN';
+                        titRes.fill = fillHeader;
+                        titRes.font = fontBanner;
+                        titRes.alignment = { horizontal: 'center', vertical: 'middle' };
+
+                        [3, 4, 5].forEach(r => { wsRes.getRow(r).height = 20; });
+                        wsRes.getCell('B3').value = 'PROYECTO :'; wsRes.getCell('B3').font = fontLabelBold; wsRes.getCell('B3').alignment = { vertical: 'middle' };
+                        wsRes.mergeCells('C3:E3'); wsRes.getCell('C3').value = meta.proyecto || window.obtenerProyectoActivoAdicionales(); wsRes.getCell('C3').font = fontBase; wsRes.getCell('C3').alignment = { vertical: 'middle' };
+                        wsRes.getCell('F3').value = 'SUPERVISOR :'; wsRes.getCell('F3').font = fontLabelBold; wsRes.getCell('F3').alignment = { vertical: 'middle' };
+                        wsRes.mergeCells('G3:H3'); wsRes.getCell('G3').value = meta.supervisor || ''; wsRes.getCell('G3').font = fontBase; wsRes.getCell('G3').alignment = { vertical: 'middle' };
+
+                        wsRes.getCell('B4').value = 'PROPIETARIO :'; wsRes.getCell('B4').font = fontLabelBold; wsRes.getCell('B4').alignment = { vertical: 'middle' };
+                        wsRes.mergeCells('C4:E4'); wsRes.getCell('C4').value = meta.propietario || ''; wsRes.getCell('C4').font = fontBase; wsRes.getCell('C4').alignment = { vertical: 'middle' };
+                        wsRes.getCell('F4').value = 'FECHA :'; wsRes.getCell('F4').font = fontLabelBold; wsRes.getCell('F4').alignment = { vertical: 'middle' };
+                        wsRes.mergeCells('G4:H4'); wsRes.getCell('G4').value = meta.fecha || ''; wsRes.getCell('G4').font = fontBase; wsRes.getCell('G4').alignment = { vertical: 'middle' };
+
+                        wsRes.getCell('B5').value = 'CONTRATISTA :'; wsRes.getCell('B5').font = fontLabelBold; wsRes.getCell('B5').alignment = { vertical: 'middle' };
+                        wsRes.mergeCells('C5:E5'); wsRes.getCell('C5').value = meta.contratista || ''; wsRes.getCell('C5').font = fontBase; wsRes.getCell('C5').alignment = { vertical: 'middle' };
+                        wsRes.getCell('F5').value = 'TC (S/ x $) :'; wsRes.getCell('F5').font = fontLabelBold; wsRes.getCell('F5').alignment = { vertical: 'middle' };
+                        wsRes.mergeCells('G5:H5'); wsRes.getCell('G5').value = Number(meta.tc) || 3.50; wsRes.getCell('G5').font = fontBaseBold; wsRes.getCell('G5').alignment = { horizontal: 'left', vertical: 'middle' };
+
+                        drawBoxBorder(wsRes, 2, 2, 8, 5, 'medium');
+
+                        wsRes.getRow(7).height = 21;
+                        wsRes.getRow(8).height = 21;
+                        wsRes.mergeCells('B7:B8'); wsRes.getCell('B7').value = 'ITEM';
+                        wsRes.mergeCells('C7:C8'); wsRes.getCell('C7').value = 'CONCEPTO';
+                        wsRes.mergeCells('D7:D8'); wsRes.getCell('D7').value = 'DESCRIPCIÓN';
+                        wsRes.mergeCells('E7:E8'); wsRes.getCell('E7').value = 'CONCEPTO';
+                        wsRes.mergeCells('F7:G7'); wsRes.getCell('F7').value = 'SUBTOTAL (INCL. IGV)';
+                        wsRes.getCell('F8').value = 'S/';
+                        wsRes.getCell('G8').value = '$';
+                        wsRes.mergeCells('H7:H8'); wsRes.getCell('H7').value = 'TIPO';
+
+                        for (let r = 7; r <= 8; r++) {
+                            for (let c = 2; c <= 8; c++) {
+                                const cell = wsRes.getCell(r, c);
+                                cell.fill = fillHeader;
+                                cell.font = fontWhiteBold;
+                                cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+                                cell.border = borderThin;
+                            }
+                        }
+
+                        wsRes.mergeCells('J7:J8'); wsRes.getCell('J7').value = 'CONCEPTO';
+                        wsRes.mergeCells('K7:K8'); wsRes.getCell('K7').value = 'CANTIDAD';
+                        wsRes.mergeCells('L7:M7'); wsRes.getCell('L7').value = 'SUBTOTAL (INCL. IGV)';
+                        wsRes.getCell('L8').value = 'S/';
+                        wsRes.getCell('M8').value = '$';
+                        for (let r = 7; r <= 8; r++) {
+                            for (let c = 10; c <= 13; c++) {
+                                const cell = wsRes.getCell(r, c);
+                                cell.fill = fillHeader;
+                                cell.font = fontWhiteBold;
+                                cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+                                cell.border = borderThin;
+                            }
+                        }
+
+                        const causalMap = {};
+                        const rowResIni = 9;
+                        let rowIdx = rowResIni;
+                        let sumTotS = 0, sumTotU = 0;
+
+                        listaExportar.forEach((item, idxItem) => {
+                            const m = window.calcularMontosAdicional(item);
+                            sumTotS += m.totS;
+                            sumTotU += m.totU;
+                            const cKey = item.causal || 'Modificación de planos';
+                            if (!causalMap[cKey]) causalMap[cKey] = { cant: 0, s: 0, u: 0 };
+                            causalMap[cKey].cant++;
+                            causalMap[cKey].s += m.totS;
+                            causalMap[cKey].u += m.totU;
+
+                            const descLen = String(item.descripcion || '').length;
+                            const titLen = String(item.titulo || '').length;
+                            wsRes.getRow(rowIdx).height = Math.max(38, Math.ceil(Math.max(descLen / 46, titLen / 28)) * 17);
+
+                            const refHoja = refsTotalesPorId[item.id];
+                            const sheetRefPrefix = refHoja ? `'${refHoja.sheetName}'!` : '';
+
+                            wsRes.getCell(rowIdx, 2).value = item.numero;
+                            wsRes.getCell(rowIdx, 2).font = fontBaseBold;
+                            wsRes.getCell(rowIdx, 2).alignment = { horizontal: 'center', vertical: 'middle' };
+
+                            wsRes.getCell(rowIdx, 3).value = item.titulo || '';
+                            wsRes.getCell(rowIdx, 3).font = fontBaseBold;
+                            wsRes.getCell(rowIdx, 3).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+
+                            wsRes.getCell(rowIdx, 4).value = item.descripcion || '';
+                            wsRes.getCell(rowIdx, 4).font = fontBase;
+                            wsRes.getCell(rowIdx, 4).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+
+                            wsRes.getCell(rowIdx, 5).value = cKey;
+                            wsRes.getCell(rowIdx, 5).font = fontBase;
+                            wsRes.getCell(rowIdx, 5).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+
+                            wsRes.getCell(rowIdx, 6).value = refHoja
+                                ? { formula: `${sheetRefPrefix}G${refHoja.rTot}`, result: m.totS }
+                                : m.totS;
+                            wsRes.getCell(rowIdx, 6).numFmt = '"S/"#,##0.00';
+                            wsRes.getCell(rowIdx, 6).font = fontBaseBold;
+                            wsRes.getCell(rowIdx, 6).alignment = { horizontal: 'right', vertical: 'middle' };
+
+                            wsRes.getCell(rowIdx, 7).value = refHoja
+                                ? { formula: `${sheetRefPrefix}I${refHoja.rTot}`, result: m.totU }
+                                : m.totU;
+                            wsRes.getCell(rowIdx, 7).numFmt = '"$"#,##0.00';
+                            wsRes.getCell(rowIdx, 7).font = fontBaseBold;
+                            wsRes.getCell(rowIdx, 7).alignment = { horizontal: 'right', vertical: 'middle' };
+
+                            wsRes.getCell(rowIdx, 8).value = {
+                                formula: `IF((F${rowIdx}+G${rowIdx}*$G$5)<-0.004,"Deductivo","Adicional")`,
+                                result: m.tipo
+                            };
+                            wsRes.getCell(rowIdx, 8).font = { name: FONT_FAMILY, size: 10, bold: true, color: { argb: m.tipo === 'Deductivo' ? 'FF991B1B' : 'FF0F172A' } };
+                            wsRes.getCell(rowIdx, 8).alignment = { horizontal: 'center', vertical: 'middle' };
+
+                            for (let c = 2; c <= 7; c++) {
+                                wsRes.getCell(rowIdx, c).border = borderThin;
+                                if (idxItem % 2 === 1) wsRes.getCell(rowIdx, c).fill = fillZebra;
+                            }
+                            wsRes.getCell(rowIdx, 8).border = borderThin;
+                            wsRes.getCell(rowIdx, 8).fill = {
+                                type: 'pattern',
+                                pattern: 'solid',
+                                fgColor: { argb: m.tipo === 'Deductivo' ? 'FFFECACA' : 'FF9BC2E6' }
+                            };
+                            rowIdx++;
+                        });
+
+                        const rowResFin = rowIdx - 1;
+
+                        wsRes.getRow(rowIdx).height = 25;
+                        wsRes.mergeCells(`B${rowIdx}:E${rowIdx}`);
+                        wsRes.getCell(rowIdx, 2).value = 'TOTAL NETO ADICIONALES / DEDUCTIVOS';
+                        wsRes.getCell(rowIdx, 2).alignment = { horizontal: 'center', vertical: 'middle' };
+
+                        wsRes.getCell(rowIdx, 6).value = { formula: `SUM(F${rowResIni}:F${rowResFin})`, result: sumTotS };
+                        wsRes.getCell(rowIdx, 6).numFmt = '"S/"#,##0.00';
+                        wsRes.getCell(rowIdx, 6).alignment = { horizontal: 'right', vertical: 'middle' };
+
+                        wsRes.getCell(rowIdx, 7).value = { formula: `SUM(G${rowResIni}:G${rowResFin})`, result: sumTotU };
+                        wsRes.getCell(rowIdx, 7).numFmt = '"$"#,##0.00';
+                        wsRes.getCell(rowIdx, 7).alignment = { horizontal: 'right', vertical: 'middle' };
+
+                        for (let c = 2; c <= 8; c++) {
+                            const cell = wsRes.getCell(rowIdx, c);
+                            cell.fill = fillHeader;
+                            cell.font = fontWhiteBold;
+                            cell.border = borderThin;
+                        }
+                        drawBoxBorder(wsRes, 2, 7, 8, rowIdx, 'medium');
+
+                        const rCauIni = 9;
+                        let rCau = rCauIni;
+                        Object.entries(causalMap).forEach(([k, v]) => {
+                            if (wsRes.getRow(rCau).height < 30) wsRes.getRow(rCau).height = 30;
+                            wsRes.getCell(rCau, 10).value = k;
+                            wsRes.getCell(rCau, 10).font = fontBaseBold;
+                            wsRes.getCell(rCau, 10).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+
+                            wsRes.getCell(rCau, 11).value = {
+                                formula: `COUNTIF($E$${rowResIni}:$E$${rowResFin},J${rCau})`,
+                                result: v.cant
+                            };
+                            wsRes.getCell(rCau, 11).font = fontBase;
+                            wsRes.getCell(rCau, 11).alignment = { horizontal: 'center', vertical: 'middle' };
+
+                            wsRes.getCell(rCau, 12).value = {
+                                formula: `SUMIF($E$${rowResIni}:$E$${rowResFin},J${rCau},$F$${rowResIni}:$F$${rowResFin})`,
+                                result: v.s
+                            };
+                            wsRes.getCell(rCau, 12).numFmt = '"S/"#,##0.00';
+                            wsRes.getCell(rCau, 12).font = fontBase;
+                            wsRes.getCell(rCau, 12).alignment = { horizontal: 'right', vertical: 'middle' };
+
+                            wsRes.getCell(rCau, 13).value = {
+                                formula: `SUMIF($E$${rowResIni}:$E$${rowResFin},J${rCau},$G$${rowResIni}:$G$${rowResFin})`,
+                                result: v.u
+                            };
+                            wsRes.getCell(rCau, 13).numFmt = '"$"#,##0.00';
+                            wsRes.getCell(rCau, 13).font = fontBase;
+                            wsRes.getCell(rCau, 13).alignment = { horizontal: 'right', vertical: 'middle' };
+
+                            for (let c = 10; c <= 13; c++) wsRes.getCell(rCau, c).border = borderThin;
+                            rCau++;
+                        });
+
+                        const rCauFin = rCau - 1;
+                        if (wsRes.getRow(rCau).height < 25) wsRes.getRow(rCau).height = 25;
+                        wsRes.getCell(rCau, 10).value = 'TOTAL';
+                        wsRes.getCell(rCau, 10).alignment = { horizontal: 'center', vertical: 'middle' };
+
+                        wsRes.getCell(rCau, 11).value = { formula: `SUM(K${rCauIni}:K${rCauFin})`, result: listaExportar.length };
+                        wsRes.getCell(rCau, 11).alignment = { horizontal: 'center', vertical: 'middle' };
+
+                        wsRes.getCell(rCau, 12).value = { formula: `SUM(L${rCauIni}:L${rCauFin})`, result: sumTotS };
+                        wsRes.getCell(rCau, 12).numFmt = '"S/"#,##0.00';
+                        wsRes.getCell(rCau, 12).alignment = { horizontal: 'right', vertical: 'middle' };
+
+                        wsRes.getCell(rCau, 13).value = { formula: `SUM(M${rCauIni}:M${rCauFin})`, result: sumTotU };
+                        wsRes.getCell(rCau, 13).numFmt = '"$"#,##0.00';
+                        wsRes.getCell(rCau, 13).alignment = { horizontal: 'right', vertical: 'middle' };
+
+                        for (let c = 10; c <= 13; c++) {
+                            const cell = wsRes.getCell(rCau, c);
+                            cell.fill = fillHeader;
+                            cell.font = fontWhiteBold;
+                            cell.border = borderThin;
+                        }
+                        drawBoxBorder(wsRes, 10, 7, 13, rCau, 'medium');
                     }
 
                     const proyNombre = (meta.proyecto || window.obtenerProyectoActivoAdicionales()).replace(/[\\/?*:|"<>]/g, '');
@@ -9488,32 +9715,609 @@
                     if (!window.ExcelJS) return alert('⚠️ Librería ExcelJS cargando...');
                     const st = window.ispEstadoActual;
                     const wb = new ExcelJS.Workbook();
+                    wb.creator = 'ERP COSTOS — Oficina Técnica & Obra';
+                    wb.created = new Date();
 
-                    const wsRes = wb.addWorksheet('RES PROD');
-                    wsRes.addRow([`PROYECTO ${st.proyecto} - RESUMEN CONTROL DE PRODUCTIVIDAD`, '', '', '', '', '', '', '', '', '', '', 'COSTO HH S/.', st.costoHH]);
-                    wsRes.addRow([`ETAPA: ${st.etapa}`, `SEMANA: ${st.semanaActiva.replace('Semana_', '')}`]);
-                    wsRes.addRow([]);
-                    const hdr = wsRes.addRow(['ITEM', 'PARTIDAS DE CONTROL', 'UND', 'TOTAL HH SEM', '# PERSONAS', 'TOTAL HH ACUM', 'TOTAL HH PPTO', 'METRADO SEM', 'METRADO ACUM', 'TOTAL METRADO PPTO', 'REND SEM', 'REND ACUM', 'REND PPTO', 'HH GAN/PERD SEM', 'HH GAN/PERD ACUM', 'S/. GAN/PERD SEM', 'S/. GAN/PERD ACUM', 'COMENTARIOS']);
-                    hdr.eachCell(c => {
-                        c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-                        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } };
+                    const nS = (n) => (typeof n === 'number' && !isNaN(n)) ? Number(n) : 0;
+                    const numSem = String(st.semanaActiva || '').replace('Semana_', '') || '1';
+                    const tareoRel = st.semanasTareo?.[st.semanaActiva] || st.semanasIspGuardadas?.[st.semanaActiva] || {};
+                    const rangoFechas = (tareoRel.fechaInicio && tareoRel.fechaFin)
+                        ? `Del ${tareoRel.fechaInicio} al ${tareoRel.fechaFin}`
+                        : 'Semana en curso';
+
+                    const thinBorder = {
+                        top: { style: 'thin', color: { argb: 'FF94A3B8' } },
+                        left: { style: 'thin', color: { argb: 'FF94A3B8' } },
+                        bottom: { style: 'thin', color: { argb: 'FF94A3B8' } },
+                        right: { style: 'thin', color: { argb: 'FF94A3B8' } }
+                    };
+                    const medBorder = {
+                        top: { style: 'medium', color: { argb: 'FF0F172A' } },
+                        left: { style: 'medium', color: { argb: 'FF0F172A' } },
+                        bottom: { style: 'medium', color: { argb: 'FF0F172A' } },
+                        right: { style: 'medium', color: { argb: 'FF0F172A' } }
+                    };
+                    const fillHex = (argb) => ({ type: 'pattern', pattern: 'solid', fgColor: { argb } });
+                    const fmtNum = '#,##0.00;-#,##0.00;"-"';
+                    const fmtSol = '"S/ "#,##0.00;-"S/ "#,##0.00;"-"';
+                    const fmtPct = '0.00%';
+
+                    // =========================================================================
+                    // 1. PESTAÑA: RES PROD (FORMATO EJECUTIVO CON CUADRÍCULAS Y TOTALES)
+                    // =========================================================================
+                    const ws1 = wb.addWorksheet('RES PROD', {
+                        views: [{ showGridLines: true, state: 'frozen', xSplit: 3, ySplit: 8 }]
                     });
 
-                    st.filasCalculadas
-                        .filter(f => !f.oculta && (f.hhSem > 0 || f.hhAcum > 0 || f.metSem > 0 || f.metAcum > 0))
-                        .forEach(f => {
-                            wsRes.addRow([
+                    // Fila 1: Banner Principal + Costo HH
+                    ws1.getRow(1).height = 28;
+                    ws1.mergeCells('A1:J1');
+                    ws1.getCell('A1').value = `PROYECTO ${st.proyecto} — RESUMEN CONTROL DE PRODUCTIVIDAD`;
+                    ws1.getCell('A1').font = { name: 'Calibri', size: 13, bold: true, color: { argb: 'FFFFFFFF' } };
+                    ws1.getCell('A1').fill = fillHex('FF0F172A');
+                    ws1.getCell('A1').alignment = { vertical: 'middle', indent: 1 };
+
+                    ws1.mergeCells('M1:O1');
+                    ws1.getCell('M1').value = 'COSTO HH (S/.):';
+                    ws1.getCell('M1').font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+                    ws1.getCell('M1').fill = fillHex('FF1E293B');
+                    ws1.getCell('M1').alignment = { horizontal: 'right', vertical: 'middle' };
+
+                    ws1.getCell('P1').value = Number(st.costoHH) || 26;
+                    ws1.getCell('P1').numFmt = fmtSol;
+                    ws1.getCell('P1').font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FF0F172A' } };
+                    ws1.getCell('P1').fill = fillHex('FFFEF3C7');
+                    ws1.getCell('P1').alignment = { horizontal: 'center', vertical: 'middle' };
+                    for (let c = 13; c <= 16; c++) ws1.getCell(1, c).border = medBorder;
+
+                    // Filas 3-5: Ficha de Etapa, Semana y Periodo
+                    const metaRows = [
+                        { r: 3, lbl: 'ETAPA', val: st.etapa || 'ESTRUCTURAS / ACABADOS', bg: 'FFFFFFFF' },
+                        { r: 4, lbl: 'SEMANA', val: `SEM ${numSem}`, bg: 'FFFEF08A' },
+                        { r: 5, lbl: 'PERIODO', val: rangoFechas, bg: 'FFFFFFFF' }
+                    ];
+                    metaRows.forEach(m => {
+                        ws1.getRow(m.r).height = 20;
+                        const cLbl = ws1.getCell(m.r, 1);
+                        cLbl.value = m.lbl;
+                        cLbl.font = { bold: true, size: 10, color: { argb: 'FFFFFFFF' } };
+                        cLbl.fill = fillHex('FF1E3A5F');
+                        cLbl.alignment = { horizontal: 'center', vertical: 'middle' };
+                        cLbl.border = thinBorder;
+
+                        ws1.mergeCells(m.r, 2, m.r, 3);
+                        const cVal = ws1.getCell(m.r, 2);
+                        cVal.value = m.val;
+                        cVal.font = { bold: true, size: 10, color: { argb: 'FF0F172A' } };
+                        cVal.fill = fillHex(m.bg);
+                        cVal.alignment = { horizontal: 'center', vertical: 'middle' };
+                        ws1.getCell(m.r, 2).border = thinBorder;
+                        ws1.getCell(m.r, 3).border = thinBorder;
+                    });
+
+                    // Fila 7: Super-encabezados de Grupo
+                    ws1.getRow(7).height = 22;
+                    ws1.mergeCells('D7:L7');
+                    ws1.getCell('D7').value = `RENDIMIENTO REAL SEM ${numSem}`;
+                    ws1.getCell('D7').font = { bold: true, size: 10, color: { argb: 'FFFFFFFF' } };
+                    ws1.getCell('D7').fill = fillHex('FF334155');
+                    ws1.getCell('D7').alignment = { horizontal: 'center', vertical: 'middle' };
+                    for (let c = 4; c <= 12; c++) ws1.getCell(7, c).border = medBorder;
+
+                    ws1.mergeCells('M7:R7');
+                    ws1.getCell('M7').value = `RESULTADO MO VS PPTO SEM ${numSem}`;
+                    ws1.getCell('M7').font = { bold: true, size: 10, color: { argb: 'FFFFFFFF' } };
+                    ws1.getCell('M7').fill = fillHex('FF9A3412');
+                    ws1.getCell('M7').alignment = { horizontal: 'center', vertical: 'middle' };
+                    for (let c = 13; c <= 18; c++) ws1.getCell(7, c).border = medBorder;
+
+                    // Fila 8: Cabeceras de Columnas (con ajuste de texto y altura amplia)
+                    const h1 = ws1.addRow([
+                        'ÍTEM', 'PARTIDAS DE CONTROL', 'UND',
+                        'TOTAL HH SEM', '# PERSONAS SEMANA', 'TOTAL HH ACUM', 'TOTAL HH PPTO',
+                        'METRADO SEM', 'METRADO ACUM', 'TOTAL METRADO PPTO',
+                        'REND SEM (HH/UND)', 'REND ACUM (HH/UND)', 'REND PPTO (HH/UND)',
+                        'HH GANADAS / PERDIDAS SEM', 'HH GANADAS / PERDIDAS ACUM',
+                        'S/. GANADOS / PERDIDOS SEM', 'S/. GANADOS / PERDIDOS ACUM',
+                        'COMENTARIOS / ALERTA'
+                    ]);
+                    h1.height = 34;
+                    h1.eachCell((c, colIdx) => {
+                        let bg = 'FF0F172A';
+                        if (colIdx >= 4 && colIdx <= 12) bg = [7, 10].includes(colIdx) ? 'FF312E81' : 'FF334155';
+                        else if (colIdx === 13) bg = 'FF312E81';
+                        else if (colIdx >= 14) bg = 'FF9A3412';
+
+                        c.font = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } };
+                        c.fill = fillHex(bg);
+                        c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+                        c.border = medBorder;
+                    });
+
+                    ws1.autoFilter = { from: { row: 8, column: 1 }, to: { row: 8, column: 18 } };
+
+                    const filtradasProd = st.filasCalculadas.filter(f => !f.oculta && (f.hhSem !== 0 || f.metSem !== 0 || f.hhAcum !== 0 || f.metAcum !== 0));
+                    let sumHHSem = 0, sumPers = 0, sumHHAcum = 0, sumHHPpto = 0;
+                    let sumDeltaHHSem = 0, sumDeltaHHAcum = 0, sumSolSem = 0, sumSolAcum = 0;
+
+                    window.construirListaJerarquicaIsp(filtradasProd).forEach(f => {
+                        if (f.esTitulo) {
+                            const r = ws1.addRow([f.item, f.desc]);
+                            r.height = 21;
+                            const bgTit = f.depth === 0 ? 'FF0F172A' : (f.depth === 1 ? 'FFCBD5E1' : 'FFE2E8F0');
+                            const fcTit = f.depth === 0 ? 'FFFFFFFF' : 'FF0F172A';
+                            ws1.mergeCells(r.number, 2, r.number, 18);
+                            for (let c = 1; c <= 18; c++) {
+                                const cell = r.getCell(c);
+                                cell.font = { bold: true, size: 10, color: { argb: fcTit } };
+                                cell.fill = fillHex(bgTit);
+                                cell.border = thinBorder;
+                                if (c === 1) cell.alignment = { horizontal: 'left', vertical: 'middle' };
+                                if (c === 2) cell.alignment = { horizontal: 'left', vertical: 'middle', indent: f.depth };
+                            }
+                        } else {
+                            sumHHSem += nS(f.hhSem);
+                            sumPers += nS(f.personasSem);
+                            sumHHAcum += nS(f.hhAcum);
+                            sumHHPpto += nS(f.hhPpto);
+                            sumDeltaHHSem += nS(f.hhGanPerdSem);
+                            sumDeltaHHAcum += nS(f.hhGanPerdAcum);
+                            sumSolSem += nS(f.solGanPerdSem);
+                            sumSolAcum += nS(f.solGanPerdAcum);
+
+                            const r = ws1.addRow([
                                 f.item, f.desc, f.unidad,
-                                Number(f.hhSem.toFixed(2)), Number(f.personasSem.toFixed(2)), Number(f.hhAcum.toFixed(2)), Number(f.hhPpto.toFixed(2)),
-                                Number(f.metSem.toFixed(2)), Number(f.metAcum.toFixed(2)), Number(f.metPpto.toFixed(2)),
-                                Number(f.rendSem.toFixed(2)), Number(f.rendAcum.toFixed(2)), Number(f.rendPpto.toFixed(2)),
-                                Number(f.hhGanPerdSem.toFixed(2)), Number(f.hhGanPerdAcum.toFixed(2)),
-                                Number(f.solGanPerdSem.toFixed(2)), Number(f.solGanPerdAcum.toFixed(2)),
+                                nS(f.hhSem), nS(f.personasSem), nS(f.hhAcum), nS(f.hhPpto),
+                                nS(f.metSem), nS(f.metAcum), nS(f.metPpto),
+                                nS(f.rendSem), nS(f.rendAcum), nS(f.rendPpto),
+                                nS(f.hhGanPerdSem), nS(f.hhGanPerdAcum),
+                                nS(f.solGanPerdSem), nS(f.solGanPerdAcum),
                                 f.comentario || ''
                             ]);
-                        });
+                            r.height = 20;
 
-                    wsRes.columns.forEach((col, i) => { col.width = i === 1 ? 44 : (i === 17 ? 32 : 14); });
+                            for (let c = 1; c <= 18; c++) {
+                                const cell = r.getCell(c);
+                                cell.border = thinBorder;
+                                cell.font = { name: 'Calibri', size: 10, color: { argb: 'FF1E293B' } };
+                                if (f.esNoPpto) cell.fill = fillHex('FFFFF1F2');
+
+                                if (c === 1) cell.alignment = { horizontal: 'left', vertical: 'middle' };
+                                else if (c === 2) { cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true }; cell.font = { bold: true, size: 10, color: { argb: 'FF0F172A' } }; }
+                                else if (c === 3) { cell.alignment = { horizontal: 'center', vertical: 'middle' }; cell.font = { bold: true, size: 10 }; }
+                                else if (c >= 4 && c <= 17) {
+                                    cell.alignment = { horizontal: 'right', vertical: 'middle' };
+                                    cell.numFmt = (c === 16 || c === 17) ? fmtSol : fmtNum;
+                                } else {
+                                    cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+                                }
+                            }
+
+                            // Resaltar columnas de Presupuesto (Previsión)
+                            [7, 10, 13].forEach(cIdx => {
+                                r.getCell(cIdx).fill = fillHex('FFEEF2FF');
+                                r.getCell(cIdx).font = { bold: true, size: 10, color: { argb: 'FF1E1B4B' } };
+                            });
+
+                            // Alerta si supera HH o Metrado PPTO
+                            if (f.hhPpto > 0 && f.hhAcum > f.hhPpto) {
+                                r.getCell(6).fill = fillHex('FFFEE2E2');
+                                r.getCell(6).font = { bold: true, size: 10, color: { argb: 'FF991B1B' } };
+                            }
+                            if (f.metPpto > 0 && f.metAcum > f.metPpto) {
+                                r.getCell(9).fill = fillHex('FFFEF3C7');
+                                r.getCell(9).font = { bold: true, size: 10, color: { argb: 'FF92400E' } };
+                            }
+
+                            // Colores semáforo en Ganadas / Perdidas (HH y S/)
+                            [
+                                { col: 14, val: nS(f.hhGanPerdSem) },
+                                { col: 15, val: nS(f.hhGanPerdAcum) },
+                                { col: 16, val: nS(f.solGanPerdSem) },
+                                { col: 17, val: nS(f.solGanPerdAcum) }
+                            ].forEach(g => {
+                                const cCell = r.getCell(g.col);
+                                if (g.val < -0.005) {
+                                    cCell.fill = fillHex('FFFEE2E2');
+                                    cCell.font = { bold: true, size: 10, color: { argb: 'FF991B1B' } };
+                                } else if (g.val > 0.005) {
+                                    cCell.fill = fillHex('FFDCFCE7');
+                                    cCell.font = { bold: true, size: 10, color: { argb: 'FF166534' } };
+                                }
+                            });
+                        }
+                    });
+
+                    // Fila Final: TOTAL GENERAL
+                    const rTot1 = ws1.addRow([
+                        'TOTAL GENERAL', '', '',
+                        sumHHSem, sumPers, sumHHAcum, sumHHPpto,
+                        null, null, null,
+                        null, null, null,
+                        sumDeltaHHSem, sumDeltaHHAcum,
+                        sumSolSem, sumSolAcum, ''
+                    ]);
+                    rTot1.height = 25;
+                    ws1.mergeCells(rTot1.number, 1, rTot1.number, 3);
+                    for (let c = 1; c <= 18; c++) {
+                        const cell = rTot1.getCell(c);
+                        cell.fill = fillHex('FF0F172A');
+                        cell.border = medBorder;
+                        cell.font = { bold: true, size: 10, color: { argb: 'FFFFFFFF' } };
+                        if (c <= 3) cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                        else if (c >= 4 && c <= 17) {
+                            cell.alignment = { horizontal: 'right', vertical: 'middle' };
+                            cell.numFmt = (c === 16 || c === 17) ? fmtSol : fmtNum;
+                        }
+                    }
+                    rTot1.getCell(7).font = { bold: true, size: 10, color: { argb: 'FFA5B4FC' } };
+                    [
+                        { col: 14, val: sumDeltaHHSem },
+                        { col: 15, val: sumDeltaHHAcum },
+                        { col: 16, val: sumSolSem },
+                        { col: 17, val: sumSolAcum }
+                    ].forEach(t => {
+                        rTot1.getCell(t.col).font = {
+                            bold: true,
+                            size: 11,
+                            color: { argb: t.val < -0.005 ? 'FFF87171' : 'FF34D399' }
+                        };
+                    });
+
+                    ws1.columns = [
+                        { width: 13 }, { width: 46 }, { width: 8 },
+                        { width: 13 }, { width: 13 }, { width: 13 }, { width: 13 },
+                        { width: 13 }, { width: 13 }, { width: 14 },
+                        { width: 13 }, { width: 13 }, { width: 13 },
+                        { width: 16 }, { width: 16 }, { width: 17 }, { width: 17 },
+                        { width: 34 }
+                    ];
+
+                    // =========================================================================
+                    // 2. PESTAÑA: ISP DATOS (CARGA DIARIA CON FORMATO FORMAL Y CUADRÍCULAS)
+                    // =========================================================================
+                    const ws2 = wb.addWorksheet('ISP DATOS', {
+                        views: [{ showGridLines: true, state: 'frozen', xSplit: 3, ySplit: 4 }]
+                    });
+
+                    // Fila 1: Banner de Proyecto, Etapa, Semana y Costo HH
+                    ws2.getRow(1).height = 26;
+                    ws2.mergeCells('A1:L1');
+                    ws2.getCell('A1').value = `PROYECTO ${st.proyecto} — CONTROL DIARIO DE PRODUCTIVIDAD (ISP SEM)`;
+                    ws2.getCell('A1').font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+                    ws2.getCell('A1').fill = fillHex('FF0F172A');
+                    ws2.getCell('A1').alignment = { vertical: 'middle', indent: 1 };
+
+                    ws2.mergeCells('M1:R1');
+                    ws2.getCell('M1').value = `ETAPA: ${st.etapa}`;
+                    ws2.getCell('M1').font = { bold: true, size: 10, color: { argb: 'FFFFFFFF' } };
+                    ws2.getCell('M1').fill = fillHex('FF1E293B');
+                    ws2.getCell('M1').alignment = { horizontal: 'center', vertical: 'middle' };
+
+                    ws2.mergeCells('S1:X1');
+                    ws2.getCell('S1').value = `SEMANA ${numSem} (${rangoFechas})`;
+                    ws2.getCell('S1').font = { bold: true, size: 10, color: { argb: 'FF0F172A' } };
+                    ws2.getCell('S1').fill = fillHex('FFFEF08A');
+                    ws2.getCell('S1').alignment = { horizontal: 'center', vertical: 'middle' };
+
+                    ws2.mergeCells('Y1:AD1');
+                    ws2.getCell('Y1').value = `COSTO HH: S/ ${(Number(st.costoHH) || 26).toFixed(2)}`;
+                    ws2.getCell('Y1').font = { bold: true, size: 10, color: { argb: 'FF065F46' } };
+                    ws2.getCell('Y1').fill = fillHex('FFD1FAE5');
+                    ws2.getCell('Y1').alignment = { horizontal: 'center', vertical: 'middle' };
+                    for (let c = 1; c <= 36; c++) {
+                        if (!ws2.getCell(1, c).fill) ws2.getCell(1, c).fill = fillHex('FF0F172A');
+                        ws2.getCell(1, c).border = thinBorder;
+                    }
+
+                    ws2.getRow(2).height = 8;
+
+                    // Filas 3 y 4: Encabezados Agrupados
+                    const h2a = ws2.addRow([
+                        'ÍTEM', 'PARTIDAS DE CONTROL (POR CASA)', 'UND',
+                        'PPTO (PRESUPUESTO S10)', '', '',
+                        'PREVISIÓN OBRA', '', '',
+                        'ACUM. ANTERIOR (2)', '', '',
+                        'LUNES', '', '', 'MARTES', '', '', 'MIÉRCOLES', '', '',
+                        'JUEVES', '', '', 'VIERNES', '', '', 'SÁBADO', '', '',
+                        'PRESENTE SEMANA (3)', '', '',
+                        'ACUMULADO ACTUAL (4)', '', ''
+                    ]);
+                    const h2b = ws2.addRow([
+                        '', '', '',
+                        'Metrado', 'PU (S/)', 'P. Total',
+                        'Metrado', 'HH', 'Rend',
+                        'Metrado', 'HH', 'Rend',
+                        'Met', 'HH', 'Rend', 'Met', 'HH', 'Rend', 'Met', 'HH', 'Rend',
+                        'Met', 'HH', 'Rend', 'Met', 'HH', 'Rend', 'Met', 'HH', 'Rend',
+                        'Metrado', 'HH', 'Rend',
+                        'Metrado', 'HH', 'Rend'
+                    ]);
+                    h2a.height = 24;
+                    h2b.height = 22;
+
+                    ws2.mergeCells('A3:A4'); ws2.mergeCells('B3:B4'); ws2.mergeCells('C3:C4');
+                    ws2.mergeCells('D3:F3'); ws2.mergeCells('G3:I3'); ws2.mergeCells('J3:L3');
+                    for (let i = 0; i < 6; i++) ws2.mergeCells(3, 13 + i * 3, 3, 15 + i * 3);
+                    ws2.mergeCells('AE3:AG3'); ws2.mergeCells('AH3:AJ3');
+
+                    for (let c = 1; c <= 36; c++) {
+                        const ca = ws2.getCell(3, c);
+                        const cb = ws2.getCell(4, c);
+                        ca.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+                        cb.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+                        ca.border = medBorder;
+                        cb.border = medBorder;
+
+                        if (c <= 3) {
+                            ca.fill = fillHex('FF0F172A'); ca.font = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } };
+                            cb.fill = fillHex('FF0F172A'); cb.font = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } };
+                        } else if (c >= 4 && c <= 6) {
+                            ca.fill = fillHex('FF1E3A8A'); ca.font = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } };
+                            cb.fill = fillHex('FF1D4ED8'); cb.font = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } };
+                        } else if (c >= 7 && c <= 9) {
+                            ca.fill = fillHex('FF312E81'); ca.font = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } };
+                            cb.fill = fillHex('FF4338CA'); cb.font = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } };
+                        } else if (c >= 10 && c <= 12) {
+                            ca.fill = fillHex('FF334155'); ca.font = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } };
+                            cb.fill = fillHex('FF475569'); cb.font = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } };
+                        } else if (c >= 13 && c <= 30) {
+                            ca.fill = fillHex('FFF59E0B'); ca.font = { bold: true, size: 9, color: { argb: 'FF0F172A' } };
+                            cb.fill = fillHex('FFFDE047'); cb.font = { bold: true, size: 9, color: { argb: 'FF0F172A' } };
+                        } else if (c >= 31 && c <= 33) {
+                            ca.fill = fillHex('FF065F46'); ca.font = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } };
+                            cb.fill = fillHex('FF047857'); cb.font = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } };
+                        } else {
+                            ca.fill = fillHex('FF155E75'); ca.font = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } };
+                            cb.fill = fillHex('FF0E7490'); cb.font = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } };
+                        }
+                    }
+
+                    let totParcialS = 0, totHHPpto2 = 0, totHHAnt2 = 0, totHHSem2 = 0, totHHAcum2 = 0;
+                    const totHHDias2 = [0, 0, 0, 0, 0, 0];
+
+                    const filtradasCarga = st.filasCalculadas.filter(f => !f.oculta);
+                    window.construirListaJerarquicaIsp(filtradasCarga).forEach(f => {
+                        if (f.esTitulo) {
+                            const r = ws2.addRow([f.item, f.desc]);
+                            r.height = 20;
+                            const bgTit = f.depth === 0 ? 'FF0F172A' : (f.depth === 1 ? 'FFCBD5E1' : (f.depth === 2 ? 'FFFEF3C7' : 'FFF1F5F9'));
+                            const fcTit = f.depth === 0 ? 'FFFFFFFF' : 'FF0F172A';
+                            ws2.mergeCells(r.number, 2, r.number, 36);
+                            for (let c = 1; c <= 36; c++) {
+                                const cell = r.getCell(c);
+                                cell.font = { bold: true, size: 10, color: { argb: fcTit } };
+                                cell.fill = fillHex(bgTit);
+                                cell.border = thinBorder;
+                            }
+                        } else {
+                            totParcialS += nS(f.parcialS);
+                            totHHPpto2 += nS(f.hhPpto);
+                            totHHAnt2 += nS(f.hhAnt);
+                            totHHSem2 += nS(f.hhSem);
+                            totHHAcum2 += nS(f.hhAcum);
+                            for (let d = 0; d < 6; d++) totHHDias2[d] += nS(f.hhDias[d]);
+
+                            const antRend = f.metAnt > 0 ? f.hhAnt / f.metAnt : 0;
+                            const valsDias = [];
+                            for (let d = 0; d < 6; d++) {
+                                const mD = nS(f.metDias[d]);
+                                const hD = nS(f.hhDias[d]);
+                                const rD = mD > 0 ? hD / mD : 0;
+                                valsDias.push(mD, hD, rD);
+                            }
+
+                            const r = ws2.addRow([
+                                f.item, f.desc, f.unidad,
+                                nS(f.metContrato), nS(f.precioUnitS), nS(f.parcialS),
+                                nS(f.metPpto), nS(f.hhPpto), nS(f.rendPpto),
+                                nS(f.metAnt), nS(f.hhAnt), antRend,
+                                ...valsDias,
+                                nS(f.metSem), nS(f.hhSem), nS(f.rendSem),
+                                nS(f.metAcum), nS(f.hhAcum), nS(f.rendAcum)
+                            ]);
+                            r.height = 19;
+
+                            for (let c = 1; c <= 36; c++) {
+                                const cell = r.getCell(c);
+                                cell.border = thinBorder;
+                                cell.font = { name: 'Calibri', size: 10, color: { argb: 'FF1E293B' } };
+
+                                if (c === 1) cell.alignment = { horizontal: 'left', vertical: 'middle' };
+                                else if (c === 2) { cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true }; cell.font = { bold: true, size: 10, color: { argb: 'FF0F172A' } }; }
+                                else if (c === 3) { cell.alignment = { horizontal: 'center', vertical: 'middle' }; cell.font = { bold: true, size: 10 }; }
+                                else {
+                                    cell.alignment = { horizontal: 'right', vertical: 'middle' };
+                                    cell.numFmt = fmtNum;
+                                }
+
+                                // Fondos suaves por bloque para lectura formal en Excel
+                                if (c >= 4 && c <= 6) cell.fill = fillHex('FFEFF6FF');
+                                else if (c >= 7 && c <= 9) cell.fill = fillHex('FFEEF2FF');
+                                else if (c >= 10 && c <= 12) cell.fill = fillHex('FFF8FAFC');
+                                else if (c >= 13 && c <= 30 && (c - 13) % 3 === 0) cell.fill = fillHex('FFFEFCE8');
+                                else if (c >= 31 && c <= 33) {
+                                    cell.fill = fillHex('FFECFDF5');
+                                    cell.font = { bold: true, size: 10, color: { argb: 'FF065F46' } };
+                                } else if (c >= 34 && c <= 36) {
+                                    cell.fill = fillHex('FFECFEFF');
+                                    cell.font = { bold: true, size: 10, color: { argb: 'FF155E75' } };
+                                }
+                            }
+                        }
+                    });
+
+                    // Fila Final: TOTAL GENERAL en ISP DATOS
+                    const totDiasCols = [];
+                    for (let d = 0; d < 6; d++) totDiasCols.push(null, totHHDias2[d], null);
+                    const rTot2 = ws2.addRow([
+                        'TOTAL GENERAL', '', '',
+                        null, null, totParcialS,
+                        null, totHHPpto2, null,
+                        null, totHHAnt2, null,
+                        ...totDiasCols,
+                        null, totHHSem2, null,
+                        null, totHHAcum2, null
+                    ]);
+                    rTot2.height = 24;
+                    ws2.mergeCells(rTot2.number, 1, rTot2.number, 3);
+                    for (let c = 1; c <= 36; c++) {
+                        const cell = rTot2.getCell(c);
+                        cell.fill = fillHex('FF0F172A');
+                        cell.border = medBorder;
+                        cell.font = { bold: true, size: 10, color: { argb: 'FFFFFFFF' } };
+                        if (c <= 3) cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                        else {
+                            cell.alignment = { horizontal: 'right', vertical: 'middle' };
+                            cell.numFmt = fmtNum;
+                        }
+                    }
+
+                    ws2.columns = [{ width: 13 }, { width: 44 }, { width: 7 }];
+                    for (let i = 4; i <= 36; i++) ws2.getColumn(i).width = 10.5;
+
+                    // =========================================================================
+                    // 3. PESTAÑA: DESP. CONCRETO (TABLAS CUADRICULADAS POR RESISTENCIA ACTIVA)
+                    // =========================================================================
+                    const ws3 = wb.addWorksheet('DESP. CONCRETO', {
+                        views: [{ showGridLines: true }]
+                    });
+
+                    ws3.getRow(1).height = 26;
+                    ws3.mergeCells('A1:G1');
+                    ws3.getCell('A1').value = `PROYECTO ${st.proyecto} — CONTROL DE DESPERDICIO DE CONCRETO PREMEZCLADO`;
+                    ws3.getCell('A1').font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+                    ws3.getCell('A1').fill = fillHex('FF0F172A');
+                    ws3.getCell('A1').alignment = { vertical: 'middle', indent: 1 };
+
+                    ws3.getRow(2).height = 20;
+                    ws3.mergeCells('A2:G2');
+                    ws3.getCell('A2').value = `ETAPA: ${st.etapa}   |   SEMANA ${numSem} (${rangoFechas})`;
+                    ws3.getCell('A2').font = { bold: true, size: 10, color: { argb: 'FFFFFFFF' } };
+                    ws3.getCell('A2').fill = fillHex('FF334155');
+                    ws3.getCell('A2').alignment = { vertical: 'middle', indent: 1 };
+                    ws3.addRow([]);
+
+                    const bloquesConcreto = (window._resistenciasConcretoActivasSem && window._resistenciasConcretoActivasSem.length > 0)
+                        ? window._resistenciasConcretoActivasSem
+                        : [];
+
+                    if (bloquesConcreto.length === 0) {
+                        const rEmpty = ws3.addRow(['No se registraron partidas de concreto activas en esta semana de Tareo.']);
+                        rEmpty.font = { italic: true, color: { argb: 'FF64748B' } };
+                    } else {
+                        const diasL = ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO'];
+                        bloquesConcreto.forEach(g => {
+                            const rTit = ws3.addRow([g.titulo, '', '', '', '', `META REND: ${Number(g.metaRend || 0).toFixed(2)} HH/m³`, '']);
+                            rTit.height = 23;
+                            ws3.mergeCells(rTit.number, 1, rTit.number, 5);
+                            ws3.mergeCells(rTit.number, 6, rTit.number, 7);
+                            for (let c = 1; c <= 7; c++) {
+                                const cell = rTit.getCell(c);
+                                cell.fill = fillHex('FF0F172A');
+                                cell.border = medBorder;
+                                cell.font = { bold: true, size: 10, color: { argb: c >= 6 ? 'FFFDE047' : 'FFFFFFFF' } };
+                                cell.alignment = { horizontal: c >= 6 ? 'right' : 'left', vertical: 'middle', indent: c < 6 ? 1 : 0 };
+                            }
+
+                            const h3 = ws3.addRow(['DÍA', 'METRADO (m³)', 'HH REALES', 'RATIO (HH/m³)', 'GUÍA CONCRETERA (m³)', 'DESP. (%)', 'DESP. (m³)']);
+                            h3.height = 24;
+                            h3.eachCell((c, idx) => {
+                                c.font = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } };
+                                c.fill = fillHex(idx === 5 ? 'FFB45309' : 'FF334155');
+                                c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+                                c.border = thinBorder;
+                            });
+
+                            diasL.forEach((dia, d) => {
+                                const m = nS(g.metDias[d]);
+                                const h = nS(g.hhDias[d]);
+                                const p = parseFloat(g.guiasDias[d]) || 0;
+                                const ratio = m > 0 ? h / m : 0;
+                                const despPct = m > 0 ? (p - m) / m : 0;
+                                const despM3 = p - m;
+
+                                const rd = ws3.addRow([dia, m, h, ratio, p, despPct, despM3]);
+                                rd.height = 19;
+                                for (let c = 1; c <= 7; c++) {
+                                    const cell = rd.getCell(c);
+                                    cell.border = thinBorder;
+                                    cell.font = { size: 10, color: { argb: 'FF1E293B' }, bold: c === 1 };
+                                    if (c === 1) cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+                                    else {
+                                        cell.alignment = { horizontal: 'right', vertical: 'middle' };
+                                        cell.numFmt = c === 6 ? fmtPct : fmtNum;
+                                    }
+                                    if (c === 5) cell.fill = fillHex('FFFEFCE8');
+                                    if (c === 6 && m > 0) {
+                                        cell.font = { bold: true, size: 10, color: { argb: despPct > 0.05 ? 'FFDC2626' : 'FF16A34A' } };
+                                    }
+                                }
+                            });
+
+                            const rS = ws3.addRow(['SEMANAL', nS(g.metSem), nS(g.hhSem), g.metSem > 0 ? g.hhSem / g.metSem : 0, nS(g.pedSem), nS(g.despPctSem) / 100, nS(g.despM3Sem)]);
+                            rS.height = 21;
+                            for (let c = 1; c <= 7; c++) {
+                                const cell = rS.getCell(c);
+                                cell.fill = fillHex('FFE2E8F0');
+                                cell.border = thinBorder;
+                                cell.font = { bold: true, size: 10, color: { argb: 'FF0F172A' } };
+                                cell.alignment = { horizontal: c === 1 ? 'left' : 'right', vertical: 'middle', indent: c === 1 ? 1 : 0 };
+                                if (c > 1) cell.numFmt = c === 6 ? fmtPct : fmtNum;
+                            }
+
+                            const rA = ws3.addRow(['ACUMULADO', nS(g.metAcum), nS(g.hhAcum), g.metAcum > 0 ? g.hhAcum / g.metAcum : 0, nS(g.pedAcum), nS(g.despPctAcum) / 100, nS(g.despM3Acum)]);
+                            rA.height = 23;
+                            for (let c = 1; c <= 7; c++) {
+                                const cell = rA.getCell(c);
+                                cell.fill = fillHex('FF0F172A');
+                                cell.border = medBorder;
+                                cell.font = {
+                                    bold: true,
+                                    size: 10,
+                                    color: { argb: c === 5 ? 'FFFDE047' : (c === 6 ? (g.despPctAcum > 5 ? 'FFF87171' : 'FF34D399') : 'FFFFFFFF') }
+                                };
+                                cell.alignment = { horizontal: c === 1 ? 'left' : 'right', vertical: 'middle', indent: c === 1 ? 1 : 0 };
+                                if (c > 1) cell.numFmt = c === 6 ? fmtPct : fmtNum;
+                            }
+
+                            ws3.addRow([]);
+                        });
+                    }} else if (tipo === 'acero') {} else if (tipo === 'acero') {
+                        const sec = document.getElementById('seccionAceroAdicional');
+                        const lbl = document.getElementById('lblToggleAceroAdic');
+                        const oculto = sec.classList.contains('hidden');
+                        if (oculto) {
+                            sec.classList.remove('hidden');
+                            lbl.textContent = '− Ocultar Conversión de Acero';
+                            if (window.adicionalEditandoActual.aceroSustento.length === 0) {
+                                window.agregarFilaAceroAdicional();
+                            }
+                        } else {
+                            sec.classList.add('hidden');
+                            lbl.textContent = '+ Activar Conversión de Acero (Opcional)';
+                        }
+                    }
+                        const sec = document.getElementById('seccionAceroAdicional');
+                        const lbl = document.getElementById('lblToggleAceroAdic');
+                        const oculto = sec.classList.contains('hidden');
+                        if (oculto) {
+                            sec.classList.remove('hidden');
+                            lbl.textContent = '− Ocultar Conversión de Acero';
+                            if (window.adicionalEditandoActual.aceroSustento.length === 0) {
+                                window.agregarFilaAceroAdicional();
+                            }
+                        } else {
+                            sec.classList.add('hidden');
+                            lbl.textContent = '+ Activar Conversión de Acero (Opcional)';
+                        }
+                    }
+
+                    ws3.columns = [
+                        { width: 16 }, { width: 16 }, { width: 14 },
+                        { width: 15 }, { width: 22 }, { width: 14 }, { width: 15 }
+                    ];
+
                     const buf = await wb.xlsx.writeBuffer();
                     saveAs(new Blob([buf]), `ISP_${st.proyecto}_${st.semanaActiva}.xlsx`);
                 };
@@ -18027,8 +18831,10 @@ window.iniciarNuevoReporte = function() {
             document.getElementById('historialTareos').classList.add('hidden');
             document.getElementById('zonaCargaTareo').classList.remove('hidden');
 
-            // 2. Limpiar memoria global
+            // 2. Limpiar memoria global (incluyendo nombre y URL del padrón anterior)
             archivoPadronS10 = null;
+            window.currentPadronUrl = null;
+            window.currentPadronName = null;
             archivosTareoCampo = [];
             numeroSemanaTareo = null;
             window.semanaActualTareo = null;
@@ -18114,6 +18920,8 @@ window.iniciarNuevoReporte = function() {
         document.getElementById('fileS10Padron')?.addEventListener('change', function(e) {
             if (e.target.files.length > 0) {
                 archivoPadronS10 = e.target.files[0];
+                window.currentPadronName = archivoPadronS10.name;
+                window.currentPadronUrl = null;
                 document.getElementById('statusPadron').classList.remove('hidden');
                 verificarArchivosTareo();
             }
@@ -19646,13 +20454,14 @@ window.iniciarNuevoReporte = function() {
             let pCrudo = window.proyectoSeleccionadoGlobal || window.proyectoActualGlobal || "";
             const codigoProyectoActual = pCrudo ? String(pCrudo).split(' ')[0].trim() : "";
 
-            // 2. Extraer y FILTRAR las opciones de la memoria cruda
+            // 2. Extraer y FILTRAR las opciones de la memoria cruda (revisando Columna A y Columna B para no omitir la 1ra partida 0101001)
             if (codigoProyectoActual && window.hojaActividadesCruda) {
                 window.hojaActividadesCruda.forEach(fila => {
-                    let colA = String(fila.A || '').trim(); // Columna A (Código)
-                    let colD = String(fila.D || '').trim(); // Columna D (Partida)
+                    let colA = String(fila.A || '').trim();
+                    let colB = String(fila.B || '').trim();
+                    let colD = String(fila.D || '').trim();
                     
-                    if (colA.startsWith(codigoProyectoActual) && colD.length > 5) {
+                    if ((colA.startsWith(codigoProyectoActual) || colB.startsWith(codigoProyectoActual)) && colD.length > 5) {
                         if (!opcionesGlobalesPartida.includes(`value="${colD}"`)) {
                             opcionesGlobalesPartida += `<option value="${colD}">${colD}</option>`;
                         }
@@ -20549,9 +21358,10 @@ window.iniciarNuevoReporte = function() {
             let opcionesUnicas = new Set();
             if (codigoProyecto && window.hojaActividadesCruda && Array.isArray(window.hojaActividadesCruda)) {
                 window.hojaActividadesCruda.forEach(fila => {
-                    let colA = String(fila.A || '').trim(); 
+                    let colA = String(fila.A || '').trim();
+                    let colB = String(fila.B || '').trim();
                     let colD = String(fila.D || '').trim(); 
-                    if (colA.startsWith(codigoProyecto) && colD.length > 5) { opcionesUnicas.add(colD); }
+                    if ((colA.startsWith(codigoProyecto) || colB.startsWith(codigoProyecto)) && colD.length > 5) { opcionesUnicas.add(colD); }
                 });
             }
             
@@ -20923,190 +21733,8 @@ window.iniciarNuevoReporte = function() {
             }
         }, true);
     </script>
-    <!-- ========================================== -->
-    <!-- MOTOR DE EXPORTACIÓN EXCELJS (FORMATO S10 PERFECTO) -->
-    <!-- ========================================== -->
-    <script>
-        setTimeout(() => {
-            let btnExportOld = document.getElementById('btnConfirmarExportacion');
-            if (!btnExportOld) return;
-            
-            let btnExportNew = btnExportOld.cloneNode(true);
-            btnExportOld.parentNode.replaceChild(btnExportNew, btnExportOld);
-
-            btnExportNew.addEventListener('click', async function() {
-                if (typeof datosListosParaExportar === 'undefined' || datosListosParaExportar.length === 0) return;
-                if (!archivoPadronS10) return alert("No se encuentra el archivo Padrón S10 original.");
-
-                const btn = this;
-                const originalHTML = btn.innerHTML;
-                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Procesando Formato S10...';
-                btn.disabled = true;
-
-                try {
-                    const arrayBuffer = await archivoPadronS10.arrayBuffer();
-                    const wb = new ExcelJS.Workbook();
-                    await wb.xlsx.load(arrayBuffer);
-
-                    const ws = wb.worksheets[0]; 
-                    let proyectoLobby = window.proyectoSeleccionadoGlobal || document.getElementById('proyectoSelect').value || "";
-
-                    // 🔥 CAPTURA DE LISTAS DESPLEGABLES MAESTRAS (Desde la Fila 8 del S10)
-                    let masterRow = ws.getRow(8);
-                    let dvProyecto = masterRow.getCell(5).dataValidation; // Columna E
-                    let dvPartida = masterRow.getCell(7).dataValidation;  // Columna G
-                    let dvConcepto = masterRow.getCell(8).dataValidation; // Columna H
-
-                    const tbody = document.getElementById('tablaVistaPreviaTareo');
-                    const filasTr = Array.from(tbody.querySelectorAll('tr')).filter(tr => !tr.classList.contains('sticky')); 
-                    
-                    let dataPorObrero = [];
-                    datosListosParaExportar.forEach((rowObj, index) => {
-                        const tr = filasTr[index];
-                        if(!tr) return;
-                        
-                        let lineaVisual = tr.querySelectorAll('td')[1].innerText.trim();
-                        
-                        const selectsConcepto = tr.querySelectorAll('.selector-concepto-fila');
-                        const selectsPartida = tr.querySelectorAll('.selector-partida-fila');
-                        const inputsHoras = tr.querySelectorAll('.input-horas-fila');
-                        
-                        let selectIdx = 0;
-                        let rowData = {
-                            dni: String(rowObj.dni).trim(),
-                            linea: lineaVisual, 
-                            nombre: rowObj.nombre,
-                            dias: []
-                        };
-
-                        rowObj.dias.forEach((diaData, dIdx) => {
-                            if (diaData !== null && diaData.horas > 0) {
-                                const concepto = selectsConcepto[selectIdx] ? selectsConcepto[selectIdx].value : "";
-                                const partida = selectsPartida[selectIdx] ? selectsPartida[selectIdx].value : diaData.partida;
-                                const horas = inputsHoras[selectIdx] ? parseFloat(inputsHoras[selectIdx].value) || 0 : diaData.horas;
-                                
-                                rowData.dias[dIdx] = { partida, concepto, horas };
-                                selectIdx++;
-                            } else {
-                                rowData.dias[dIdx] = null;
-                            }
-                        });
-                        dataPorObrero.push(rowData);
-                    });
-
-                    let mapaFilasExcel = {};
-                    ws.eachRow({ includeEmpty: false }, function(row, rowNumber) {
-                        if (rowNumber >= 8) {
-                            let cellDNI = row.getCell(3).value; 
-                            if (cellDNI && String(cellDNI).trim().length >= 4) {
-                                mapaFilasExcel[String(cellDNI).trim()] = rowNumber;
-                            }
-                        }
-                    });
-
-                    let trabajadoresAgrupados = {};
-                    dataPorObrero.forEach(wd => {
-                        if (!trabajadoresAgrupados[wd.dni]) trabajadoresAgrupados[wd.dni] = [];
-                        trabajadoresAgrupados[wd.dni].push(wd);
-                    });
-
-                    // ORDEN DE ABAJO HACIA ARRIBA
-                    let dnisOrdenados = Object.keys(trabajadoresAgrupados).sort((a, b) => {
-                        return (mapaFilasExcel[b] || 0) - (mapaFilasExcel[a] || 0);
-                    });
-
-                    const columnasInicioDia = [7, 10, 13, 16, 19, 22, 25]; 
-
-                    dnisOrdenados.forEach(dni => {
-                        let excelRowIdx = mapaFilasExcel[dni];
-                        if (!excelRowIdx) return;
-
-                        let filasDelTrabajador = trabajadoresAgrupados[dni];
-                        let sourceRow = ws.getRow(excelRowIdx);
-                        
-                        filasDelTrabajador.forEach((wd, i) => {
-                            let targetRow;
-                            let currentRowIdx = excelRowIdx + i;
-                            
-                            let lineaFija = wd.linea;
-                            let valorLineaFinal = (lineaFija && !isNaN(lineaFija)) ? Number(lineaFija) : lineaFija;
-
-                            if (i === 0) {
-                                // 1. FILA ORIGINAL
-                                targetRow = sourceRow;
-                                
-                                targetRow.getCell(1).value = valorLineaFinal;
-                                if (proyectoLobby) targetRow.getCell(5).value = proyectoLobby;
-                                
-                                // Vaciamos los días
-                                for (let c = 7; c <= 27; c++) { targetRow.getCell(c).value = null; }
-                            } else {
-                                // 2. FILAS CLONADAS
-                                targetRow = ws.insertRow(currentRowIdx, []);
-                                targetRow.height = sourceRow.height;
-                                
-                                // Clonado profundo de estilos
-                                for (let c = 1; c <= 27; c++) {
-                                    let oldStyle = sourceRow.getCell(c).style;
-                                    if (oldStyle) targetRow.getCell(c).style = JSON.parse(JSON.stringify(oldStyle));
-                                    targetRow.getCell(c).value = null; 
-                                }
-                                
-                                try { ws.unmergeCells(currentRowIdx, 1, currentRowIdx, 2); } catch(e) {}
-                                
-                                targetRow.getCell(1).value = valorLineaFinal;            
-                                targetRow.getCell(2).value = null;                       
-                                targetRow.getCell(3).value = sourceRow.getCell(3).value; 
-                                targetRow.getCell(4).value = sourceRow.getCell(4).value; 
-                                targetRow.getCell(5).value = proyectoLobby;              
-                                targetRow.getCell(6).value = sourceRow.getCell(6).value; 
-
-                                targetRow.getCell(4).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDDEBF7' } };
-                            }
-
-                            // 🔥 RE-INYECTAR LISTA DESPLEGABLE DE PROYECTO (Columna E)
-                            if (dvProyecto) targetRow.getCell(5).dataValidation = JSON.parse(JSON.stringify(dvProyecto));
-
-                            // Inyectar datos de los días y 🔥 RE-INYECTAR LISTAS DESPLEGABLES DE PARTIDAS/CONCEPTOS
-                            columnasInicioDia.forEach((startCol, diaIndex) => {
-                                let diaInfo = wd.dias[diaIndex];
-                                
-                                if (diaInfo) {
-                                    targetRow.getCell(startCol).value = diaInfo.partida;     
-                                    targetRow.getCell(startCol + 1).value = diaInfo.concepto; 
-                                    targetRow.getCell(startCol + 2).value = diaInfo.horas;    
-                                }
-                                
-                                // Aplicar las listas desplegables inquebrantables
-                                if (dvPartida) targetRow.getCell(startCol).dataValidation = JSON.parse(JSON.stringify(dvPartida));
-                                if (dvConcepto) targetRow.getCell(startCol + 1).dataValidation = JSON.parse(JSON.stringify(dvConcepto));
-                            });
-                        });
-                    });
-
-                    const buffer = await wb.xlsx.writeBuffer();
-                    let nombreOriginal = archivoPadronS10.name;
-                    if (nombreOriginal.toLowerCase().endsWith('.xlsm')) {
-                        nombreOriginal = nombreOriginal.substring(0, nombreOriginal.length - 5) + '.xlsx';
-                    }
-
-                    saveAs(new Blob([buffer]), nombreOriginal);
-
-                    alert("✅ ¡Exportación S10 completada con éxito!\nEl formato, colores, celdas y listas desplegables están listos.");
-                    if (typeof window.cerrarVistaPrevia === 'function') window.cerrarVistaPrevia();
-
-                } catch (err) {
-                    console.error("Error en la inyección:", err);
-                    alert("❌ Hubo un error al procesar los datos: " + err.message);
-                } finally {
-                    btn.innerHTML = originalHTML;
-                    btn.disabled = false;
-                }
-            });
-        }, 1500); 
-    </script>
-
-<script>
+    
+        <script>
         // ==========================================
         // MÓDULO RDI: MOTOR LÓGICO Y FIREBASE
         // ==========================================
@@ -21618,287 +22246,499 @@ window.iniciarNuevoReporte = function() {
     </script>
     <script>
         // ==========================================
-        // EXPORTACIÓN A S10 - RECONSTRUCCIÓN EXACTA + ORDEN ALFABÉTICO + NOMBRE LARGO
+        // EXPORTACIÓN A S10 - INYECCIÓN XML COMPLETA (PROYECTO ELEGIDO + CLONES CELESTES + LISTAS + MARCOS)
         // ==========================================
         window.ejecutarExportacionNube = async function() {
-            const btn = document.getElementById('btnExportacionNube');
-            const originalHTML = btn.innerHTML;
+            const btn = document.getElementById('btnExportacionNube') || document.getElementById('btnConfirmarExportacion');
+            const originalHTML = btn ? btn.innerHTML : '';
 
             try {
-                // 1. AUTO-DESCARGA DESDE FIREBASE SI NO ESTÁ EN RAM
+                // 1. OBTENER ARCHIVO BASE S10 (EN RAM O DESDE FIREBASE)
                 if (!archivoPadronS10) {
                     if (window.currentPadronUrl) {
-                        btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-down fa-bounce"></i> Descargando Matriz...';
-                        try {
-                            const response = await fetch(window.currentPadronUrl);
-                            const blob = await response.blob();
-                            archivoPadronS10 = new File([blob], window.currentPadronName || "Matriz_S10.xlsx");
-                        } catch(e) {
-                            alert("❌ Error de red al intentar descargar la Matriz S10 desde Firebase.");
-                            btn.innerHTML = originalHTML;
-                            btn.disabled = false;
-                            return;
-                        }
+                        if (btn) btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-down fa-bounce"></i> Descargando Matriz...';
+                        const response = await fetch(window.currentPadronUrl);
+                        if (!response.ok) throw new Error("No se pudo descargar la Matriz S10 desde Firebase.");
+                        const blob = await response.blob();
+                        archivoPadronS10 = new File([blob], window.currentPadronName || "Matriz_S10.xlsm");
                     } else {
-                        alert("⚠️ No hay matriz S10 en la memoria ni en la nube.\n👉 Cierra esta vista previa, carga el archivo original en el 'Paso 1' y vuelve a intentar.");
-                        btn.innerHTML = originalHTML;
-                        btn.disabled = false;
+                        alert("⚠️ No hay matriz S10 en la memoria ni en la nube.\n👉 Carga el archivo original en el 'Paso 1' y vuelve a intentar.");
                         return;
                     }
                 }
 
-                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando S10 Exacto...';
-                btn.disabled = true;
+                if (btn) {
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando Excel S10...';
+                    btn.disabled = true;
+                }
 
-                // 2. OBTENER EL NOMBRE LARGO EXACTO DEL PROYECTO S10 DESDE LA NUBE
-                let proyectoCortoLobby = window.proyectoActualGlobal || document.getElementById('proyectoSelect')?.value || "";
-                let nombreLargoProyectoS10 = proyectoCortoLobby; // Fallback
-                
-                if (proyectoCortoLobby) {
+                const normDni = (v) => {
+                    const clean = String(v ?? '').replace(/\D/g, '');
+                    return (clean.length > 0 && clean.length < 8) ? clean.padStart(8, '0') : (clean || String(v ?? '').trim());
+                };
+                const normName = (v) => String(v ?? '')
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                    .replace(/\s+/g, ' ').trim().toUpperCase();
+
+                // 2. DETERMINAR EL PROYECTO OFICIAL S10 SELECCIONADO EN LA APP
+                const proyectoCortoLobby = window.proyectoActualGlobal || document.getElementById('proyectoSelect')?.value || "";
+                const proyEnTablaVisual = document.querySelector('#tablaVistaPreviaTareo tr:not(.sticky) td:nth-child(5)')?.innerText?.trim() || "";
+                let nombreLargoProyectoS10 = (/^\d{4,6}\s+/.test(proyEnTablaVisual) ? proyEnTablaVisual : "")
+                    || window.proyectoSeleccionadoGlobal
+                    || proyectoCortoLobby;
+
+                if (!/^\d{4,6}\s+/.test(nombreLargoProyectoS10) && proyectoCortoLobby && window.firebaseDb && window.fsDoc && window.fsGetDoc) {
                     try {
-                        const maestroRef = window.fsDoc(window.firebaseDb, `proyectos/${proyectoCortoLobby}/configuracionTareos/Maestro`);
-                        const maestroSnap = await window.fsGetDoc(maestroRef);
-                        if (maestroSnap.exists() && maestroSnap.data().proyectoS10Vinculado) {
-                            nombreLargoProyectoS10 = maestroSnap.data().proyectoS10Vinculado;
+                        const mSnap = await window.fsGetDoc(window.fsDoc(window.firebaseDb, `proyectos/${proyectoCortoLobby}/configuracionTareos/Maestro`));
+                        if (mSnap.exists() && mSnap.data().proyectoS10Vinculado) {
+                            nombreLargoProyectoS10 = mSnap.data().proyectoS10Vinculado;
                         }
-                    } catch (e) {
-                        console.warn("No se pudo obtener el nombre largo del proyecto S10 de Firebase:", e);
-                    }
+                    } catch (e) {}
                 }
 
-                // 3. ESCANEAR TEXTOS CON SHEETJS
-                const arrayBuffer = await archivoPadronS10.arrayBuffer();
-                const sheetJsWb = XLSX.read(arrayBuffer, { type: 'array' });
-                const wsOriginalName = sheetJsWb.SheetNames[0];
-                const rawAOA = XLSX.utils.sheet_to_json(sheetJsWb.Sheets[wsOriginalName], { header: 1, defval: "" });
-
-                let datosOriginalesObreros = {};
-                for (let i = 7; i < rawAOA.length; i++) {
-                    let row = rawAOA[i];
-                    if (!row) continue;
-                    let dni = String(row[2] || '').trim(); // DNI en Columna C
-                    if (dni.length >= 4 && !datosOriginalesObreros[dni]) {
-                        datosOriginalesObreros[dni] = {
-                            nombre: String(row[3] || '').trim(),
-                            proy: row[4] || '', 
-                            porcentaje: row[5] || ''
-                        };
-                    }
-                }
-
-                // 4. CREAR UN EXCEL NUEVO CON EXCELJS
-                const wb = new ExcelJS.Workbook();
-                const ws = wb.addWorksheet(wsOriginalName);
-
-                ws.getColumn(1).width = 6;   // A: Linea
-                ws.getColumn(2).width = 5;   // B: Visible para combinar
-                ws.getColumn(2).hidden = true; 
-                ws.getColumn(3).width = 12;  // C: DNI
-                ws.getColumn(4).width = 40;  // D: Nombre
-                ws.getColumn(5).width = 25;  // E: Proyecto
-                ws.getColumn(6).width = 8;   // F: %
-                for (let c = 7; c <= 27; c += 3) {
-                    ws.getColumn(c).width = 22;     
-                    ws.getColumn(c + 1).width = 22; 
-                    ws.getColumn(c + 2).width = 8;  
-                }
-
-                // 5. REPLICAR CABECERA SUPERIOR (Filas 1 a 5)
-                for (let i = 0; i < 5; i++) {
-                    let r = ws.addRow(rawAOA[i] || []);
-                    r.font = { name: 'Arial', size: 9, bold: true };
-                }
-                for (let i = 1; i <= 5; i++) {
-                    ws.mergeCells(i, 1, i, 2); 
-                }
-                ws.getCell('J2').font = { name: 'Arial', size: 12, bold: true }; 
-
-                // 6. DIBUJAR CABECERAS AMARILLAS S10 (Filas 6 y 7)
-                const diasS10 = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo"];
-                const r6 = ws.getRow(6);
-                const r7 = ws.getRow(7);
-
-                r6.getCell(1).value = "Linea"; 
-                r6.getCell(3).value = "DNI"; 
-                r6.getCell(4).value = "Nombre"; 
-                r6.getCell(5).value = "Proyecto"; 
-                r6.getCell(6).value = "%";
-                
-                let colIdx = 7;
-                diasS10.forEach(dia => {
-                    r6.getCell(colIdx).value = dia;
-                    ws.mergeCells(6, colIdx, 6, colIdx + 2); 
-                    r7.getCell(colIdx).value = "Partida de Control";
-                    r7.getCell(colIdx + 1).value = "Concepto";
-                    r7.getCell(colIdx + 2).value = "Horas";
-                    colIdx += 3;
-                });
-
-                ws.mergeCells(6, 1, 7, 2); 
-                [3, 4, 5, 6].forEach(col => ws.mergeCells(6, col, 7, col));
-
-                [r6, r7].forEach(row => {
-                    row.height = 18;
-                    for (let c = 1; c <= 27; c++) {
-                        let cell = row.getCell(c);
-                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF99' } }; 
-                        cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
-                        cell.font = { name: 'Arial', size: 8, bold: true };
-                        cell.alignment = { horizontal: 'center', vertical: 'middle' };
-                    }
-                });
-
-                // 7. EXTRAER TAREO DE LA PANTALLA (Ya viene con la suma matemática del vigilante)
+                // 3. EXTRAER DATOS DEL TAREO (datosListosParaExportar + EDICIONES EN PANTALLA)
                 const tbody = document.getElementById('tablaVistaPreviaTareo');
-                const filasTr = Array.from(tbody.querySelectorAll('tr')).filter(tr => !tr.classList.contains('sticky')); 
+                const filasTr = tbody ? Array.from(tbody.querySelectorAll('tr')).filter(tr => !tr.classList.contains('sticky')) : [];
+                const trabajadoresPorDni = {};
+                const trabajadoresPorNombre = {};
 
-                let trabajadoresAgrupados = {};
-                
-                filasTr.forEach((tr) => {
-                    const tds = tr.querySelectorAll('td');
-                    if (tds.length < 27) return; 
-                    
-                    let linea = tds[1]?.innerText.trim();
-                    let dni = tds[2]?.innerText.trim();
-                    if (!dni) return;
-                    
-                    if (!trabajadoresAgrupados[dni]) trabajadoresAgrupados[dni] = [];
-
-                    let diasData = [];
-                    const baseIndex = 6; 
-                    
-                    for(let i = 0; i < 7; i++) {
-                        let idxPartida = baseIndex + (i * 3);
-                        let idxConcepto = baseIndex + (i * 3) + 1;
-                        let idxHoras = baseIndex + (i * 3) + 2;
-
-                        let tdP = tds[idxPartida];
-                        let tdC = tds[idxConcepto];
-                        let tdH = tds[idxHoras];
-
-                        let partida = tdP ? (tdP.querySelector('.selector-partida-fila')?.value || tdP.innerText.trim()) : "";
-                        let concepto = tdC ? (tdC.querySelector('.selector-concepto-fila')?.value || tdC.innerText.trim()) : "";
-                        let horasStr = tdH ? (tdH.querySelector('.input-horas-fila')?.value || tdH.innerText.trim()) : "0";
-                        let horas = parseFloat(horasStr) || 0;
-
-                        if (horas > 0) diasData[i] = { partida, concepto, horas };
-                        else diasData[i] = null;
+                const registrarFilaTareo = (dniRaw, nombreRaw, lineaRaw, diasData) => {
+                    const dni = normDni(dniRaw);
+                    const nom = normName(nombreRaw);
+                    const item = { linea: lineaRaw, dias: diasData };
+                    if (dni) {
+                        if (!trabajadoresPorDni[dni]) trabajadoresPorDni[dni] = [];
+                        trabajadoresPorDni[dni].push(item);
                     }
-                    trabajadoresAgrupados[dni].push({ linea, dias: diasData });
+                    if (nom) {
+                        if (!trabajadoresPorNombre[nom]) trabajadoresPorNombre[nom] = [];
+                        trabajadoresPorNombre[nom].push(item);
+                    }
+                };
+
+                if (Array.isArray(datosListosParaExportar) && datosListosParaExportar.length > 0) {
+                    datosListosParaExportar.forEach((rowObj, idxFila) => {
+                        const tr = filasTr[idxFila];
+                        const tds = tr ? tr.querySelectorAll('td') : null;
+                        const dni = normDni(rowObj.dni || (tds?.[2]?.innerText || ''));
+                        if (!dni) return;
+
+                        const lineaVisual = tds?.[1]?.innerText?.trim() || '';
+                        const linea = lineaVisual !== '' ? lineaVisual : (rowObj.lineaOriginal ?? rowObj.linea ?? '');
+
+                        const diasData = [];
+                        for (let i = 0; i < 7; i++) {
+                            const diaMem = Array.isArray(rowObj.dias) ? rowObj.dias[i] : null;
+                            const baseIdx = 6 + (i * 3);
+                            const tdP = tds?.[baseIdx], tdC = tds?.[baseIdx + 1], tdH = tds?.[baseIdx + 2];
+                            const inpP = tdP?.querySelector('.selector-partida-fila');
+                            const inpC = tdC?.querySelector('.selector-concepto-fila');
+                            const inpH = tdH?.querySelector('.input-horas-fila');
+
+                            const partida = inpP ? inpP.value : (diaMem?.partida || tdP?.innerText?.trim() || '');
+                            const concepto = inpC ? inpC.value : (diaMem?.concepto || tdC?.innerText?.trim() || '');
+                            const horas = inpH ? (parseFloat(inpH.value) || 0) : (parseFloat(diaMem?.horas ?? tdH?.innerText?.trim()) || 0);
+                            diasData[i] = horas > 0 ? { partida, concepto, horas } : null;
+                        }
+                        registrarFilaTareo(dni, rowObj.nombre, linea, diasData);
+                    });
+                } else {
+                    filasTr.forEach((tr) => {
+                        const tds = tr.querySelectorAll('td');
+                        if (tds.length < 27) return;
+                        const linea = tds[1]?.innerText.trim() || '';
+                        const dni = normDni(tds[2]?.innerText.trim() || '');
+                        const nombre = tds[3]?.innerText.trim() || '';
+                        if (!dni) return;
+
+                        const diasData = [];
+                        for (let i = 0; i < 7; i++) {
+                            const baseIdx = 6 + (i * 3);
+                            const tdP = tds[baseIdx], tdC = tds[baseIdx + 1], tdH = tds[baseIdx + 2];
+                            const partida = tdP?.querySelector('.selector-partida-fila')?.value || tdP?.innerText.trim() || '';
+                            const concepto = tdC?.querySelector('.selector-concepto-fila')?.value || tdC?.innerText.trim() || '';
+                            const horas = parseFloat(tdH?.querySelector('.input-horas-fila')?.value || tdH?.innerText.trim()) || 0;
+                            diasData[i] = horas > 0 ? { partida, concepto, horas } : null;
+                        }
+                        registrarFilaTareo(dni, nombre, linea, diasData);
+                    });
+                }
+
+                // 4. LEER CON SHEETJS LA ESTRUCTURA EXACTA DE LA PLANTILLA S10
+                if (!window.XLSX || !window.JSZip) throw new Error("Librerías XLSX / JSZip no disponibles. Recarga la página.");
+                const rawBuffer = await archivoPadronS10.arrayBuffer();
+                const refWb = XLSX.read(rawBuffer, { type: 'array' });
+                const refWs = refWb.Sheets[refWb.SheetNames[0]];
+                const refAoa = XLSX.utils.sheet_to_json(refWs, { header: 1, defval: '' });
+
+                const contarFilasColD = (sheetNameBuscada, fallbackMax) => {
+                    const realName = refWb.SheetNames.find(n => n.trim().toUpperCase() === sheetNameBuscada.toUpperCase());
+                    if (!realName) return fallbackMax;
+                    const aoa = XLSX.utils.sheet_to_json(refWb.Sheets[realName], { header: 1, defval: '' });
+                    let maxR = 1;
+                    for (let r = 0; r < aoa.length; r++) {
+                        if (String(aoa[r]?.[3] ?? '').trim() !== '') maxR = r + 1;
+                    }
+                    return maxR;
+                };
+
+                const maxRowProyecto = contarFilasColD('Proyecto', 50);
+                const maxRowTipoHora = contarFilasColD('TipoHora', 20);
+
+                // Si aún no tiene código de 4-6 dígitos, buscar en la hoja oculta Proyecto
+                if (!/^\d{4,6}\s+/.test(nombreLargoProyectoS10) && proyectoCortoLobby) {
+                    const normProy = normName(proyectoCortoLobby);
+                    const proySheetName = refWb.SheetNames.find(n => n.trim().toUpperCase() === 'PROYECTO');
+                    if (proySheetName) {
+                        const proyAoa = XLSX.utils.sheet_to_json(refWb.Sheets[proySheetName], { header: 1, defval: '' });
+                        for (const pRow of proyAoa) {
+                            const matchCell = (pRow || []).find(cell => /^\d{4,6}\s+/.test(String(cell || '').trim()) && normName(cell).includes(normProy));
+                            if (matchCell) {
+                                nombreLargoProyectoS10 = String(matchCell).trim();
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // Detectar rango exacto de actividades del proyecto seleccionado en hoja Actividad
+                const codProyActivo = String(nombreLargoProyectoS10 || '').split(' ')[0].trim();
+                let rangoListaAct = 'Actividad!$D$1:$D$3000';
+                const actSheetName = refWb.SheetNames.find(n => n.trim().toUpperCase().includes('ACTIVIDAD'));
+                if (codProyActivo && actSheetName) {
+                    const actAoa = XLSX.utils.sheet_to_json(refWb.Sheets[actSheetName], { header: 1, defval: '' });
+                    let minR = Infinity, maxR = -1;
+                    for (let r = 0; r < actAoa.length; r++) {
+                        const cA = String(actAoa[r]?.[0] ?? '').trim();
+                        const cB = String(actAoa[r]?.[1] ?? '').trim();
+                        if (cA.startsWith(codProyActivo) || cB.startsWith(codProyActivo)) {
+                            if (r + 1 < minR) minR = r + 1;
+                            if (r + 1 > maxR) maxR = r + 1;
+                        }
+                    }
+                    if (maxR >= minR && minR !== Infinity) {
+                        rangoListaAct = `${actSheetName}!$D$${minR}:$D$${maxR}`;
+                    }
+                }
+
+                let filaInicioDatos = 8;
+                const mapaFilaExcelAWorker = new Map();
+                for (let r0 = 0; r0 < refAoa.length; r0++) {
+                    const rowArr = refAoa[r0] || [];
+                    const colC = String(rowArr[2] ?? '').trim();
+                    if (colC.toUpperCase() === 'DNI') {
+                        filaInicioDatos = r0 + 3;
+                        continue;
+                    }
+                    if ((r0 + 1) >= filaInicioDatos) {
+                        const dniClean = normDni(colC);
+                        const nomClean = normName(rowArr[3]);
+                        if (dniClean.length >= 6) {
+                            mapaFilaExcelAWorker.set(r0 + 1, {
+                                dni: dniClean, nombre: nomClean, linea: rowArr[0], proyOrig: String(rowArr[4] ?? '').trim()
+                            });
+                        }
+                    }
+                }
+
+                // 5. ABRIR PAQUETE ZIP E INYECTAR ESTILOS LIMPIOS + RESALTADO CELESTE (#DDEBF7) EN styles.xml
+                const zip = await JSZip.loadAsync(rawBuffer);
+                const s1Key = Object.keys(zip.files).find(k => /^xl\/worksheets\/sheet1\.xml$/i.test(k));
+                const ssKey = Object.keys(zip.files).find(k => /^xl\/sharedStrings\.xml$/i.test(k));
+                const stKey = Object.keys(zip.files).find(k => /^xl\/styles\.xml$/i.test(k));
+                const wbKey = Object.keys(zip.files).find(k => /^xl\/workbook\.xml$/i.test(k));
+                if (!s1Key) throw new Error("No se encontró xl/worksheets/sheet1.xml dentro de la plantilla S10.");
+
+                let s1Xml = await zip.file(s1Key).async('string');
+                let ssXml = ssKey ? await zip.file(ssKey).async('string') : '';
+                let stXml = stKey ? await zip.file(stKey).async('string') : '';
+                let wbXml = wbKey ? await zip.file(wbKey).async('string') : '';
+
+                let stLeftGrid = '', stCenterGrid = '', estiloClonID = '';
+                if (stXml) {
+                    const fontsBlock = stXml.match(/<fonts\b[^>]*>([\s\S]*?)<\/fonts>/);
+                    const bordersBlock = stXml.match(/<borders\b[^>]*>([\s\S]*?)<\/borders>/);
+                    const fillsBlock = stXml.match(/<fills\b[^>]*>([\s\S]*?)<\/fills>/);
+                    const cellXfsBlock = stXml.match(/<cellXfs\b[^>]*>([\s\S]*?)<\/cellXfs>/);
+                    if (fontsBlock && bordersBlock && fillsBlock && cellXfsBlock) {
+                        const fCnt = (fontsBlock[1].match(/<font\b/g) || []).length;
+                        const bCnt = (bordersBlock[1].match(/<border\b/g) || []).length;
+                        const bgCnt = (fillsBlock[1].match(/<fill\b/g) || []).length;
+                        const xCnt = (cellXfsBlock[1].match(/<xf\b/g) || []).length;
+
+                        stXml = stXml
+                            .replace('</fonts>', '<font><sz val="8"/><name val="Arial"/></font></fonts>')
+                            .replace('</borders>', '<border><left style="thin"><color indexed="64"/></left><right style="thin"><color indexed="64"/></right><top style="thin"><color indexed="64"/></top><bottom style="thin"><color indexed="64"/></bottom><diagonal/></border></borders>')
+                            .replace('</fills>', '<fill><patternFill patternType="solid"><fgColor rgb="FF9EEAFC"/><bgColor indexed="64"/></patternFill></fill></fills>')
+                            .replace('</cellXfs>',
+                                `<xf numFmtId="0" fontId="${fCnt}" fillId="0" borderId="${bCnt}" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>` +
+                                `<xf numFmtId="0" fontId="${fCnt}" fillId="0" borderId="${bCnt}" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>` +
+                                `<xf numFmtId="0" fontId="${fCnt}" fillId="${bgCnt}" borderId="${bCnt}" xfId="0" applyFill="1" applyBorder="1" applyFont="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf></cellXfs>`
+                            )
+                            .replace(/(<fonts\b[^>]*\bcount=")\d+(")/, `$1${fCnt + 1}$2`)
+                            .replace(/(<borders\b[^>]*\bcount=")\d+(")/, `$1${bCnt + 1}$2`)
+                            .replace(/(<fills\b[^>]*\bcount=")\d+(")/, `$1${bgCnt + 1}$2`)
+                            .replace(/(<cellXfs\b[^>]*\bcount=")\d+(")/, `$1${xCnt + 3}$2`);
+                        stLeftGrid = String(xCnt);
+                        stCenterGrid = String(xCnt + 1);
+                        estiloClonID = String(xCnt + 2);
+                        zip.file(stKey, stXml);
+                    }
+                }
+
+                const decodeXml = (s) => String(s || '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'");
+                const escapeXml = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+
+                const sharedStrings = [];
+                const ssIndexMap = new Map();
+                if (ssXml) {
+                    Array.from(ssXml.matchAll(/<si\b[^>]*>([\s\S]*?)<\/si>/g)).forEach((m, idx) => {
+                        const fullTxt = Array.from(m[1].matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g)).map(tm => decodeXml(tm[1])).join('');
+                        sharedStrings.push(fullTxt);
+                        if (!ssIndexMap.has(fullTxt)) ssIndexMap.set(fullTxt, idx);
+                    });
+                }
+
+                const nuevosSiChunks = [];
+                const getOrAddSharedString = (str) => {
+                    const clean = String(str ?? '');
+                    if (ssIndexMap.has(clean)) return ssIndexMap.get(clean);
+                    const newIdx = sharedStrings.length;
+                    sharedStrings.push(clean);
+                    ssIndexMap.set(clean, newIdx);
+                    const spaceAttr = /^\s|\s$/.test(clean) ? ' xml:space="preserve"' : '';
+                    nuevosSiChunks.push(`<si><t${spaceAttr}>${escapeXml(clean)}</t></si>`);
+                    return newIdx;
+                };
+
+                const colToNum = (letters) => { let n = 0; for (let i = 0; i < letters.length; i++) n = n * 26 + (letters.charCodeAt(i) - 64); return n; };
+                const numToCol = (num) => { let s = ''; while (num > 0) { const m = (num - 1) % 26; s = String.fromCharCode(65 + m) + s; num = Math.floor((num - 1) / 26); } return s; };
+                const parseRef = (ref) => { const m = String(ref || '').match(/^([A-Z]+)(\d+)$/); return m ? { col: colToNum(m[1]), colStr: m[1], row: parseInt(m[2], 10) } : null; };
+
+                const sheetDataMatch = s1Xml.match(/<sheetData\b[^>]*>([\s\S]*?)<\/sheetData>/);
+                if (!sheetDataMatch) throw new Error("No se encontró <sheetData> en la hoja principal.");
+
+                let seqRowCounter = 0;
+                const rawRows = Array.from(sheetDataMatch[1].matchAll(/<row\b([^>]*?)(?:\/>|>([\s\S]*?)<\/row>)/g)).map(m => {
+                    const rMatch = m[1].match(/\br="(\d+)"/);
+                    const rNum = (rMatch && parseInt(rMatch[1], 10) > 0) ? parseInt(rMatch[1], 10) : (seqRowCounter + 1);
+                    seqRowCounter = rNum;
+                    return { rNum, attrs: m[1], inner: m[2] || '', full: m[0] };
                 });
 
-                // 8. INYECTAR DATOS EN EL EXCEL 
-                let currentRow = 8;
-                const columnasInicioDia = [7, 10, 13, 16, 19, 22, 25];
-                
-                // 🔥 CORRECCIÓN: ORDENAR ESTRICTAMENTE POR NOMBRE ALFABÉTICO (NO POR DNI)
-                let dnisOrdenados = Object.keys(trabajadoresAgrupados).sort((dniA, dniB) => {
-                    let nombreA = (datosOriginalesObreros[dniA]?.nombre || "").toUpperCase();
-                    let nombreB = (datosOriginalesObreros[dniB]?.nombre || "").toUpperCase();
-                    return nombreA.localeCompare(nombreB);
+                const headerRowsXml = [];
+                const workerRowsTpl = [];
+                const footerRowsTpl = [];
+                const estilosColumna = {};
+
+                rawRows.forEach(rObj => {
+                    if (rObj.rNum < filaInicioDatos) {
+                        headerRowsXml.push(rObj.full);
+                        return;
+                    }
+                    const workerMeta = mapaFilaExcelAWorker.get(rObj.rNum);
+                    if (workerMeta) {
+                        if (Object.keys(estilosColumna).length === 0) {
+                            let seqCol = 0;
+                            Array.from(rObj.inner.matchAll(/<c\b([^>]*)/g)).forEach(cm => {
+                                const refM = cm[1].match(/\br="([A-Z]+)\d+"/);
+                                const sM = cm[1].match(/\bs="(\d+)"/);
+                                const col = refM ? colToNum(refM[1]) : (seqCol + 1);
+                                seqCol = col;
+                                if (sM) estilosColumna[col] = sM[1];
+                            });
+                        }
+                        workerRowsTpl.push({ ...rObj, ...workerMeta });
+                    } else {
+                        footerRowsTpl.push(rObj);
+                    }
                 });
 
-                dnisOrdenados.forEach(dni => {
-                    let filasTareo = trabajadoresAgrupados[dni];
-                    let originalData = datosOriginalesObreros[dni] || { nombre: '', proy: '', porcentaje: '' };
+                const buildUpdatedRowXml = (rowTpl, nuevoR, updatesMap, flagGrid = false, isClon = false) => {
+                    const cellMap = new Map();
+                    let seqCol = 0;
+                    Array.from(rowTpl.inner.matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)).forEach(cm => {
+                        const refM = cm[1].match(/\br="([A-Z]+)\d+"/);
+                        const sM = cm[1].match(/\bs="(\d+)"/);
+                        const col = refM ? colToNum(refM[1]) : (seqCol + 1);
+                        seqCol = col;
+                        let stId = sM ? sM[1] : (estilosColumna[col] || '');
+                        if (flagGrid && stLeftGrid && col >= 3 && col <= 27) {
+                            stId = (col >= 7 && (col - 7) % 3 === 2) ? stCenterGrid : stLeftGrid;
+                        } else if (isClon && estiloClonID && col === 4) {
+                            stId = estiloClonID;
+                        }
+                        cellMap.set(col, { col, colStr: numToCol(col), s: stId, rawAttrs: cm[1], rawBody: cm[2] || '', modified: false });
+                    });
 
-                    filasTareo.forEach((wd, indexFilaDoble) => {
-                        let rowData = new Array(27).fill(null);
-                        
-                        rowData[0] = (wd.linea && !isNaN(wd.linea)) ? Number(wd.linea) : wd.linea;
-                        rowData[2] = dni;
-                        rowData[3] = originalData.nombre;
-                        rowData[4] = originalData.proy || nombreLargoProyectoS10;
-                        rowData[5] = originalData.porcentaje;
-
-                        columnasInicioDia.forEach((startCol, diaIndex) => {
-                            let diaInfo = wd.dias[diaIndex];
-                            if (diaInfo) {
-                                rowData[startCol - 1] = diaInfo.partida;
-                                rowData[startCol] = diaInfo.concepto;
-                                rowData[startCol + 1] = diaInfo.horas;
+                    if (flagGrid && stLeftGrid) {
+                        Array.from({ length: 25 }, (_, i) => 3 + i).forEach(col => {
+                            if (!cellMap.has(col)) {
+                                cellMap.set(col, { col, colStr: numToCol(col), s: ((col >= 7 && (col - 7) % 3 === 2) ? stCenterGrid : stLeftGrid), modified: true, spec: { val: '', type: 'clear' } });
                             }
                         });
-                        
-                        let excelRow = ws.addRow(rowData);
-                        
-                        ws.mergeCells(currentRow, 1, currentRow, 2);
+                    }
 
-                        for (let c = 1; c <= 27; c++) {
-                            let cell = excelRow.getCell(c);
-                            cell.font = { name: 'Arial', size: 8 };
-                            cell.border = { top: {style:'thin', color:{argb:'FF000000'}}, bottom: {style:'thin', color:{argb:'FF000000'}}, left: {style:'thin', color:{argb:'FF000000'}}, right: {style:'thin', color:{argb:'FF000000'}} };
-                            cell.alignment = { vertical: 'middle' };
-                            if (c > 6) cell.alignment = { horizontal: 'center', vertical: 'middle' };
-                            
-                            if (indexFilaDoble > 0 && (c === 3 || c === 4)) {
-                                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDDEBF7' } }; 
-                            }
+                    Object.entries(updatesMap).forEach(([colStrNum, spec]) => {
+                        const col = Number(colStrNum);
+                        const exist = cellMap.get(col);
+                        let stId = (exist && exist.s) ? exist.s : (estilosColumna[col] || '');
+                        if (stLeftGrid && stCenterGrid) {
+                            if (col === 5) stId = stLeftGrid;
+                            else if (col >= 7 && col <= 27) stId = ((col - 7) % 3 === 2) ? stCenterGrid : stLeftGrid;
                         }
+                        if (isClon && estiloClonID && col === 4) stId = estiloClonID;
+                        cellMap.set(col, { col, colStr: numToCol(col), s: stId, modified: true, spec });
+                    });
+
+                    const cellsXml = Array.from(cellMap.keys()).sort((a, b) => a - b).map(col => {
+                        const item = cellMap.get(col);
+                        const newRef = `${item.colStr}${nuevoR}`;
+                        if (!item.modified) {
+                            let upAttr = /\br="[A-Z]+\d+"/.test(item.rawAttrs) ? item.rawAttrs.replace(/\br="[A-Z]+\d+"/, `r="${newRef}"`) : ` r="${newRef}"${item.rawAttrs}`;
+                            if ((flagGrid || (isClon && col === 4)) && item.s) {
+                                upAttr = /\bs="\d+"/.test(upAttr) ? upAttr.replace(/\bs="\d+"/, `s="${item.s}"`) : `${upAttr} s="${item.s}"`;
+                            }
+                            return item.rawBody ? `<c${upAttr}>${item.rawBody}</c>` : `<c${upAttr}/>`;
+                        }
+                        const sAttr = item.s ? ` s="${item.s}"` : '';
+                        const { val, type } = item.spec;
+                        if (val === null || val === undefined || val === '') return `<c r="${newRef}"${sAttr}/>`;
+                        if (type === 's') {
+                            if (ssKey) {
+                                const ssIdx = getOrAddSharedString(String(val));
+                                return `<c r="${newRef}"${sAttr} t="s"><v>${ssIdx}</v></c>`;
+                            }
+                            const sp = /^\s|\s$/.test(String(val)) ? ' xml:space="preserve"' : '';
+                            return `<c r="${newRef}"${sAttr} t="inlineStr"><is><t${sp}>${escapeXml(String(val))}</t></is></c>`;
+                        }
+                        return `<c r="${newRef}"${sAttr}><v>${val}</v></c>`;
+                    }).join('');
+
+                    const newRowAttrs = /\br="\d+"/.test(rowTpl.attrs) ? rowTpl.attrs.replace(/\br="\d+"/, `r="${nuevoR}"`) : ` r="${nuevoR}"${rowTpl.attrs}`;
+                    return `<row${newRowAttrs}>${cellsXml}</row>`;
+                };
+
+                // 6. GENERAR FILAS DE OBREROS (SOBRESCRIBIENDO CON EL PROYECTO SELECCIONADO EN LA APP)
+                const colsDias = [7, 10, 13, 16, 19, 22, 25];
+                const dnisProcesados = new Set();
+                const nuevasFilasObrerosXml = [];
+                let currentRow = filaInicioDatos;
+                let celdasHorasEscritas = 0;
+
+                workerRowsTpl.forEach(wTpl => {
+                    const claveUnica = wTpl.dni || wTpl.nombre;
+                    if (!claveUnica || dnisProcesados.has(claveUnica)) return;
+                    dnisProcesados.add(claveUnica);
+
+                    const filasTareo = trabajadoresPorDni[wTpl.dni] || trabajadoresPorNombre[wTpl.nombre] || [{ linea: wTpl.linea, dias: [] }];
+                    const proyFinal = nombreLargoProyectoS10 || wTpl.proyOrig;
+
+                    filasTareo.forEach((wd, idxSub) => {
+                        const updates = {};
+                        if (wd.linea !== '' && wd.linea !== undefined && wd.linea !== null) {
+                            const numL = Number(wd.linea);
+                            updates[1] = !isNaN(numL) ? { val: numL, type: 'n' } : { val: String(wd.linea), type: 's' };
+                        }
+                        if (proyFinal) updates[5] = { val: proyFinal, type: 's' };
+
+                        for (let c = 7; c <= 27; c++) updates[c] = { val: '', type: 'clear' };
+
+                        colsDias.forEach((startCol, diaIdx) => {
+                            const diaInfo = wd.dias ? wd.dias[diaIdx] : null;
+                            if (diaInfo && diaInfo.horas > 0) {
+                                updates[startCol] = { val: String(diaInfo.partida || '').trim(), type: 's' };
+                                updates[startCol + 1] = { val: String(diaInfo.concepto || '').trim(), type: 's' };
+                                updates[startCol + 2] = { val: Number(diaInfo.horas), type: 'n' };
+                                celdasHorasEscritas++;
+                            }
+                        });
+
+                        nuevasFilasObrerosXml.push(buildUpdatedRowXml(wTpl, currentRow, updates, false, idxSub > 0));
                         currentRow++;
                     });
                 });
 
-                // 9. AGREGAR FILAS VACÍAS CON BORDES
-                for (let i = 0; i < 5; i++) {
-                    let emptyRow = ws.getRow(currentRow);
-                    ws.mergeCells(currentRow, 1, currentRow, 2); 
-                    for (let c = 1; c <= 27; c++) {
-                        let cell = emptyRow.getCell(c);
-                        cell.border = { top: {style:'thin'}, bottom: {style:'thin'}, left: {style:'thin'}, right: {style:'thin'} };
-                    }
-                    currentRow++;
+                const ultimaFilaObrero = Math.max(filaInicioDatos, currentRow - 1);
+                const primeraFilaPieOrig = footerRowsTpl.length > 0 ? footerRowsTpl[0].rNum : (filaInicioDatos + workerRowsTpl.length);
+                const deltaPie = currentRow - primeraFilaPieOrig;
+
+                let ultimaFilaGrid = ultimaFilaObrero;
+                const nuevasFilasPieXml = footerRowsTpl.map((fObj, idxFooter) => {
+                    const nuevoR = fObj.rNum + deltaPie;
+                    const tieneTextoFirma = /<v>/.test(fObj.inner) || /<is>/.test(fObj.inner);
+                    const esFilaGridVacia = !tieneTextoFirma && idxFooter < 4;
+                    if (esFilaGridVacia) ultimaFilaGrid = nuevoR;
+                    return buildUpdatedRowXml(fObj, nuevoR, {}, esFilaGridVacia, false);
+                });
+
+                const ultimaFilaTotal = footerRowsTpl.length > 0 ? (footerRowsTpl[footerRowsTpl.length - 1].rNum + deltaPie) : ultimaFilaGrid;
+
+                s1Xml = s1Xml.replace(/<sheetData\b[^>]*>[\s\S]*?<\/sheetData>/, `<sheetData>${headerRowsXml.join('')}${nuevasFilasObrerosXml.join('')}${nuevasFilasPieXml.join('')}</sheetData>`);
+                s1Xml = s1Xml.replace(/(<dimension\b[^>]*\bref="A1:[A-Z]+)\d+(")/, `$1${Math.max(1001, ultimaFilaTotal)}$2`);
+
+                // 7. ACTUALIZAR COMBINACIONES DE CELDAS (<mergeCells>)
+                const mergeMatch = s1Xml.match(/<mergeCells[^>]*>([\s\S]*?)<\/mergeCells>/);
+                if (mergeMatch) {
+                    const origMerges = Array.from(mergeMatch[1].matchAll(/ref="([^"]+)"/g)).map(m => m[1]);
+                    const newMerges = [];
+                    origMerges.forEach(ref => {
+                        const sPos = parseRef(ref.split(':')[0]);
+                        if (sPos && sPos.row < filaInicioDatos) newMerges.push(ref);
+                    });
+                    origMerges.forEach(ref => {
+                        const [p1, p2] = ref.split(':');
+                        const sPos = parseRef(p1), ePos = parseRef(p2);
+                        if (sPos && ePos && sPos.row >= primeraFilaPieOrig) {
+                            newMerges.push(`${sPos.colStr}${sPos.row + deltaPie}:${ePos.colStr}${ePos.row + deltaPie}`);
+                        }
+                    });
+                    s1Xml = s1Xml.replace(/<mergeCells[^>]*>[\s\S]*?<\/mergeCells>/, `<mergeCells count="${newMerges.length}">${newMerges.map(r => `<mergeCell ref="${r}"/>`).join('')}</mergeCells>`);
                 }
 
-                // 10. DIBUJAR FIRMAS INFERIORES
-                currentRow += 3;
-                
-                ws.getCell(`D${currentRow}`).value = '_______________________________________';
-                ws.getCell(`J${currentRow}`).value = '_______________________________________';
-                ws.getCell(`D${currentRow}`).alignment = { horizontal: 'center' };
-                ws.getCell(`J${currentRow}`).alignment = { horizontal: 'center' };
-                
-                currentRow++;
-                ws.getCell(`D${currentRow}`).value = 'TAREADOR';
-                ws.getCell(`J${currentRow}`).value = 'SUPERVISOR';
-                ws.getCell(`D${currentRow}`).font = { name: 'Arial', size: 9, bold: true };
-                ws.getCell(`J${currentRow}`).font = { name: 'Arial', size: 9, bold: true };
-                ws.getCell(`D${currentRow}`).alignment = { horizontal: 'center' };
-                ws.getCell(`J${currentRow}`).alignment = { horizontal: 'center' };
-                
-                currentRow++;
-                ws.getCell(`J${currentRow}`).value = ':Firma2:';
-                ws.getCell(`J${currentRow}`).font = { name: 'Arial', size: 9 };
-                ws.getCell(`J${currentRow}`).alignment = { horizontal: 'center' };
+                // 8. LISTAS DESPLEGABLES NATIVAS (PROYECTO, PARTIDA DE CONTROL Y CONCEPTO)
+                const rangoProy = `E${filaInicioDatos}:E${ultimaFilaGrid}`;
+                const rangoAct = ['G', 'J', 'M', 'P', 'S', 'V', 'Y'].map(c => `${c}${filaInicioDatos}:${c}${ultimaFilaGrid}`).join(' ');
+                const rangoTip = ['H', 'K', 'N', 'Q', 'T', 'W', 'Z'].map(c => `${c}${filaInicioDatos}:${c}${ultimaFilaGrid}`).join(' ');
 
-                // 11. DESCARGA INFALIBLE (.xlsx)
-                const buffer = await wb.xlsx.writeBuffer();
-                let nombreBase = (window.currentPadronName || archivoPadronS10?.name || "Tareo_S10").substring(0, (window.currentPadronName || archivoPadronS10?.name || "Tareo_S10").lastIndexOf('.'));
-                if (!nombreBase) nombreBase = window.currentPadronName || archivoPadronS10?.name || "Tareo_S10";
-                let nombreFinalExcel = nombreBase + ".xlsx"; 
-                
-                try {
-                    saveAs(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), nombreFinalExcel);
-                } catch(e) {
-                    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = nombreFinalExcel;
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    document.body.removeChild(a);
+                const secureDvXml = `<dataValidations count="3">` +
+                    `<dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" sqref="${rangoProy}"><formula1>Proyecto!$D$1:$D$${maxRowProyecto}</formula1></dataValidation>` +
+                    `<dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" sqref="${rangoAct}"><formula1>${rangoListaAct}</formula1></dataValidation>` +
+                    `<dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" sqref="${rangoTip}"><formula1>TipoHora!$D$1:$D$${maxRowTipoHora}</formula1></dataValidation>` +
+                    `</dataValidations>`;
+
+                s1Xml = s1Xml.replace(/<dataValidations\b[^>]*>[\s\S]*?<\/dataValidations>/g, '');
+                s1Xml = s1Xml.replace(/<x14:dataValidations\b[^>]*>[\s\S]*?<\/x14:dataValidations>/g, '');
+                s1Xml = s1Xml.replace(/<pageMargins\b/, `${secureDvXml}<pageMargins`);
+
+                // 9. ACTUALIZAR sharedStrings.xml SI EXISTE
+                if (ssKey && nuevosSiChunks.length > 0) {
+                    const prevCountM = ssXml.match(/<sst\b[^>]*\bcount="(\d+)"/);
+                    const prevCount = prevCountM ? parseInt(prevCountM[1], 10) : sharedStrings.length;
+                    ssXml = ssXml
+                        .replace(/(<sst\b[^>]*\bcount=")\d+(")/, `$1${prevCount + nuevosSiChunks.length}$2`)
+                        .replace(/(<sst\b[^>]*\buniqueCount=")\d+(")/, `$1${sharedStrings.length}$2`)
+                        .replace(/<\/sst>/, `${nuevosSiChunks.join('')}</sst>`);
+                    zip.file(ssKey, ssXml);
                 }
 
-                alert("✅ ¡Tareo exportado exitosamente!");
+                zip.file(s1Key, s1Xml);
+
+                // 10. DESCARGAR CONSERVANDO EL NOMBRE EXACTO DEL ARCHIVO SUBIDO
+                const nombreFinalExcel = (archivoPadronS10?.name || window.currentPadronName || "Tareo_S10.xlsm").trim();
+                const outBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+
+                saveAs(outBlob, nombreFinalExcel);
+                alert(`✅ ¡Tareo exportado en formato oficial S10 (${nombreFinalExcel})!\n• ${dnisProcesados.size} obreros | ${celdasHorasEscritas} registros diarios inyectados.`);
 
             } catch (err) {
                 console.error("Error al exportar:", err);
-                alert("❌ Hubo un error al exportar: " + err.message);
+                alert("❌ Hubo un error al exportar para S10: " + err.message);
             } finally {
-                btn.innerHTML = originalHTML;
-                btn.disabled = false;
+                if (btn) {
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                }
             }
         };
         
