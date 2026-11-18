@@ -1442,6 +1442,21 @@
 
                 <!-- PANTALLA 2: ZONA DE CARGA (Oculta por defecto) -->
                 <div id="zonaCargaTareo" class="hidden w-full">
+                    <!-- Cabecera Editorial con Flecha de Retorno -->
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 w-full gap-6">
+                        <div>
+                            <button type="button" onclick="archivoPadronS10 = null; window.cerrarVistaPrevia();" class="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400 hover:text-emerald-600 transition mb-4 cursor-pointer group">
+                                <i class="fa-solid fa-arrow-left text-[10px] transition-transform duration-300 group-hover:-translate-x-1"></i> Historial de Tareos
+                            </button>
+                            <h1 class="text-3xl sm:text-4xl lg:text-[44px] font-light text-slate-800 leading-[1.08] tracking-tight lobby-hero-title">
+                                Nuevo <span class="font-black text-slate-900">Tareo</span>
+                            </h1>
+                            <p class="text-slate-500 mt-2.5 text-sm sm:text-base font-light lobby-hero-sub">
+                                Carga el padrón oficial S10 y los reportes de campo para cruzar horas y partidas.
+                            </p>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     
                     <!-- COLUMNA IZQUIERDA: Zonas de Carga -->
@@ -12973,21 +12988,33 @@
             <!-- ========================================== -->
             <!-- VISTA PREVIA EXCEL (PANTALLA COMPLETA) -->
             <!-- ========================================== -->
-            <div id="vistaPreviaExportacion" class="hidden w-full mt-6">
-                <div class="bg-white rounded-[24px] p-6 border border-slate-200 shadow-sm flex flex-col">
-                    <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
-                        <h3 class="text-sm font-bold text-slate-800 uppercase tracking-widest flex items-center gap-2">
-                            <i class="fa-solid fa-table border text-emerald-600"></i> Vista Previa (Coordenadas Excel)
+            <div id="vistaPreviaExportacion" class="hidden w-full pt-6 pb-16">
+                <!-- Cabecera Editorial con Flecha de Retorno -->
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 w-full gap-6">
+                    <div>
+                        <button type="button" onclick="window.cerrarVistaPrevia()" class="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400 hover:text-emerald-600 transition mb-4 cursor-pointer group">
+                            <i class="fa-solid fa-arrow-left text-[10px] transition-transform duration-300 group-hover:-translate-x-1"></i> <span id="textoRetornoVistaPrevia">Historial de Tareos</span>
+                        </button>
+                        <h1 class="text-3xl sm:text-4xl lg:text-[44px] font-light text-slate-800 leading-[1.08] tracking-tight lobby-hero-title">
+                            Detalle de <span class="font-black text-slate-900" id="tituloSemanaVistaPrevia">Tareo</span>
+                        </h1>
+                        <p class="text-slate-500 mt-2.5 text-sm sm:text-base font-light lobby-hero-sub" id="subtituloVistaPrevia">
+                            Revisión de coordenadas S10, horas registradas y exportación oficial.
+                        </p>
+                    </div>
+                </div>
+                <div class="bg-white rounded-[24px] p-6 border border-slate-200 shadow-xl flex flex-col relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-2 h-full bg-[#141724]"></div>
+                    <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-100 pl-4">
+                        <h3 class="text-sm font-black text-[#141724] uppercase tracking-widest flex items-center gap-2">
+                            <i class="fa-solid fa-table text-emerald-600 text-lg mr-1"></i> VISTA PREVIA (COORDENADAS EXCEL)
                         </h3>
                         <div class="flex gap-3">
-                            <button onclick="window.cerrarVistaPrevia()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-bold uppercase tracking-widest py-2 px-4 rounded-full transition-colors">
-                                Volver
+                            <button id="btnGuardarTareoNube" onclick="window.guardarTareoEnNube()" class="bg-[#1b43d2] hover:bg-blue-600 text-white text-[10px] font-bold uppercase tracking-widest py-2 px-6 rounded-full shadow-md transition-colors flex items-center gap-2">
+                                <i class="fa-solid fa-cloud-arrow-up"></i> GUARDAR EN NUBE
                             </button>
-                            <button id="btnGuardarTareoNube" onclick="window.guardarTareoEnNube()" class="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold uppercase tracking-widest py-2 px-4 rounded-full shadow transition-colors flex items-center gap-2">
-                                <i class="fa-solid fa-cloud-arrow-up"></i> Guardar en Nube
-                            </button>
-                            <button id="btnExportacionNube" onclick="window.ejecutarExportacionNube()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-widest py-2 px-4 rounded-full shadow transition-colors flex items-center gap-2">
-                                <i class="fa-solid fa-file-excel"></i> Exportar S10
+                            <button id="btnExportacionNube" onclick="window.ejecutarExportacionNube()" class="bg-[#008080] hover:bg-teal-600 text-white text-[10px] font-bold uppercase tracking-widest py-2 px-6 rounded-full shadow-md transition-colors flex items-center gap-2">
+                                <i class="fa-solid fa-file-excel"></i> EXPORTAR S10
                             </button>
                         </div>
                     </div>
@@ -20206,8 +20233,9 @@ window.iniciarNuevoReporte = function() {
             if (history.state?.vista === 'tareo_detalle') {
                 history.replaceState({ vista: 'modulo', modulo: 'TAREOS', proyecto: window.proyectoActualGlobal }, '', '#modulo-tareos');
             }
-            // 1. Ocultamos la tabla de Vista Previa
+            // 1. Ocultamos la tabla de Vista Previa y restauramos el contenedor del módulo
             document.getElementById('vistaPreviaExportacion').classList.add('hidden');
+            document.getElementById('moduloProyectoTareos')?.classList.remove('hidden');
             
             // 2. Destruimos los gráficos vivos para no generar fantasmas (CRÍTICO)
             if (window.chartTareoInst) {
@@ -20379,12 +20407,17 @@ window.iniciarNuevoReporte = function() {
                 alert("⚠️ No hay Padrón S10 en memoria. Sube el archivo primero."); return;
             }
 
-            // 🔥 Ocultamos el fondo correctamente
+            // 🔥 Ocultamos el fondo correctamente y actualizamos cabecera de Vista Previa
             const zonaCarga = document.getElementById('zonaCargaTareo');
             if(zonaCarga) {
+                zonaCarga.classList.add('hidden');
                 const gridPrincipal = zonaCarga.querySelector('.grid');
                 if(gridPrincipal) gridPrincipal.classList.add('hidden');
             }
+            const lblRetorno = document.getElementById('textoRetornoVistaPrevia');
+            const lblSemana = document.getElementById('tituloSemanaVistaPrevia');
+            if (lblRetorno) lblRetorno.textContent = 'Carga de Archivos';
+            if (lblSemana) lblSemana.textContent = window.semanaActualTareo ? `Semana ${window.semanaActualTareo}` : 'Tareo';
 
             const gridPrincipal = document.querySelector('#moduloProyectoTareos > .grid');
             if(gridPrincipal) gridPrincipal.classList.add('hidden');
@@ -20400,29 +20433,29 @@ window.iniciarNuevoReporte = function() {
             const theadNombres = document.getElementById('headNombresColumnas');
             tbody.innerHTML = '';
             
-            // DIBUJAR CABECERAS
-            let htmlLetras = '<tr><th class="py-1 px-2 text-center border-r border-slate-600 bg-slate-900 w-10">#</th>';
-            let htmlDias = '<tr><th class="py-1 px-2 border-r border-amber-200"></th>';
-            let htmlNombres = '<tr><th class="py-1 px-2 text-center border-r border-slate-300 bg-slate-200 w-10">Fila</th>';
+            // DIBUJAR CABECERAS CON ESTILO EDITORIAL
+            let htmlLetras = '<tr><th class="py-1 px-2 text-center border-r border-[#1f2336] bg-[#141724] text-white w-10">#</th>';
+            let htmlDias = '<tr><th class="py-1 px-2 border-r border-[#f6e0b5]"></th>';
+            let htmlNombres = '<tr><th class="py-2 px-2 text-center border-r border-slate-200 bg-slate-50 text-slate-600 font-black w-10">Fila</th>';
             
             const columnasFijas = ["Línea", "DNI", "Nombre", "Proyecto", "%"];
             columnasFijas.forEach((colName, index) => {
                 const letra = String.fromCharCode(65 + index);
-                htmlLetras += `<th class="py-1 px-2 text-center border-r border-slate-600 font-black text-amber-400 w-24">${letra}<div class="resizer"></div></th>`;
-                htmlDias += `<th class="py-1 px-2 border-r border-amber-200"></th>`;
-                htmlNombres += `<th class="py-1 px-2 text-center border-r border-slate-300 border-b border-slate-300 text-[10px] truncate">${colName}</th>`;
+                htmlLetras += `<th class="py-1 px-2 text-center border-r border-[#1f2336] bg-[#141724] font-black text-[#ffcc00] w-24">${letra}<div class="resizer"></div></th>`;
+                htmlDias += `<th class="py-1 px-2 border-r border-[#f6e0b5]"></th>`;
+                htmlNombres += `<th class="py-2 px-2 text-center border-r border-slate-200 bg-slate-50 text-slate-700 font-black text-[10px] truncate">${colName}</th>`;
             });
 
             const diasSemana = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo"];
             let charCode = 70; // 'F'
 
             diasSemana.forEach(dia => {
-                htmlDias += `<th colspan="3" class="py-1 px-2 text-center border-r border-amber-300 font-bold text-[11px]">${dia}</th>`;
+                htmlDias += `<th colspan="3" class="py-1 px-2 text-center border-r border-amber-200 bg-amber-50 font-black text-amber-800 text-[11px]">${dia}</th>`;
                 const subCols = ["Partida de Control", "Concepto", "Horas"];
                 subCols.forEach(subCol => {
                     let letra = charCode > 90 ? 'A' + String.fromCharCode(charCode - 26) : String.fromCharCode(charCode);
-                    htmlLetras += `<th class="py-1 px-2 text-center border-r border-slate-600 font-black text-amber-400 w-32">${letra}<div class="resizer"></div></th>`;
-                    htmlNombres += `<th class="py-1 px-2 text-center border-r border-slate-300 border-b border-slate-300 text-[9px] truncate" title="${subCol}">${subCol}</th>`;
+                    htmlLetras += `<th class="py-1 px-2 text-center border-r border-[#1f2336] bg-[#141724] font-black text-[#ffcc00] w-32">${letra}<div class="resizer"></div></th>`;
+                    htmlNombres += `<th class="py-2 px-2 text-center border-r border-slate-200 bg-slate-50 text-slate-700 font-black text-[9px] truncate" title="${subCol}">${subCol}</th>`;
                     charCode++;
                 });
             });
@@ -20599,6 +20632,8 @@ window.iniciarNuevoReporte = function() {
 
             document.getElementById('resumenVistaPrevia').innerHTML = `<span class="text-indigo-600">${datosListosParaExportar.length}</span> filas alineadas al S10 | <span class="text-emerald-600" id="totalHorasVisualResumen">${totalHorasGlobal}</span> horas totales`;
                 
+                document.getElementById('moduloProyectoTareos')?.classList.add('hidden');
+                document.getElementById('moduloProyectoTareos')?.classList.add('hidden');
                 document.getElementById('vistaPreviaExportacion').classList.remove('hidden');
 
                 // 🔥 SOLUCIÓN DEL BUG: Forzar a la calculadora a sumar TODAS las cajas recién creadas (incluyendo Convenios)
@@ -21116,7 +21151,12 @@ window.iniciarNuevoReporte = function() {
                 datosListosParaExportar = snap.data().datos;
                 window.semanaActualTareo = semanaId.replace('Semana_', ''); 
                 window.currentPadronUrl = snap.data().archivoPadronUrl || null;
-                window.currentPadronName = snap.data().nombreOriginalPadron || `Plantilla_S10.xlsx`; 
+                window.currentPadronName = snap.data().nombreOriginalPadron || `Plantilla_S10.xlsx`;
+
+                const lblRetorno = document.getElementById('textoRetornoVistaPrevia');
+                const lblSemana = document.getElementById('tituloSemanaVistaPrevia');
+                if (lblRetorno) lblRetorno.textContent = 'Historial de Tareos';
+                if (lblSemana) lblSemana.textContent = `Semana ${window.semanaActualTareo}`;
                 
                 // 🔥 NUEVO: Recuperar el registro de faltas desde Firebase
                 window.reporteFaltas = snap.data().faltasRegistradas || [];
@@ -21127,28 +21167,28 @@ window.iniciarNuevoReporte = function() {
                 const theadNombres = document.getElementById('headNombresColumnas');
                 tbody.innerHTML = '';
 
-                let htmlLetras = '<tr><th class="py-1 px-2 text-center border-r border-slate-600 bg-slate-900 w-10">#</th>';
-                let htmlDias = '<tr><th class="py-1 px-2 border-r border-amber-200"></th>';
-                let htmlNombres = '<tr><th class="py-1 px-2 text-center border-r border-slate-300 bg-slate-200 w-10">Fila</th>';
+                let htmlLetras = '<tr><th class="py-1 px-2 text-center border-r border-[#1f2336] bg-[#141724] text-white w-10">#</th>';
+                let htmlDias = '<tr><th class="py-1 px-2 border-r border-[#f6e0b5]"></th>';
+                let htmlNombres = '<tr><th class="py-2 px-2 text-center border-r border-slate-200 bg-slate-50 text-slate-600 font-black w-10">Fila</th>';
 
                 const columnasFijas = ["Línea", "DNI", "Nombre", "Proyecto", "%"];
                 columnasFijas.forEach((colName, index) => {
                     const letra = String.fromCharCode(65 + index);
-                    htmlLetras += `<th class="py-1 px-2 text-center border-r border-slate-600 font-black text-amber-400 w-24">${letra}<div class="resizer"></div></th>`;
-                    htmlDias += `<th class="py-1 px-2 border-r border-amber-200"></th>`;
-                    htmlNombres += `<th class="py-1 px-2 text-center border-r border-slate-300 border-b border-slate-300 text-[10px] truncate">${colName}</th>`;
+                    htmlLetras += `<th class="py-1 px-2 text-center border-r border-[#1f2336] bg-[#141724] font-black text-[#ffcc00] w-24">${letra}<div class="resizer"></div></th>`;
+                    htmlDias += `<th class="py-1 px-2 border-r border-[#f6e0b5]"></th>`;
+                    htmlNombres += `<th class="py-2 px-2 text-center border-r border-slate-200 bg-slate-50 text-slate-700 font-black text-[10px] truncate">${colName}</th>`;
                 });
 
                 const diasSemana = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo"];
                 let charCode = 70;
 
                 diasSemana.forEach(dia => {
-                    htmlDias += `<th colspan="3" class="py-1 px-2 text-center border-r border-amber-300 font-bold text-[11px]">${dia}</th>`;
+                    htmlDias += `<th colspan="3" class="py-1 px-2 text-center border-r border-amber-200 bg-amber-50 font-black text-amber-800 text-[11px]">${dia}</th>`;
                     const subCols = ["Partida de Control", "Concepto", "Horas"];
                     subCols.forEach(subCol => {
                         let letra = charCode > 90 ? 'A' + String.fromCharCode(charCode - 26) : String.fromCharCode(charCode);
-                        htmlLetras += `<th class="py-1 px-2 text-center border-r border-slate-600 font-black text-amber-400 w-32">${letra}<div class="resizer"></div></th>`;
-                        htmlNombres += `<th class="py-1 px-2 text-center border-r border-slate-300 border-b border-slate-300 text-[9px] truncate" title="${subCol}">${subCol}</th>`;
+                        htmlLetras += `<th class="py-1 px-2 text-center border-r border-[#1f2336] bg-[#141724] font-black text-[#ffcc00] w-32">${letra}<div class="resizer"></div></th>`;
+                        htmlNombres += `<th class="py-2 px-2 text-center border-r border-slate-200 bg-slate-50 text-slate-700 font-black text-[9px] truncate" title="${subCol}">${subCol}</th>`;
                         charCode++;
                     });
                 });
@@ -21209,6 +21249,7 @@ window.iniciarNuevoReporte = function() {
 
                 document.getElementById('resumenVistaPrevia').innerHTML = `<span class="text-indigo-600">${datosListosParaExportar.length}</span> filas alineadas al S10 | <span class="text-emerald-600" id="totalHorasVisualResumen">${totalHorasGlobal}</span> horas totales ${btnFaltasHTML}`;
                 
+                document.getElementById('moduloProyectoTareos')?.classList.add('hidden');
                 document.getElementById('vistaPreviaExportacion').classList.remove('hidden');
 
                 // 🔥 Disparamos la suma exacta para el histórico
